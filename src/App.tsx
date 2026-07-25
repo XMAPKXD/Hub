@@ -344,6 +344,9 @@ export default function App() {
 
   // Sync currentPath with activeTab
   useEffect(() => {
+    document.documentElement.lang = 'pt-BR';
+    document.documentElement.classList.add('notranslate');
+
     const pLower = currentPath.toLowerCase();
     if (pLower.includes('artes')) {
       setActiveTab('artes');
