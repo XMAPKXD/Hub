@@ -259,39 +259,40 @@ export default function App() {
       let targetPath = path;
       const hashMatch = path.match(/#\w+$/);
       const hashSuffix = hashMatch ? hashMatch[0] : '';
+      const pLower = path.toLowerCase();
 
       if (isGitHubPages) {
-        // On GitHub Pages, let's preserve the repository prefix subdirectory to prevent global root 404s
+        // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        
-        if (path.toLowerCase().includes('admin')) {
-          if (base && base !== 'admin' && base !== 'Admin') {
-            targetPath = `/${base}/admin/${hashSuffix}`;
-          } else {
-            targetPath = `/admin/${hashSuffix}`;
-          }
-        } else if (path.toLowerCase().includes('inscric') || path.toLowerCase().includes('inscricao')) {
-          // Use the replicated directory that contains index.html
-          if (base && base !== 'inscricoes' && base !== 'Inscricoes' && base !== 'Inscrições') {
-            targetPath = `/${base}/inscricoes/${hashSuffix}`;
-          } else {
-            targetPath = `/inscricoes/${hashSuffix}`;
-          }
+        const specialRoutes = ['admin', 'inscricoes', 'artes', 'comunidade', 'missoes'];
+        const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
+
+        if (pLower.includes('admin')) {
+          targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
+        } else if (pLower.includes('inscric')) {
+          targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
+        } else if (pLower.includes('artes')) {
+          targetPath = baseIsSpecial ? `/artes/${hashSuffix}` : (base ? `/${base}/artes/${hashSuffix}` : `/artes/${hashSuffix}`);
+        } else if (pLower.includes('comunidade')) {
+          targetPath = baseIsSpecial ? `/comunidade/${hashSuffix}` : (base ? `/${base}/comunidade/${hashSuffix}` : `/comunidade/${hashSuffix}`);
+        } else if (pLower.includes('missoes')) {
+          targetPath = baseIsSpecial ? `/missoes/${hashSuffix}` : (base ? `/${base}/missoes/${hashSuffix}` : `/missoes/${hashSuffix}`);
         } else {
-          // Back to main index
-          if (base && base !== 'inscricoes' && base !== 'Inscricoes' && base !== 'Inscrições' && base !== 'admin' && base !== 'Admin') {
-            targetPath = `/${base}/${hashSuffix}`;
-          } else {
-            targetPath = `/${hashSuffix}`;
-          }
+          targetPath = baseIsSpecial ? `/${hashSuffix}` : (base ? `/${base}/${hashSuffix}` : `/${hashSuffix}`);
         }
       } else {
         // Standard environments
-        if (path.toLowerCase().includes('admin')) {
+        if (pLower.includes('admin')) {
           targetPath = `/admin${hashSuffix}`;
-        } else if (path.toLowerCase().includes('inscric') || path.toLowerCase().includes('inscricao')) {
-          targetPath = `/inscricoes/${hashSuffix}`;
+        } else if (pLower.includes('inscric')) {
+          targetPath = `/inscricoes${hashSuffix}`;
+        } else if (pLower.includes('artes')) {
+          targetPath = `/artes${hashSuffix}`;
+        } else if (pLower.includes('comunidade')) {
+          targetPath = `/comunidade${hashSuffix}`;
+        } else if (pLower.includes('missoes')) {
+          targetPath = `/missoes${hashSuffix}`;
         } else {
           targetPath = `/${hashSuffix}`;
         }
@@ -340,6 +341,20 @@ export default function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Sync currentPath with activeTab
+  useEffect(() => {
+    const pLower = currentPath.toLowerCase();
+    if (pLower.includes('artes')) {
+      setActiveTab('artes');
+    } else if (pLower.includes('comunidade') || pLower.includes('mural')) {
+      setActiveTab('comunidade');
+    } else if (pLower.includes('missoes') || pLower.includes('missao')) {
+      setActiveTab('missoes');
+    } else if (!pLower.includes('admin') && !pLower.includes('inscric')) {
+      setActiveTab('inicio');
+    }
+  }, [currentPath]);
 
   // Register Service Worker for Web Push on mount
   useEffect(() => {
@@ -3034,7 +3049,7 @@ export default function App() {
               <button
                 onClick={() => {
                   triggerAudio('tap');
-                  setActiveTab('inicio');
+                  navigateTo('/');
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'inicio'
@@ -3049,7 +3064,7 @@ export default function App() {
               <button
                 onClick={() => {
                   triggerAudio('tap');
-                  setActiveTab('comunidade');
+                  navigateTo('/comunidade');
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'comunidade'
@@ -3064,7 +3079,7 @@ export default function App() {
               <button
                 onClick={() => {
                   triggerAudio('tap');
-                  setActiveTab('missoes');
+                  navigateTo('/missoes');
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'missoes'
@@ -3079,7 +3094,7 @@ export default function App() {
               <button
                 onClick={() => {
                   triggerAudio('tap');
-                  setActiveTab('artes');
+                  navigateTo('/artes');
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'artes'

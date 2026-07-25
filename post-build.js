@@ -30,3 +30,30 @@ if (fs.existsSync(sourceFile)) {
 } else {
   console.warn('Warning: dist/inscricoes.html not found, skipping replication.');
 }
+
+// Replicate main index.html for route sub-folders (artes, comunidade, missoes)
+const mainIndexFile = path.join(distPath, 'index.html');
+if (fs.existsSync(mainIndexFile)) {
+  const mainContent = fs.readFileSync(mainIndexFile, 'utf8');
+  const adjustedMain = mainContent
+    .replace(/(href|src)="\.\/assets\//g, '$1="../assets/')
+    .replace(/(href|src)="assets\//g, '$1="../assets/')
+    .replace(/(href|src)="\.\/favicon\.svg"/g, '$1="../favicon.svg"');
+
+  const mainTargets = [
+    path.join(distPath, 'artes', 'index.html'),
+    path.join(distPath, 'Artes', 'index.html'),
+    path.join(distPath, 'comunidade', 'index.html'),
+    path.join(distPath, 'missoes', 'index.html'),
+  ];
+
+  mainTargets.forEach((target) => {
+    const dir = path.dirname(target);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(target, adjustedMain);
+    console.log(`Copied and adjusted index.html to ${target}`);
+  });
+}
+
