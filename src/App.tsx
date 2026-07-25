@@ -699,7 +699,7 @@ export default function App() {
   useEffect(() => {
     let logoIconUrl = siteLogoUrl;
     if (!logoIconUrl || logoIconUrl.includes("photos.app.goo.gl") || logoIconUrl.includes("google.com/photos")) {
-      logoIconUrl = "./favicon.svg";
+      logoIconUrl = "./favicon.png";
     }
     
     if (logoIconUrl) {
@@ -921,7 +921,7 @@ export default function App() {
               body: newNotif.body,
               tag: newNotif.id,
               icon: 'https://img.icons8.com/color/96/000000/bell.png',
-              badge: '/favicon.svg',
+              badge: '/favicon.png',
               vibrate: [100, 50, 100]
             };
 
@@ -3787,8 +3787,8 @@ export default function App() {
                         const welcomeTitle = 'Portal PKXD Central 🔔';
                         const welcomeOptions = {
                           body: 'Notificações ativas com sucesso! Você receberá alertas de novos spoilers e códigos.',
-                          icon: '/favicon.svg',
-                          badge: '/favicon.svg',
+                          icon: '/favicon.png',
+                          badge: '/favicon.png',
                         };
 
                         if ('serviceWorker' in navigator) {

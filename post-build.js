@@ -11,7 +11,7 @@ if (fs.existsSync(sourceFile)) {
   const adjustedContent = content
     .replace(/(href|src)="\.\/assets\//g, '$1="../assets/')
     .replace(/(href|src)="assets\//g, '$1="../assets/')
-    .replace(/(href|src)="\.\/favicon\.svg"/g, '$1="../favicon.svg"');
+    .replace(/(href|src)="\.\/favicon\.png"/g, '$1="../favicon.png"');
 
   const targets = [
     path.join(distPath, 'inscricoes', 'index.html'),
@@ -38,7 +38,7 @@ if (fs.existsSync(mainIndexFile)) {
   const adjustedMain = mainContent
     .replace(/(href|src)="\.\/assets\//g, '$1="../assets/')
     .replace(/(href|src)="assets\//g, '$1="../assets/')
-    .replace(/(href|src)="\.\/favicon\.svg"/g, '$1="../favicon.svg"');
+    .replace(/(href|src)="\.\/favicon\.png"/g, '$1="../favicon.png"');
 
   const mainTargets = [
     path.join(distPath, 'artes', 'index.html'),
