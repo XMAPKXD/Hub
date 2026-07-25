@@ -8,11 +8,14 @@ import {
   Plus, 
   Trash2, 
   Image as ImageIcon, 
+  Video as VideoIcon,
+  Film,
   Tag, 
   Check, 
   Heart, 
   Sparkles, 
   ExternalLink,
+  UploadCloud,
   X
 } from 'lucide-react';
 
@@ -75,7 +78,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
   const [notifType, setNotifType] = useState<'success' | 'info'>('success');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Admin states
+  // Admin / User upload states
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -85,6 +88,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
   const [isCustomCat, setIsCustomCat] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isVideo, setIsVideo] = useState(false);
 
   // Show a temporal alert toast inside this section
   const showToast = (msg: string, type: 'success' | 'info' = 'success') => {
@@ -95,69 +99,103 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
     }, 3500);
   };
 
-  // Process and compress file uploads directly from phone/device
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Helper for YouTube embed
+  const getYouTubeEmbedUrl = (url: string) => {
+    if (!url) return '';
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11)
+      ? `https://www.youtube.com/embed/${match[2]}`
+      : url;
+  };
+
+  // Process and upload file (Images or Videos) directly from device
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('⚠️ Por favor, selecione um arquivo de imagem válido!');
+    const isVid = file.type.startsWith('video/');
+    const isImg = file.type.startsWith('image/');
+
+    if (!isVid && !isImg) {
+      alert('⚠️ Por favor, selecione um arquivo de imagem ou vídeo válido!');
       return;
     }
 
     setUploadingImage(true);
     triggerAudio('tap');
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        // Compress the image (max 900px wide or tall)
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 900;
-
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
+    if (isVid) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setNewImgUrl(result);
+        if (!newDownloadUrl) {
+          setNewDownloadUrl(result);
         }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          // Clear rect to ensure transparency is preserved
-          ctx.clearRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-          // Export as PNG to preserve transparent background perfectly
-          const compressedBase64 = canvas.toDataURL('image/png');
-          setNewImgUrl(compressedBase64);
-          if (!newDownloadUrl) {
-            setNewDownloadUrl(compressedBase64);
-          }
-          showToast("📸 Imagem do seu celular carregada e compactada com sucesso!", "success");
-          triggerAudio('success');
+        setIsVideo(true);
+        if (newCategory === "Renders") {
+          setNewCategory("Vídeos");
         }
+        showToast("🎬 Vídeo do seu aparelho carregado com sucesso!", "success");
+        triggerAudio('success');
         setUploadingImage(false);
       };
-      img.onerror = () => {
-        alert('⚠️ Falha ao processar a imagem do aparelho.');
+      reader.onerror = () => {
+        alert('⚠️ Erro ao ler o arquivo de vídeo do seu aparelho.');
         setUploadingImage(false);
       };
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => {
-      alert('⚠️ Erro ao ler arquivo do celular.');
-      setUploadingImage(false);
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    } else {
+      setIsVideo(false);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 900;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedBase64 = canvas.toDataURL('image/png');
+            setNewImgUrl(compressedBase64);
+            if (!newDownloadUrl) {
+              setNewDownloadUrl(compressedBase64);
+            }
+            showToast("📸 Imagem do seu celular carregada e compactada com sucesso!", "success");
+            triggerAudio('success');
+          }
+          setUploadingImage(false);
+        };
+        img.onerror = () => {
+          alert('⚠️ Falha ao processar a imagem do aparelho.');
+          setUploadingImage(false);
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => {
+        alert('⚠️ Erro ao ler arquivo do celular.');
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Listen to Firestore real-time updates for art_assets
@@ -174,6 +212,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
           imageUrl: data.imageUrl || '',
           downloadUrl: data.downloadUrl || '',
           category: data.category || 'Outros',
+          isVideo: data.isVideo || false,
           createdAt: data.createdAt || Date.now()
         });
       });
@@ -209,27 +248,34 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
     }
   };
 
-  // Add a new art asset
+  // Add a new art asset or video
   const handleAddArt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) return;
 
     if (!newTitle.trim() || !newImgUrl.trim()) {
-      showToast("⚠️ Título e Link da Imagem são obrigatórios!", "info");
+      showToast("⚠️ Título e Link ou Arquivo de Imagem/Vídeo são obrigatórios!", "info");
       triggerAudio('tap');
       return;
     }
 
     const finalCat = isCustomCat ? (customCategory.trim() || "Outros") : newCategory;
+    const isVidFinal = isVideo || 
+      finalCat === "Vídeos" || 
+      newImgUrl.startsWith('data:video/') || 
+      newImgUrl.endsWith('.mp4') || 
+      newImgUrl.endsWith('.webm') || 
+      newImgUrl.includes('youtube.com') || 
+      newImgUrl.includes('youtu.be');
 
     try {
       triggerAudio('tap');
-      const docRef = await addDoc(collection(db, 'art_assets'), {
+      await addDoc(collection(db, 'art_assets'), {
         title: newTitle.trim(),
         description: newDesc.trim() || "Use livremente nos seus vídeos do YouTube e redes sociais! 🎬✨",
         imageUrl: newImgUrl.trim(),
         downloadUrl: newDownloadUrl.trim() || newImgUrl.trim(),
         category: finalCat,
+        isVideo: isVidFinal,
         createdAt: Date.now(),
         admin_secret: "pkxd2026_super_secret_admin_key"
       });
@@ -242,49 +288,50 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
       setNewCategory("Renders");
       setCustomCategory("");
       setIsCustomCat(false);
+      setIsVideo(false);
       setShowAddModal(false);
 
-      showToast("🎉 Nova arte adicionada com sucesso! 🌟", "success");
+      showToast(isVidFinal ? "🎉 Novo vídeo publicado com sucesso! 🎬" : "🎉 Nova arte adicionada com sucesso! 🌟", "success");
       triggerAudio('success');
     } catch (err) {
-      console.error("Erro ao adicionar arte:", err);
-      showToast("❌ Erro ao salvar arte no banco de dados", "info");
+      console.error("Erro ao adicionar arte/vídeo:", err);
+      showToast("❌ Erro ao salvar mídia no banco de dados", "info");
     }
   };
 
   // Delete an art asset
   const handleDeleteArt = async (id: string, title: string) => {
     if (!isAdmin) return;
-    if (!window.confirm(`Tem certeza que deseja excluir a arte "${title}" permanentemente?`)) {
+    if (!window.confirm(`Tem certeza que deseja excluir "${title}" permanentemente?`)) {
       return;
     }
 
     try {
       triggerAudio('tap');
       await deleteDoc(doc(db, 'art_assets', id));
-      showToast(`🗑️ Arte "${title}" removida com sucesso!`, "success");
+      showToast(`🗑️ "${title}" removido com sucesso!`, "success");
       triggerAudio('success');
     } catch (err) {
       console.error("Erro ao remover arte:", err);
-      showToast("❌ Erro ao excluir arte", "info");
+      showToast("❌ Erro ao excluir mídia", "info");
     }
   };
 
-  // Safe high-performance download handler that prevents browser tabs/Chrome from closing
-  const handleDownload = (url: string, title: string) => {
+  // Safe high-performance download handler
+  const handleDownload = (url: string, title: string, isVid?: boolean) => {
     triggerAudio('tap');
     if (!url) return;
 
-    // Build standard high-quality file name
     const safeTitle = title.toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
-      .replace(/[^a-z0-9]+/g, '_')                     // replace special chars with underscore
-      .replace(/^_+|_+$/g, '');                        // trim underscores
-    const filename = `${safeTitle || 'arte'}_pkxd.png`;
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    
+    const ext = isVid || url.startsWith('data:video/') || url.endsWith('.mp4') ? 'mp4' : 'png';
+    const filename = `${safeTitle || 'media'}_pkxd.${ext}`;
 
     try {
       if (url.startsWith('data:')) {
-        // Safe base64 download directly on client-side (does not open new tab, prevents crash)
         const link = document.createElement('a');
         link.href = url;
         link.download = filename;
@@ -293,7 +340,6 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
         document.body.removeChild(link);
         showToast("📥 Download iniciado com sucesso!", "success");
       } else {
-        // Standard URL download. Try blob download to trigger native save as, with CORS fallback
         fetch(url, { mode: 'cors' })
           .then(res => {
             if (!res.ok) throw new Error("Network error");
@@ -311,10 +357,9 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
             showToast("📥 Download concluído!", "success");
           })
           .catch(() => {
-            // CORS blocked or fetch error fallback: Open in clean window tab safely without crashes
             const win = window.open(url, '_blank');
             if (win) {
-              showToast("🔗 Arte aberta em nova aba para download!", "success");
+              showToast("🔗 Arquivo aberto em nova aba para salvar!", "success");
             } else {
               showToast("⚠️ Bloqueador de popups impediu abertura da aba.", "info");
             }
@@ -322,7 +367,6 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
       }
     } catch (error) {
       console.error("Erro no download:", error);
-      // Fallback
       window.open(url, '_blank');
     }
   };
@@ -338,11 +382,10 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
     }, 2000);
   };
 
-  // Categories list - dynamically includes any newly created categories by the admin
+  // Categories list
   const categories = React.useMemo(() => {
-    const base = ["Todas", "Renders", "Logos", "Fundos", "Overlays", "Outros"];
+    const base = ["Todas", "Vídeos", "Renders", "Logos", "Fundos", "Overlays", "Outros"];
     const uniqueFromDb = Array.from(new Set(artes.map(a => a.category).filter(Boolean))) as string[];
-    // Add any unique category from database that isn't in base
     const extra = uniqueFromDb.filter(c => !base.includes(c) && c !== "Todas" && c !== "CUSTOM");
     return [...base, ...extra];
   }, [artes]);
@@ -376,46 +419,44 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
         <div className="text-center md:text-left space-y-1">
           <div className="flex items-center justify-center md:justify-start gap-2">
             <h2 className="text-xl sm:text-2xl font-black font-sans bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent uppercase tracking-wider">
-              🎨 Central de Artes do Canal
+              🎨 Central de Artes e Vídeos
             </h2>
             <span className="bg-pink-500/20 text-pink-300 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border border-pink-500/30">
-              Youtubers 🎬
+              Youtubers & Criadores 🎬
             </span>
           </div>
           <p className="text-xs text-neutral-400 max-w-xl leading-relaxed">
-            Área oficial de criadores! Baixe renders transparentes, molduras de câmera, fundos fofos e logos exclusivas do PK XD Central para dar um toque profissional aos seus vídeos e lives! 🌟🚀
+            Área oficial de criadores! Baixe e envie fotos, renders transparentes, vídeos fofos, molduras e logos do PK XD Central para seus projetos! 🌟🚀
           </p>
         </div>
 
-        {/* Admin Controls in the Header */}
-        {isAdmin && (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              onClick={() => {
-                triggerAudio('tap');
-                setShowAddModal(true);
-              }}
-              className="px-3.5 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Adicionar Arte</span>
-            </button>
+        {/* Upload Controls in the Header */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            onClick={() => {
+              triggerAudio('tap');
+              setShowAddModal(true);
+            }}
+            className="px-4 py-2.5 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer border border-pink-400/30"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Adicionar Arte ou Vídeo 🎬</span>
+          </button>
 
-            {artes.length === 0 && (
-              <button
-                onClick={handleSeedDefaultArtes}
-                className="px-3 py-2 bg-zinc-900 border border-white/10 text-gray-300 hover:text-white hover:bg-zinc-800 text-[10px] font-bold uppercase rounded-xl transition-all flex items-center gap-1 cursor-pointer"
-                title="Restaurar artes padrões recomendadas"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Restaurar Iniciais</span>
-              </button>
-            )}
-          </div>
-        )}
+          {isAdmin && artes.length === 0 && (
+            <button
+              onClick={handleSeedDefaultArtes}
+              className="px-3 py-2 bg-zinc-900 border border-white/10 text-gray-300 hover:text-white hover:bg-zinc-800 text-[10px] font-bold uppercase rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+              title="Restaurar artes padrões recomendadas"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Restaurar Iniciais</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Category Tabs / Filters - Super cute rounded pills */}
+      {/* Category Tabs / Filters */}
       <div className="flex flex-wrap gap-1.5 mb-6 justify-center sm:justify-start bg-neutral-900/40 p-1.5 rounded-2xl border border-white/5 max-w-fit">
         {categories.map((cat) => (
           <button
@@ -424,13 +465,14 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
               triggerAudio('tap');
               setCategoryFilter(cat);
             }}
-            className={`px-3 py-1.5 rounded-xl font-sans text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-sans text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               categoryFilter === cat
                 ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40 shadow-sm'
                 : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5 border border-transparent'
             }`}
           >
-            {cat}
+            {cat === "Vídeos" && <VideoIcon className="w-3 h-3 text-cyan-400" />}
+            <span>{cat}</span>
           </button>
         ))}
       </div>
@@ -439,123 +481,159 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center gap-3">
           <div className="w-10 h-10 border-4 border-pink-500/20 border-t-pink-500 rounded-full animate-spin" />
-          <p className="text-xs text-neutral-400 font-mono">Carregando catálogo de artes...</p>
+          <p className="text-xs text-neutral-400 font-mono">Carregando catálogo de mídias...</p>
         </div>
       ) : filteredArtes.length === 0 ? (
-        <div className="py-16 text-center border-2 border-dashed border-white/5 rounded-3xl bg-neutral-900/20">
-          <ImageIcon className="w-12 h-12 text-neutral-600 mx-auto mb-3.5" />
-          <h3 className="text-sm font-bold text-neutral-300 uppercase tracking-wider mb-1">
-            Nenhuma arte encontrada
+        <div className="py-16 text-center border-2 border-dashed border-white/5 rounded-3xl bg-neutral-900/20 space-y-3">
+          <Film className="w-12 h-12 text-neutral-600 mx-auto" />
+          <h3 className="text-sm font-bold text-neutral-300 uppercase tracking-wider">
+            Nenhuma mídia encontrada
           </h3>
           <p className="text-xs text-neutral-500 max-w-sm mx-auto leading-relaxed">
             {categoryFilter === "Todas" 
-              ? "Nenhuma arte foi cadastrada na central ainda. Se você for administrador, clique no botão para adicionar!" 
-              : `Não existem artes cadastradas na categoria "${categoryFilter}" no momento.`}
+              ? "Nenhum arquivo cadastrado ainda. Clique no botão acima para upar suas fotos ou vídeos!" 
+              : `Não existem mídias na categoria "${categoryFilter}" no momento.`}
           </p>
-          {isAdmin && categoryFilter === "Todas" && (
-            <button
-              onClick={handleSeedDefaultArtes}
-              className="mt-4 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-black uppercase tracking-wider rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Colocar artes demonstrativas</span>
-            </button>
-          )}
+          <button
+            onClick={() => {
+              triggerAudio('tap');
+              setShowAddModal(true);
+            }}
+            className="px-4 py-2 bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/40 text-xs font-black uppercase tracking-wider rounded-xl transition-all inline-flex items-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Enviar Primeira Mídia</span>
+          </button>
         </div>
       ) : (
-        /* Cute Bento Grid of assets */
+        /* Bento Grid of assets & videos */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredArtes.map((art) => (
-            <div 
-              key={art.id}
-              className="group bg-neutral-900/50 border border-white/5 hover:border-pink-500/30 rounded-2xl overflow-hidden transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-pink-950/10 flex flex-col relative"
-            >
-              {/* Category Pill Tag */}
-              <span className="absolute top-2.5 left-2.5 z-10 bg-neutral-950/80 backdrop-blur-md text-pink-300 text-[9px] font-black uppercase px-2 py-0.5 rounded-lg border border-pink-500/30 flex items-center gap-1 shadow-sm">
-                <Tag className="w-2.5 h-2.5" />
-                <span>{art.category}</span>
-              </span>
+          {filteredArtes.map((art) => {
+            const isArtVid = art.isVideo || 
+              art.category === "Vídeos" || 
+              (art.imageUrl && (
+                art.imageUrl.startsWith('data:video/') || 
+                art.imageUrl.endsWith('.mp4') || 
+                art.imageUrl.endsWith('.webm') || 
+                art.imageUrl.endsWith('.mov') ||
+                art.imageUrl.includes('youtube.com') ||
+                art.imageUrl.includes('youtu.be')
+              ));
 
-              {/* Delete button (Admin exclusive) */}
-              {isAdmin && (
-                <button
-                  onClick={() => handleDeleteArt(art.id, art.title)}
-                  className="absolute top-2.5 right-2.5 z-10 p-1.5 bg-neutral-950/80 hover:bg-red-950/90 text-neutral-400 hover:text-red-400 border border-white/10 rounded-lg transition-all cursor-pointer shadow-sm"
-                  title="Excluir Arte permanentemente"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-
-              {/* Image Preview Container */}
+            return (
               <div 
-                className="relative aspect-video w-full overflow-hidden flex items-center justify-center group-hover:brightness-105 transition-all border-b border-white/5"
-                style={{
-                  backgroundColor: '#27272a', // Zinc-800 checkerboard background to clearly show PNG transparency!
-                  backgroundImage: `
-                    linear-gradient(45deg, #3f3f46 25%, transparent 25%), 
-                    linear-gradient(-45deg, #3f3f46 25%, transparent 25%), 
-                    linear-gradient(45deg, transparent 75%, #3f3f46 75%), 
-                    linear-gradient(-45deg, transparent 75%, #3f3f46 75%)
-                  `,
-                  backgroundSize: '16px 16px',
-                  backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px'
-                }}
+                key={art.id}
+                className="group bg-neutral-900/50 border border-white/5 hover:border-pink-500/30 rounded-2xl overflow-hidden transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-pink-950/10 flex flex-col relative"
               >
-                <img 
-                  src={art.imageUrl} 
-                  alt={art.title} 
-                  className="max-w-full max-h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-                  onError={(e) => {
-                    (e.target as any).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400";
-                  }}
-                  referrerPolicy="no-referrer"
-                />
-                
-                {/* Heart decoration in the center on hover (cute vibe) */}
-                <div className="absolute inset-0 bg-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                  <Heart className="w-8 h-8 text-pink-400/30 animate-pulse fill-pink-400/10" />
-                </div>
-              </div>
+                {/* Category Pill Tag */}
+                <span className="absolute top-2.5 left-2.5 z-10 bg-neutral-950/80 backdrop-blur-md text-pink-300 text-[9px] font-black uppercase px-2 py-0.5 rounded-lg border border-pink-500/30 flex items-center gap-1 shadow-sm">
+                  {isArtVid ? <VideoIcon className="w-2.5 h-2.5 text-cyan-400" /> : <Tag className="w-2.5 h-2.5" />}
+                  <span>{art.category}</span>
+                </span>
 
-              {/* Content area */}
-              <div className="p-4 flex-1 flex flex-col justify-between space-y-3.5">
-                <div className="space-y-1">
-                  <h3 className="font-sans font-black text-xs sm:text-sm text-white leading-tight uppercase tracking-wide group-hover:text-pink-300 transition-colors">
-                    {art.title}
-                  </h3>
-                  <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
-                    {art.description}
-                  </p>
-                </div>
-
-                {/* Bottom interactive buttons */}
-                <div className="flex gap-2 pt-1 border-t border-white/5">
-                  {/* Download button */}
+                {/* Delete button (Admin exclusive) */}
+                {isAdmin && (
                   <button
-                    onClick={() => handleDownload(art.downloadUrl || art.imageUrl, art.title)}
-                    className="flex-1 py-1.5 px-3 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 hover:border-pink-500/50 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-pink-300 hover:text-white text-center flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    onClick={() => handleDeleteArt(art.id, art.title)}
+                    className="absolute top-2.5 right-2.5 z-10 p-1.5 bg-neutral-950/80 hover:bg-red-950/90 text-neutral-400 hover:text-red-400 border border-white/10 rounded-lg transition-all cursor-pointer shadow-sm"
+                    title="Excluir Mídia"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download</span>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
+                )}
 
-                  {/* Copy Link Button */}
-                  <button
-                    onClick={() => handleCopyLink(art.downloadUrl || art.imageUrl, art.id)}
-                    className="p-2 bg-neutral-800/60 hover:bg-neutral-800 border border-white/5 rounded-xl transition-all cursor-pointer text-gray-400 hover:text-white"
-                    title="Copiar Link de Download Direto"
-                  >
-                    {copiedId === art.id ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                {/* Media Container: Image or Video */}
+                <div 
+                  className="relative aspect-video w-full overflow-hidden flex items-center justify-center border-b border-white/5 bg-zinc-900"
+                  style={!isArtVid ? {
+                    backgroundColor: '#27272a',
+                    backgroundImage: `
+                      linear-gradient(45deg, #3f3f46 25%, transparent 25%), 
+                      linear-gradient(-45deg, #3f3f46 25%, transparent 25%), 
+                      linear-gradient(45deg, transparent 75%, #3f3f46 75%), 
+                      linear-gradient(-45deg, transparent 75%, #3f3f46 75%)
+                    `,
+                    backgroundSize: '16px 16px',
+                    backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px'
+                  } : {}}
+                >
+                  {isArtVid ? (
+                    (art.imageUrl.includes('youtube.com') || art.imageUrl.includes('youtu.be')) ? (
+                      <iframe
+                        src={getYouTubeEmbedUrl(art.imageUrl)}
+                        title={art.title}
+                        className="w-full h-full border-0"
+                        allowFullScreen
+                      />
                     ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
+                      <video 
+                        src={art.imageUrl} 
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="w-full h-full object-contain bg-black"
+                      />
+                    )
+                  ) : (
+                    <img 
+                      src={art.imageUrl} 
+                      alt={art.title} 
+                      className="max-w-full max-h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as any).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400";
+                      }}
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                  
+                  {/* Decorative icon on image hover */}
+                  {!isArtVid && (
+                    <div className="absolute inset-0 bg-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <Heart className="w-8 h-8 text-pink-400/30 animate-pulse fill-pink-400/10" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Content area */}
+                <div className="p-4 flex-1 flex flex-col justify-between space-y-3.5">
+                  <div className="space-y-1">
+                    <h3 className="font-sans font-black text-xs sm:text-sm text-white leading-tight uppercase tracking-wide group-hover:text-pink-300 transition-colors flex items-center gap-1.5">
+                      {isArtVid && <VideoIcon className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
+                      <span>{art.title}</span>
+                    </h3>
+                    <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
+                      {art.description}
+                    </p>
+                  </div>
+
+                  {/* Bottom interactive buttons */}
+                  <div className="flex gap-2 pt-1 border-t border-white/5">
+                    {/* Download button */}
+                    <button
+                      onClick={() => handleDownload(art.downloadUrl || art.imageUrl, art.title, isArtVid)}
+                      className="flex-1 py-1.5 px-3 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 hover:border-pink-500/50 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-pink-300 hover:text-white text-center flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{isArtVid ? 'Baixar Vídeo' : 'Download'}</span>
+                    </button>
+
+                    {/* Copy Link Button */}
+                    <button
+                      onClick={() => handleCopyLink(art.downloadUrl || art.imageUrl, art.id)}
+                      className="p-2 bg-neutral-800/60 hover:bg-neutral-800 border border-white/5 rounded-xl transition-all cursor-pointer text-gray-400 hover:text-white"
+                      title="Copiar Link de Download Direto"
+                    >
+                      {copiedId === art.id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -569,12 +647,12 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
             💜 Dica de Criação:
           </h4>
           <p className="text-[10px] text-neutral-400 leading-relaxed max-w-2xl">
-            Sempre que for usar alguma arte, lembre-se de salvar em formato original PNG de alta qualidade clicando em Download. Adicione créditos do <strong>PK XD Central</strong> na descrição de seu vídeo para nos apoiar!
+            Sempre que for usar fotos, renders ou vídeos do canal, baixe em alta qualidade clicando em Download. Adicione créditos do <strong>PK XD Central</strong> no seu canal!
           </p>
         </div>
       </div>
 
-      {/* Cute dialog modal for Adding assets */}
+      {/* Dialog modal for Adding assets / videos */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-zinc-900 border border-pink-500/30 rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col relative shadow-2xl animate-scale-up overflow-hidden">
@@ -590,25 +668,25 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
               <X className="w-4 h-4" />
             </button>
 
-            {/* Header - Fixed */}
+            {/* Header */}
             <div className="p-5 pb-3 border-b border-white/5 flex items-center gap-2">
               <div className="p-1.5 bg-pink-500/15 rounded-xl border border-pink-500/20">
-                <ImageIcon className="w-5 h-5 text-pink-400" />
+                <Film className="w-5 h-5 text-pink-400" />
               </div>
               <h3 className="text-sm font-black font-sans text-white uppercase tracking-wider">
-                Nova Arte do Canal 🎨
+                Nova Arte ou Vídeo 🎬
               </h3>
             </div>
 
-            {/* Scrollable inputs wrapper inside the form */}
+            {/* Form */}
             <form onSubmit={handleAddArt} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-5 space-y-4 overflow-y-auto max-h-[55vh] scrollbar-thin text-left">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Título da Arte</label>
+                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Título</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Fundo de Nuvem Lilás"
+                    placeholder="Ex: Animação Fofa do PK XD / Render"
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold"
@@ -619,127 +697,95 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
                   <label className="text-[10px] font-extrabold uppercase text-neutral-400">Descrição</label>
                   <textarea
                     rows={2}
-                    placeholder="Explique do que se trata a imagem e onde os youtubers podem usar..."
+                    placeholder="Explique do que se trata e como os criadores podem utilizar..."
                     value={newDesc}
                     onChange={(e) => setNewDesc(e.target.value)}
                     className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500"
                   />
                 </div>
 
-                {/* Image Input choice */}
+                {/* Media File Upload choice */}
                 <div className="space-y-2 border border-white/5 bg-black/20 p-3 rounded-2xl text-left">
                   <label className="block text-[10px] font-extrabold uppercase text-neutral-400">
-                    Imagem da Arte 🖼️
+                    Enviar Foto ou Vídeo do Aparelho 📱
                   </label>
                   
                   <div className="space-y-3">
-                    {/* Upload from cellphone button */}
                     <div className="flex items-center gap-2">
                       <label className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 cursor-pointer hover:bg-white/5 hover:border-pink-500/50 transition-all ${newImgUrl.startsWith('data:') ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-white/10'}`}>
-                        <span className={`text-[11px] font-black uppercase text-center mt-0.5 ${newImgUrl.startsWith('data:') ? 'text-emerald-400' : 'text-pink-400'}`}>
-                          {newImgUrl.startsWith('data:') ? '✓ Imagem Selecionada!' : '📱 Selecionar do Celular / Upar Foto'}
+                        <UploadCloud className={`w-6 h-6 mb-1 ${newImgUrl.startsWith('data:') ? 'text-emerald-400' : 'text-pink-400'}`} />
+                        <span className={`text-[11px] font-black uppercase text-center ${newImgUrl.startsWith('data:') ? 'text-emerald-400' : 'text-pink-400'}`}>
+                          {newImgUrl.startsWith('data:') ? (isVideo ? '✓ Vídeo Selecionado!' : '✓ Foto Selecionada!') : '📱 Escolher Foto ou Vídeo'}
                         </span>
                         <span className="text-[9px] text-gray-400 text-center mt-0.5">
-                          {newImgUrl.startsWith('data:') ? 'Foto do celular carregada!' : 'Toque para escolher da galeria'}
+                          Aceita .PNG, .JPG, .MP4, .WEBM, .MOV do celular
                         </span>
                         <input 
                           type="file" 
-                          accept="image/*" 
-                          onChange={handleImageUpload} 
+                          accept="image/*,video/*" 
+                          onChange={handleFileUpload} 
                           className="hidden" 
                         />
                       </label>
                     </div>
 
-                    {/* Loading spinner */}
                     {uploadingImage && (
                       <div className="flex items-center justify-center gap-2 py-1">
                         <div className="w-4 h-4 border-2 border-pink-400 border-t-transparent rounded-full animate-spin" />
-                        <span className="text-[10px] font-mono text-pink-400 uppercase tracking-widest animate-pulse">Processando foto...</span>
+                        <span className="text-[10px] font-mono text-pink-400 uppercase tracking-widest animate-pulse">Carregando arquivo...</span>
                       </div>
                     )}
 
                     {/* Preview Thumbnail if selected */}
                     {newImgUrl && (
-                      <div 
-                        className="relative rounded-xl overflow-hidden border border-white/10 h-28 w-full max-w-[200px] mx-auto flex items-center justify-center p-2 shadow-inner"
-                        style={{
-                          backgroundColor: '#27272a',
-                          backgroundImage: `
-                            linear-gradient(45deg, #3f3f46 25%, transparent 25%), 
-                            linear-gradient(-45deg, #3f3f46 25%, transparent 25%), 
-                            linear-gradient(45deg, transparent 75%, #3f3f46 75%), 
-                            linear-gradient(-45deg, transparent 75%, #3f3f46 75%)
-                          `,
-                          backgroundSize: '12px 12px',
-                          backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px'
-                        }}
-                      >
-                        <img 
-                          src={newImgUrl} 
-                          alt="Preview" 
-                          className="max-h-full max-w-full rounded-lg object-contain"
-                        />
+                      <div className="relative rounded-xl overflow-hidden border border-white/10 h-32 w-full max-w-[240px] mx-auto flex items-center justify-center bg-black shadow-inner">
+                        {isVideo || newImgUrl.startsWith('data:video/') ? (
+                          <video src={newImgUrl} controls playsInline className="max-h-full max-w-full rounded-lg object-contain" />
+                        ) : (
+                          <img src={newImgUrl} alt="Preview" className="max-h-full max-w-full rounded-lg object-contain" />
+                        )}
                         <button
                           type="button"
                           onClick={() => {
                             triggerAudio('tap');
                             setNewImgUrl("");
+                            setIsVideo(false);
                             if (newDownloadUrl.startsWith('data:')) {
                               setNewDownloadUrl("");
                             }
                           }}
                           className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all cursor-pointer shadow-md z-10"
-                          title="Remover Imagem"
+                          title="Remover"
                         >
-                          <X className="w-2.5 h-2.5" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     )}
 
-                    {/* Or Manual URL input toggle */}
+                    {/* Manual URL input */}
                     <div className="relative pt-1">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[9px] text-zinc-500 font-bold uppercase">Ou usar link de internet (URL)</span>
-                        {newImgUrl.startsWith('data:') && (
-                          <span className="text-[9px] text-emerald-400 font-bold uppercase">✓ Usando arquivo local</span>
-                        )}
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase">Ou usar link da internet (imagem ou vídeo MP4/YouTube)</span>
                       </div>
                       <input
                         type="text"
-                        placeholder="https://exemplo.com/imagem.png"
-                        value={newImgUrl.startsWith('data:') ? '[Imagem do Aparelho]' : newImgUrl}
+                        placeholder="https://exemplo.com/video.mp4 ou link do YouTube"
+                        value={newImgUrl.startsWith('data:') ? '[Arquivo do Aparelho]' : newImgUrl}
                         disabled={newImgUrl.startsWith('data:')}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val !== '[Imagem do Aparelho]') {
+                          if (val !== '[Arquivo do Aparelho]') {
                             setNewImgUrl(val);
+                            if (val.includes('.mp4') || val.includes('.webm') || val.includes('youtube.com') || val.includes('youtu.be')) {
+                              setIsVideo(true);
+                              setNewCategory("Vídeos");
+                            }
                           }
                         }}
                         className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-semibold disabled:opacity-45"
                       />
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-1 text-left">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-extrabold uppercase text-neutral-400">Link de Download Oficial (Opcional)</label>
-                    <span className="text-[8px] text-zinc-500 font-bold uppercase">Deixe em branco para usar a mesma imagem</span>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="https://exemplo.com/imagem-hd.png"
-                    value={newDownloadUrl.startsWith('data:') ? '[Imagem do Aparelho]' : newDownloadUrl}
-                    disabled={newDownloadUrl.startsWith('data:')}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val !== '[Imagem do Aparelho]') {
-                        setNewDownloadUrl(val);
-                      }
-                    }}
-                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 disabled:opacity-45"
-                  />
                 </div>
 
                 <div className="space-y-1">
@@ -754,14 +800,18 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
                       } else {
                         setIsCustomCat(false);
                       }
+                      if (val === "Vídeos") {
+                        setIsVideo(true);
+                      }
                     }}
                     className="w-full px-3 py-1.5 bg-neutral-800 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold cursor-pointer"
                   >
-                    <option value="Renders">Renders (Personagens)</option>
-                    <option value="Logos">Logos</option>
-                    <option value="Fundos">Fundos</option>
-                    <option value="Overlays">Overlays / Borda de Cam</option>
-                    <option value="Outros">Outros</option>
+                    <option value="Vídeos">🎬 Vídeos</option>
+                    <option value="Renders">🎨 Renders (Personagens)</option>
+                    <option value="Logos">🏷️ Logos</option>
+                    <option value="Fundos">🌌 Fundos</option>
+                    <option value="Overlays">📸 Overlays / Molduras</option>
+                    <option value="Outros">📁 Outros</option>
                     <option value="CUSTOM">➕ Criar Nova Categoria...</option>
                   </select>
                 </div>
@@ -772,18 +822,13 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
                     <input
                       type="text"
                       required
-                      placeholder="Ex: Miniaturas, Divisórias..."
+                      placeholder="Ex: Editais, Curtas..."
                       value={customCategory}
                       onChange={(e) => setCustomCategory(e.target.value)}
                       className="w-full px-3 py-2 bg-black/40 border border-pink-500/30 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold"
                     />
                   </div>
                 )}
-
-                <div className="text-[10px] text-zinc-400 bg-black/30 p-2.5 rounded-xl border border-white/5 leading-relaxed space-y-1">
-                  <p className="font-extrabold text-pink-400 uppercase tracking-wider">💡 Dica de Upload de Galeria:</p>
-                  <p>Você pode enviar qualquer imagem de sua galeria/computador para sites gratuitos como <a href="https://postimages.org/" target="_blank" rel="noreferrer" className="text-pink-400 underline">Postimages</a>, <a href="https://imgur.com/" target="_blank" rel="noreferrer" className="text-pink-400 underline">Imgur</a> ou pelo Discord, e colar o <strong>link direto da imagem</strong> nos campos acima!</p>
-                </div>
               </div>
 
               {/* Fixed Footer */}
@@ -799,7 +844,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
                   type="submit"
                   className="flex-1 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all shadow-md active:scale-95 cursor-pointer"
                 >
-                  Salvar Arte
+                  Salvar Mídia
                 </button>
               </div>
             </form>

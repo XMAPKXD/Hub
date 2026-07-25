@@ -2637,7 +2637,7 @@ export default function App() {
       </nav>
 
       {/* Hero Header Area */}
-      {!isApplicationsRoute && !isAdminRoute && (
+      {!isApplicationsRoute && !isAdminRoute && activeTab !== 'artes' && (
         <header id="masthead-hero" className="relative overflow-hidden py-12 md:py-16 px-4 bg-gradient-to-b from-purple-800/45 via-slate-950/80 to-slate-950 select-none">
           
           {/* Neon Glow spots */}
@@ -2686,7 +2686,7 @@ export default function App() {
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8 pt-4">
         
         {/* Apple Style Premium Profile Header */}
-        {!isAdminRoute && (
+        {!isAdminRoute && activeTab !== 'artes' && (
           <AppleProfileHeader
             user={user}
             fanLevel={fanLevel}
