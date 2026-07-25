@@ -20,8 +20,8 @@ self.addEventListener('push', function(event) {
   const title = data.title || 'Novidade no PKXD Hub! 🔔';
   const options = {
     body: data.body || 'Abra o aplicativo para conferir as novidades.',
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
+    icon: '/favicon.png',
+    badge: '/favicon.png',
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/'
