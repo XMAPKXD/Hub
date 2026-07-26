@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy, updateDoc } from 'firebase/firestore';
 import { ArtAsset } from '../types';
 import { 
   Download, 
@@ -16,7 +16,9 @@ import {
   Sparkles, 
   ExternalLink,
   UploadCloud,
-  X
+  X,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 interface ArtesSectionProps {
@@ -213,6 +215,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
           downloadUrl: data.downloadUrl || '',
           category: data.category || 'Outros',
           isVideo: data.isVideo || false,
+          order: typeof data.order === 'number' ? data.order : undefined,
           createdAt: data.createdAt || Date.now()
         });
       });
@@ -267,6 +270,11 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
       newImgUrl.includes('youtube.com') || 
       newImgUrl.includes('youtu.be');
 
+    const minOrder = artes.reduce((min, item) => {
+      const o = item.order !== undefined ? item.order : 0;
+      return Math.min(min, o);
+    }, 0);
+
     try {
       triggerAudio('tap');
       await addDoc(collection(db, 'art_assets'), {
@@ -276,6 +284,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
         downloadUrl: newDownloadUrl.trim() || newImgUrl.trim(),
         category: finalCat,
         isVideo: isVidFinal,
+        order: minOrder - 1,
         createdAt: Date.now(),
         admin_secret: "pkxd2026_super_secret_admin_key"
       });
@@ -382,6 +391,44 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
     }, 2000);
   };
 
+  // Reorder art assets (move up/down)
+  const handleMoveArt = async (artId: string, direction: 'up' | 'down') => {
+    if (!isAdmin) return;
+    const index = filteredArtes.findIndex(a => a.id === artId);
+    if (index === -1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= filteredArtes.length) return;
+
+    try {
+      triggerAudio('tap');
+      const currentArt = filteredArtes[index];
+      const targetArt = filteredArtes[targetIndex];
+
+      const currentOrder = currentArt.order !== undefined ? currentArt.order : index;
+      const targetOrder = targetArt.order !== undefined ? targetArt.order : targetIndex;
+
+      let newOrderForCurrent = targetOrder;
+      let newOrderForTarget = currentOrder;
+
+      if (newOrderForCurrent === newOrderForTarget) {
+        newOrderForCurrent = targetIndex;
+        newOrderForTarget = index;
+      }
+
+      await Promise.all([
+        updateDoc(doc(db, 'art_assets', currentArt.id), { order: newOrderForCurrent }),
+        updateDoc(doc(db, 'art_assets', targetArt.id), { order: newOrderForTarget })
+      ]);
+
+      showToast("↕️ Ordem da mídia atualizada!", "success");
+      triggerAudio('success');
+    } catch (err) {
+      console.error("Erro ao reordenar mídia:", err);
+      showToast("❌ Erro ao salvar nova ordem", "info");
+    }
+  };
+
   // Categories list
   const categories = React.useMemo(() => {
     const base = ["Todas", "Vídeos", "Renders", "Logos", "Fundos", "Overlays", "Outros"];
@@ -390,10 +437,23 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
     return [...base, ...extra];
   }, [artes]);
 
+  // Sorted list based on order index, fallback to createdAt descending
+  const sortedArtes = React.useMemo(() => {
+    return [...artes].sort((a, b) => {
+      const orderA = a.order !== undefined ? a.order : Infinity;
+      const orderB = b.order !== undefined ? b.order : Infinity;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return b.createdAt - a.createdAt;
+    });
+  }, [artes]);
+
   // Filtered list
-  const filteredArtes = categoryFilter === "Todas" 
-    ? artes 
-    : artes.filter(a => a.category.toLowerCase() === categoryFilter.toLowerCase());
+  const filteredArtes = React.useMemo(() => {
+    if (categoryFilter === "Todas") return sortedArtes;
+    return sortedArtes.filter(a => a.category.toLowerCase() === categoryFilter.toLowerCase());
+  }, [sortedArtes, categoryFilter]);
 
   return (
     <div className="w-full bg-zinc-950/80 backdrop-blur-md rounded-3xl p-5 sm:p-7 border border-pink-500/20 shadow-2xl relative overflow-hidden" id="artes-section-main">
@@ -508,7 +568,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
       ) : (
         /* Bento Grid of assets & videos */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredArtes.map((art) => {
+          {filteredArtes.map((art, idx) => {
             const isArtVid = art.isVideo || 
               art.category === "Vídeos" || 
               (art.imageUrl && (
@@ -531,15 +591,34 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
                   <span>{art.category}</span>
                 </span>
 
-                {/* Delete button (Admin exclusive) */}
+                {/* Admin controls: Reorder & Delete */}
                 {isAdmin && (
-                  <button
-                    onClick={() => handleDeleteArt(art.id, art.title)}
-                    className="absolute top-2.5 right-2.5 z-10 p-1.5 bg-neutral-950/80 hover:bg-red-950/90 text-neutral-400 hover:text-red-400 border border-white/10 rounded-lg transition-all cursor-pointer shadow-sm"
-                    title="Excluir Mídia"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 bg-neutral-950/85 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md">
+                    <button
+                      onClick={() => handleMoveArt(art.id, 'up')}
+                      disabled={idx === 0}
+                      className="p-1 text-neutral-300 hover:text-pink-300 disabled:opacity-25 disabled:hover:text-neutral-300 transition-all cursor-pointer disabled:cursor-not-allowed"
+                      title="Mover para cima / antes"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleMoveArt(art.id, 'down')}
+                      disabled={idx === filteredArtes.length - 1}
+                      className="p-1 text-neutral-300 hover:text-pink-300 disabled:opacity-25 disabled:hover:text-neutral-300 transition-all cursor-pointer disabled:cursor-not-allowed"
+                      title="Mover para baixo / depois"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="w-[1px] h-3 bg-white/20 mx-0.5" />
+                    <button
+                      onClick={() => handleDeleteArt(art.id, art.title)}
+                      className="p-1 text-neutral-300 hover:text-red-400 transition-all cursor-pointer"
+                      title="Excluir Mídia"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
 
                 {/* Media Container: Image or Video */}

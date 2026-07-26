@@ -127,6 +127,7 @@ export interface ArtAsset {
   category: string; // e.g. Renders, Vídeos, Logos, Fundos, Outros
   createdAt: number;
   isVideo?: boolean;
+  order?: number;
 }
 
 export interface PollOption {
