@@ -18,13 +18,27 @@ import {
   UploadCloud,
   X,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Layers,
+  FolderPlus
 } from 'lucide-react';
 
 interface ArtesSectionProps {
   isAdmin: boolean;
   triggerAudio: (sound: string) => void;
   soundEnabled: boolean;
+}
+
+interface BatchUploadItem {
+  id: string;
+  title: string;
+  desc: string;
+  imageUrl: string;
+  category: string;
+  customCategory?: string;
+  isCustomCat?: boolean;
+  isVideo: boolean;
+  fileName: string;
 }
 
 const DEFAULT_ARTES: Omit<ArtAsset, 'id'>[] = [
@@ -82,6 +96,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
 
   // Admin / User upload states
   const [showAddModal, setShowAddModal] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'single' | 'batch'>('single');
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newImgUrl, setNewImgUrl] = useState("");
@@ -91,6 +106,12 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
   const [customCategory, setCustomCategory] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
+
+  // Batch Upload States
+  const [batchItems, setBatchItems] = useState<BatchUploadItem[]>([]);
+  const [globalBatchCategory, setGlobalBatchCategory] = useState<string>("Renders");
+  const [isUploadingBatch, setIsUploadingBatch] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
   // Show a temporal alert toast inside this section
   const showToast = (msg: string, type: 'success' | 'info' = 'success') => {
@@ -326,6 +347,195 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
     }
   };
 
+  // Delete an entire section / category
+  const handleDeleteSection = async (categoryToDelete: string) => {
+    if (!isAdmin || !categoryToDelete || categoryToDelete === "Todas") return;
+
+    const affectedItems = artes.filter(a => a.category?.toLowerCase() === categoryToDelete.toLowerCase());
+    const count = affectedItems.length;
+
+    if (!window.confirm(`Tem certeza que deseja excluir a seção "${categoryToDelete}"?\n\nExistem ${count} mídia(s) nesta seção. Todas as mídias desta seção serão movidas para "Outros".`)) {
+      return;
+    }
+
+    try {
+      triggerAudio('tap');
+      if (count > 0) {
+        await Promise.all(
+          affectedItems.map(item => 
+            updateDoc(doc(db, 'art_assets', item.id), { category: "Outros" })
+          )
+        );
+      }
+      setCategoryFilter("Todas");
+      showToast(`🗑️ Seção "${categoryToDelete}" excluída com sucesso! ${count > 0 ? `(${count} mídia(s) movida(s) para Outros)` : ''}`, "success");
+      triggerAudio('success');
+    } catch (err) {
+      console.error("Erro ao excluir seção:", err);
+      showToast("❌ Erro ao excluir a seção", "info");
+    }
+  };
+
+  // Process batch files select
+  const handleBatchFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    triggerAudio('tap');
+
+    const fileArray = Array.from(files) as File[];
+    const newBatchList: BatchUploadItem[] = [];
+    let processedCount = 0;
+
+    fileArray.forEach((file) => {
+      const isVid = file.type.startsWith('video/');
+      const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+      const defaultCat = isVid ? "Vídeos" : (globalBatchCategory !== "CUSTOM" ? globalBatchCategory : "Renders");
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+
+        if (isVid) {
+          newBatchList.push({
+            id: Math.random().toString(36).substring(2) + Date.now(),
+            title: cleanName,
+            desc: "Use livremente nos seus vídeos do YouTube e redes sociais! 🎬✨",
+            imageUrl: result,
+            category: defaultCat,
+            isVideo: true,
+            fileName: file.name
+          });
+          processedCount++;
+          if (processedCount === fileArray.length) {
+            setBatchItems(prev => [...prev, ...newBatchList]);
+            setUploadingImage(false);
+            showToast(`📦 ${fileArray.length} arquivo(s) adicionado(s) ao lote!`, 'success');
+            triggerAudio('success');
+          }
+        } else {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 900;
+
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.clearRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressedBase64 = canvas.toDataURL('image/png');
+              newBatchList.push({
+                id: Math.random().toString(36).substring(2) + Date.now(),
+                title: cleanName,
+                desc: "Use livremente nos seus vídeos do YouTube e redes sociais! 🎬✨",
+                imageUrl: compressedBase64,
+                category: defaultCat,
+                isVideo: false,
+                fileName: file.name
+              });
+            }
+            processedCount++;
+            if (processedCount === fileArray.length) {
+              setBatchItems(prev => [...prev, ...newBatchList]);
+              setUploadingImage(false);
+              showToast(`📦 ${fileArray.length} foto(s) adicionada(s) ao lote!`, 'success');
+              triggerAudio('success');
+            }
+          };
+          img.onerror = () => {
+            processedCount++;
+            if (processedCount === fileArray.length) {
+              setBatchItems(prev => [...prev, ...newBatchList]);
+              setUploadingImage(false);
+            }
+          };
+          img.src = result;
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Apply category to all batch items
+  const handleApplyGlobalCategory = (cat: string) => {
+    if (!cat || cat === "CUSTOM") return;
+    setBatchItems(prev => prev.map(item => ({
+      ...item,
+      category: cat,
+      isCustomCat: false
+    })));
+    showToast(`🏷️ Categoria "${cat}" aplicada a todas as mídias do lote!`, 'success');
+  };
+
+  // Submit batch upload
+  const handleBatchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (batchItems.length === 0) {
+      showToast("⚠️ Adicione pelo menos uma mídia ao lote!", "info");
+      return;
+    }
+
+    setIsUploadingBatch(true);
+    setBatchProgress({ current: 0, total: batchItems.length });
+    triggerAudio('tap');
+
+    let currentMinOrder = artes.reduce((min, item) => {
+      const o = item.order !== undefined ? item.order : 0;
+      return Math.min(min, o);
+    }, 0);
+
+    try {
+      for (let i = 0; i < batchItems.length; i++) {
+        const item = batchItems[i];
+        const finalCat = item.isCustomCat ? (item.customCategory?.trim() || "Outros") : item.category;
+        
+        currentMinOrder -= 1;
+
+        await addDoc(collection(db, 'art_assets'), {
+          title: item.title.trim() || `Mídia ${i + 1}`,
+          description: item.desc.trim() || "Use livremente nos seus vídeos e artes!",
+          imageUrl: item.imageUrl,
+          downloadUrl: item.imageUrl,
+          category: finalCat,
+          isVideo: item.isVideo,
+          order: currentMinOrder,
+          createdAt: Date.now() + i,
+          admin_secret: "pkxd2026_super_secret_admin_key"
+        });
+
+        setBatchProgress({ current: i + 1, total: batchItems.length });
+      }
+
+      showToast(`🎉 ${batchItems.length} mídia(s) publicada(s) em lote com sucesso! 🚀`, 'success');
+      triggerAudio('success');
+
+      setBatchItems([]);
+      setShowAddModal(false);
+      setUploadMode('single');
+    } catch (err) {
+      console.error("Erro no envio em lote:", err);
+      showToast("❌ Ocorreu um erro ao enviar lote de mídias.", "info");
+    } finally {
+      setIsUploadingBatch(false);
+    }
+  };
+
   // Safe high-performance download handler
   const handleDownload = (url: string, title: string, isVid?: boolean) => {
     triggerAudio('tap');
@@ -429,9 +639,17 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
     }
   };
 
-  // Categories list
+  // Categories list for filter tabs
   const categories = React.useMemo(() => {
     const base = ["Todas", "Vídeos", "Renders", "Logos", "Fundos", "Overlays", "Outros"];
+    const uniqueFromDb = Array.from(new Set(artes.map(a => a.category).filter(Boolean))) as string[];
+    const extra = uniqueFromDb.filter(c => !base.includes(c) && c !== "Todas" && c !== "CUSTOM");
+    return [...base, ...extra];
+  }, [artes]);
+
+  // Categories list for options dropdowns
+  const availableCategories = React.useMemo(() => {
+    const base = ["Renders", "Vídeos", "Logos", "Fundos", "Overlays", "Outros"];
     const uniqueFromDb = Array.from(new Set(artes.map(a => a.category).filter(Boolean))) as string[];
     const extra = uniqueFromDb.filter(c => !base.includes(c) && c !== "Todas" && c !== "CUSTOM");
     return [...base, ...extra];
@@ -517,24 +735,38 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
       </div>
 
       {/* Category Tabs / Filters */}
-      <div className="flex flex-wrap gap-1.5 mb-6 justify-center sm:justify-start bg-neutral-900/40 p-1.5 rounded-2xl border border-white/5 max-w-fit">
-        {categories.map((cat) => (
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap gap-1.5 justify-center sm:justify-start bg-neutral-900/40 p-1.5 rounded-2xl border border-white/5">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => {
+                triggerAudio('tap');
+                setCategoryFilter(cat);
+              }}
+              className={`px-3 py-1.5 rounded-xl font-sans text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                categoryFilter === cat
+                  ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40 shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5 border border-transparent'
+              }`}
+            >
+              {cat === "Vídeos" && <VideoIcon className="w-3 h-3 text-cyan-400" />}
+              <span>{cat}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Delete category section button for Admin */}
+        {isAdmin && categoryFilter !== "Todas" && (
           <button
-            key={cat}
-            onClick={() => {
-              triggerAudio('tap');
-              setCategoryFilter(cat);
-            }}
-            className={`px-3 py-1.5 rounded-xl font-sans text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              categoryFilter === cat
-                ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40 shadow-sm'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5 border border-transparent'
-            }`}
+            onClick={() => handleDeleteSection(categoryFilter)}
+            className="px-3.5 py-1.5 bg-red-950/70 hover:bg-red-900 text-red-300 hover:text-white border border-red-500/30 rounded-xl text-xs font-black uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95"
+            title={`Excluir a seção "${categoryFilter}" e mover suas mídias para Outros`}
           >
-            {cat === "Vídeos" && <VideoIcon className="w-3 h-3 text-cyan-400" />}
-            <span>{cat}</span>
+            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+            <span>Excluir Seção "{categoryFilter}" 🗑️</span>
           </button>
-        ))}
+        )}
       </div>
 
       {/* Content Area */}
@@ -733,8 +965,8 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
 
       {/* Dialog modal for Adding assets / videos */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-zinc-900 border border-pink-500/30 rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col relative shadow-2xl animate-scale-up overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 animate-fade-in">
+          <div className="bg-zinc-900 border border-pink-500/30 rounded-3xl w-full max-w-xl max-h-[92vh] flex flex-col relative shadow-2xl animate-scale-up overflow-hidden">
             
             {/* Close button */}
             <button
@@ -753,180 +985,408 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
                 <Film className="w-5 h-5 text-pink-400" />
               </div>
               <h3 className="text-sm font-black font-sans text-white uppercase tracking-wider">
-                Nova Arte ou Vídeo 🎬
+                Adicionar Mídias 🎬
               </h3>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleAddArt} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-5 space-y-4 overflow-y-auto max-h-[55vh] scrollbar-thin text-left">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Título</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Animação Fofa do PK XD / Render"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold"
-                  />
-                </div>
+            {/* Mode selector tab */}
+            <div className="px-5 pt-3">
+              <div className="flex bg-black/50 p-1 rounded-2xl border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerAudio('tap');
+                    setUploadMode('single');
+                  }}
+                  className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    uploadMode === 'single'
+                      ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30 shadow-md'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>1 Mídia Única</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerAudio('tap');
+                    setUploadMode('batch');
+                  }}
+                  className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    uploadMode === 'batch'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-md'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Envio em Lote 📚 ({batchItems.length})</span>
+                </button>
+              </div>
+            </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Descrição</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Explique do que se trata e como os criadores podem utilizar..."
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500"
-                  />
-                </div>
-
-                {/* Media File Upload choice */}
-                <div className="space-y-2 border border-white/5 bg-black/20 p-3 rounded-2xl text-left">
-                  <label className="block text-[10px] font-extrabold uppercase text-neutral-400">
-                    Enviar Foto ou Vídeo do Aparelho 📱
-                  </label>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <label className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 cursor-pointer hover:bg-white/5 hover:border-pink-500/50 transition-all ${newImgUrl.startsWith('data:') ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-white/10'}`}>
-                        <UploadCloud className={`w-6 h-6 mb-1 ${newImgUrl.startsWith('data:') ? 'text-emerald-400' : 'text-pink-400'}`} />
-                        <span className={`text-[11px] font-black uppercase text-center ${newImgUrl.startsWith('data:') ? 'text-emerald-400' : 'text-pink-400'}`}>
-                          {newImgUrl.startsWith('data:') ? (isVideo ? '✓ Vídeo Selecionado!' : '✓ Foto Selecionada!') : '📱 Escolher Foto ou Vídeo'}
-                        </span>
-                        <span className="text-[9px] text-gray-400 text-center mt-0.5">
-                          Aceita .PNG, .JPG, .MP4, .WEBM, .MOV do celular
-                        </span>
-                        <input 
-                          type="file" 
-                          accept="image/*,video/*" 
-                          onChange={handleFileUpload} 
-                          className="hidden" 
-                        />
-                      </label>
-                    </div>
-
-                    {uploadingImage && (
-                      <div className="flex items-center justify-center gap-2 py-1">
-                        <div className="w-4 h-4 border-2 border-pink-400 border-t-transparent rounded-full animate-spin" />
-                        <span className="text-[10px] font-mono text-pink-400 uppercase tracking-widest animate-pulse">Carregando arquivo...</span>
-                      </div>
-                    )}
-
-                    {/* Preview Thumbnail if selected */}
-                    {newImgUrl && (
-                      <div className="relative rounded-xl overflow-hidden border border-white/10 h-32 w-full max-w-[240px] mx-auto flex items-center justify-center bg-black shadow-inner">
-                        {isVideo || newImgUrl.startsWith('data:video/') ? (
-                          <video src={newImgUrl} controls playsInline className="max-h-full max-w-full rounded-lg object-contain" />
-                        ) : (
-                          <img src={newImgUrl} alt="Preview" className="max-h-full max-w-full rounded-lg object-contain" />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerAudio('tap');
-                            setNewImgUrl("");
-                            setIsVideo(false);
-                            if (newDownloadUrl.startsWith('data:')) {
-                              setNewDownloadUrl("");
-                            }
-                          }}
-                          className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all cursor-pointer shadow-md z-10"
-                          title="Remover"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Manual URL input */}
-                    <div className="relative pt-1">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[9px] text-zinc-500 font-bold uppercase">Ou usar link da internet (imagem ou vídeo MP4/YouTube)</span>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="https://exemplo.com/video.mp4 ou link do YouTube"
-                        value={newImgUrl.startsWith('data:') ? '[Arquivo do Aparelho]' : newImgUrl}
-                        disabled={newImgUrl.startsWith('data:')}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val !== '[Arquivo do Aparelho]') {
-                            setNewImgUrl(val);
-                            if (val.includes('.mp4') || val.includes('.webm') || val.includes('youtube.com') || val.includes('youtu.be')) {
-                              setIsVideo(true);
-                              setNewCategory("Vídeos");
-                            }
-                          }
-                        }}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-semibold disabled:opacity-45"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Categoria</label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewCategory(val);
-                      if (val === "CUSTOM") {
-                        setIsCustomCat(true);
-                      } else {
-                        setIsCustomCat(false);
-                      }
-                      if (val === "Vídeos") {
-                        setIsVideo(true);
-                      }
-                    }}
-                    className="w-full px-3 py-1.5 bg-neutral-800 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold cursor-pointer"
-                  >
-                    <option value="Vídeos">🎬 Vídeos</option>
-                    <option value="Renders">🎨 Renders (Personagens)</option>
-                    <option value="Logos">🏷️ Logos</option>
-                    <option value="Fundos">🌌 Fundos</option>
-                    <option value="Overlays">📸 Overlays / Molduras</option>
-                    <option value="Outros">📁 Outros</option>
-                    <option value="CUSTOM">➕ Criar Nova Categoria...</option>
-                  </select>
-                </div>
-
-                {isCustomCat && (
-                  <div className="space-y-1 animate-scale-up">
-                    <label className="text-[10px] font-extrabold uppercase text-pink-400">Nome da Nova Categoria</label>
+            {uploadMode === 'single' ? (
+              /* Single item form */
+              <form onSubmit={handleAddArt} className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-5 space-y-4 overflow-y-auto max-h-[58vh] scrollbar-thin text-left">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-neutral-400">Título</label>
                     <input
                       type="text"
                       required
-                      placeholder="Ex: Editais, Curtas..."
-                      value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                      className="w-full px-3 py-2 bg-black/40 border border-pink-500/30 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold"
+                      placeholder="Ex: Animação Fofa do PK XD / Render"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold"
                     />
                   </div>
-                )}
-              </div>
 
-              {/* Fixed Footer */}
-              <div className="p-5 border-t border-white/5 bg-zinc-950/60 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all shadow-md active:scale-95 cursor-pointer"
-                >
-                  Salvar Mídia
-                </button>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-neutral-400">Descrição</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Explique do que se trata e como os criadores podem utilizar..."
+                      value={newDesc}
+                      onChange={(e) => setNewDesc(e.target.value)}
+                      className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500"
+                    />
+                  </div>
+
+                  {/* Media File Upload choice */}
+                  <div className="space-y-2 border border-white/5 bg-black/20 p-3 rounded-2xl text-left">
+                    <label className="block text-[10px] font-extrabold uppercase text-neutral-400">
+                      Enviar Foto ou Vídeo do Aparelho 📱
+                    </label>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <label className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 cursor-pointer hover:bg-white/5 hover:border-pink-500/50 transition-all ${newImgUrl.startsWith('data:') ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-white/10'}`}>
+                          <UploadCloud className={`w-6 h-6 mb-1 ${newImgUrl.startsWith('data:') ? 'text-emerald-400' : 'text-pink-400'}`} />
+                          <span className={`text-[11px] font-black uppercase text-center ${newImgUrl.startsWith('data:') ? 'text-emerald-400' : 'text-pink-400'}`}>
+                            {newImgUrl.startsWith('data:') ? (isVideo ? '✓ Vídeo Selecionado!' : '✓ Foto Selecionada!') : '📱 Escolher Foto ou Vídeo'}
+                          </span>
+                          <span className="text-[9px] text-gray-400 text-center mt-0.5">
+                            Aceita .PNG, .JPG, .MP4, .WEBM, .MOV do celular
+                          </span>
+                          <input 
+                            type="file" 
+                            accept="image/*,video/*" 
+                            onChange={handleFileUpload} 
+                            className="hidden" 
+                          />
+                        </label>
+                      </div>
+
+                      {uploadingImage && (
+                        <div className="flex items-center justify-center gap-2 py-1">
+                          <div className="w-4 h-4 border-2 border-pink-400 border-t-transparent rounded-full animate-spin" />
+                          <span className="text-[10px] font-mono text-pink-400 uppercase tracking-widest animate-pulse">Carregando arquivo...</span>
+                        </div>
+                      )}
+
+                      {/* Preview Thumbnail if selected */}
+                      {newImgUrl && (
+                        <div className="relative rounded-xl overflow-hidden border border-white/10 h-32 w-full max-w-[240px] mx-auto flex items-center justify-center bg-black shadow-inner">
+                          {isVideo || newImgUrl.startsWith('data:video/') ? (
+                            <video src={newImgUrl} controls playsInline className="max-h-full max-w-full rounded-lg object-contain" />
+                          ) : (
+                            <img src={newImgUrl} alt="Preview" className="max-h-full max-w-full rounded-lg object-contain" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerAudio('tap');
+                              setNewImgUrl("");
+                              setIsVideo(false);
+                              if (newDownloadUrl.startsWith('data:')) {
+                                setNewDownloadUrl("");
+                              }
+                            }}
+                            className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all cursor-pointer shadow-md z-10"
+                            title="Remover"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Manual URL input */}
+                      <div className="relative pt-1">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-[9px] text-zinc-500 font-bold uppercase">Ou usar link da internet (imagem ou vídeo MP4/YouTube)</span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="https://exemplo.com/video.mp4 ou link do YouTube"
+                          value={newImgUrl.startsWith('data:') ? '[Arquivo do Aparelho]' : newImgUrl}
+                          disabled={newImgUrl.startsWith('data:')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val !== '[Arquivo do Aparelho]') {
+                              setNewImgUrl(val);
+                              if (val.includes('.mp4') || val.includes('.webm') || val.includes('youtube.com') || val.includes('youtu.be')) {
+                                setIsVideo(true);
+                                setNewCategory("Vídeos");
+                              }
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-semibold disabled:opacity-45"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-neutral-400">Seção / Categoria</label>
+                    <select
+                      value={isCustomCat ? "CUSTOM" : newCategory}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "CUSTOM") {
+                          setIsCustomCat(true);
+                        } else {
+                          setIsCustomCat(false);
+                          setNewCategory(val);
+                          if (val === "Vídeos") {
+                            setIsVideo(true);
+                          }
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-neutral-800 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold cursor-pointer"
+                    >
+                      {availableCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat === "Vídeos" ? "🎬 " : cat === "Renders" ? "🎨 " : cat === "Logos" ? "🏷️ " : cat === "Fundos" ? "🌌 " : cat === "Overlays" ? "📸 " : "📁 "}
+                          {cat}
+                        </option>
+                      ))}
+                      <option value="CUSTOM">➕ Criar Nova Categoria...</option>
+                    </select>
+                  </div>
+
+                  {isCustomCat && (
+                    <div className="space-y-1 animate-scale-up">
+                      <label className="text-[10px] font-extrabold uppercase text-pink-400">Nome da Nova Categoria</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Editais, Curtas..."
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        className="w-full px-3 py-2 bg-black/40 border border-pink-500/30 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 font-bold"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Fixed Footer */}
+                <div className="p-5 border-t border-white/5 bg-zinc-950/60 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 py-2 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    Salvar Mídia
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Batch upload mode */
+              <div className="flex flex-col flex-1 overflow-hidden p-5 space-y-4">
+                {/* File picker for multiple files */}
+                <div className="space-y-2">
+                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-purple-500/40 bg-purple-500/5 hover:bg-purple-500/10 rounded-2xl p-4 cursor-pointer transition-all">
+                    <UploadCloud className="w-8 h-8 text-purple-400 mb-1" />
+                    <span className="text-xs font-black uppercase text-purple-300 text-center">
+                      📱 Selecionar Múltiplas Fotos e Vídeos do Celular
+                    </span>
+                    <span className="text-[10px] text-neutral-400 text-center mt-0.5">
+                      Segure para escolher vários arquivos (.png, .jpg, .mp4) de uma só vez!
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*"
+                      onChange={handleBatchFilesSelect}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {uploadingImage && (
+                    <div className="flex items-center justify-center gap-2 py-2">
+                      <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[10px] font-mono text-purple-300 uppercase tracking-widest animate-pulse">
+                        Processando fotos/vídeos selecionados...
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Master applicator toolbar */}
+                {batchItems.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 bg-neutral-950/80 rounded-2xl border border-white/10 text-left">
+                    <span className="text-[10px] font-extrabold uppercase text-neutral-400 flex items-center gap-1">
+                      <Tag className="w-3 h-3 text-pink-400" /> Categoria padrão para este lote:
+                    </span>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <select
+                        value={globalBatchCategory}
+                        onChange={(e) => {
+                          const cat = e.target.value;
+                          setGlobalBatchCategory(cat);
+                          if (cat !== "CUSTOM") {
+                            handleApplyGlobalCategory(cat);
+                          }
+                        }}
+                        className="w-full sm:w-auto px-3 py-1 bg-neutral-800 border border-white/10 rounded-xl text-xs text-white font-bold cursor-pointer"
+                      >
+                        {availableCategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Batch list of selected files */}
+                <div className="flex-1 overflow-y-auto max-h-[45vh] space-y-3 pr-1 scrollbar-thin text-left">
+                  {batchItems.length === 0 ? (
+                    <div className="py-12 text-center border border-dashed border-white/10 rounded-2xl bg-black/20 space-y-2">
+                      <Layers className="w-8 h-8 text-neutral-600 mx-auto" />
+                      <p className="text-xs font-bold text-neutral-400">
+                        Nenhum arquivo adicionado ao lote ainda.
+                      </p>
+                      <p className="text-[10px] text-neutral-500">
+                        Clique na caixa pontilhada acima para selecionar várias fotos de uma vez!
+                      </p>
+                    </div>
+                  ) : (
+                    batchItems.map((item, index) => (
+                      <div key={item.id} className="p-3 bg-black/50 border border-white/10 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-3 relative group">
+                        {/* Thumbnail */}
+                        <div className="w-full sm:w-24 h-20 bg-black rounded-xl border border-white/10 overflow-hidden flex-shrink-0 flex items-center justify-center relative">
+                          {item.isVideo ? (
+                            <video src={item.imageUrl} className="max-h-full max-w-full object-contain" />
+                          ) : (
+                            <img src={item.imageUrl} alt={item.title} className="max-h-full max-w-full object-contain" />
+                          )}
+                          <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 text-[8px] font-black uppercase text-purple-300 rounded">
+                            {item.isVideo ? 'Vídeo' : 'Foto'}
+                          </span>
+                        </div>
+
+                        {/* Title and Category Controls */}
+                        <div className="flex-1 space-y-2 w-full">
+                          <div className="flex items-center justify-between gap-2">
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBatchItems(prev => prev.map((b, i) => i === index ? { ...b, title: val } : b));
+                              }}
+                              placeholder="Título da mídia"
+                              className="w-full px-2.5 py-1.5 bg-neutral-900 border border-white/10 rounded-xl text-xs text-white font-bold focus:ring-1 focus:ring-pink-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerAudio('tap');
+                                setBatchItems(prev => prev.filter((_, i) => i !== index));
+                              }}
+                              className="p-1.5 text-neutral-400 hover:text-red-400 bg-neutral-800 hover:bg-neutral-750 rounded-xl cursor-pointer transition-all"
+                              title="Remover do lote"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="flex-1">
+                              <select
+                                value={item.isCustomCat ? "CUSTOM" : item.category}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setBatchItems(prev => prev.map((b, i) => {
+                                    if (i === index) {
+                                      if (val === "CUSTOM") {
+                                        return { ...b, isCustomCat: true };
+                                      } else {
+                                        return { ...b, category: val, isCustomCat: false };
+                                      }
+                                    }
+                                    return b;
+                                  }));
+                                }}
+                                className="w-full px-2 py-1.5 bg-neutral-800 border border-white/10 rounded-xl text-[11px] text-white font-bold cursor-pointer"
+                              >
+                                {availableCategories.map(cat => (
+                                  <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                                <option value="CUSTOM">➕ Nova Categoria...</option>
+                              </select>
+
+                              {item.isCustomCat && (
+                                <input
+                                  type="text"
+                                  placeholder="Nome da categoria"
+                                  value={item.customCategory || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBatchItems(prev => prev.map((b, i) => i === index ? { ...b, customCategory: val } : b));
+                                  }}
+                                  className="w-full mt-1.5 px-2 py-1 bg-black/60 border border-pink-500/30 rounded-lg text-[11px] text-white font-bold"
+                                />
+                              )}
+                            </div>
+
+                            <input
+                              type="text"
+                              value={item.desc}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBatchItems(prev => prev.map((b, i) => i === index ? { ...b, desc: val } : b));
+                              }}
+                              placeholder="Descrição rápida (opcional)"
+                              className="flex-1 px-2.5 py-1.5 bg-neutral-900 border border-white/10 rounded-xl text-[11px] text-neutral-300"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Batch Submit Footer */}
+                <div className="pt-3 border-t border-white/5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="py-2.5 px-4 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBatchSubmit}
+                    disabled={isUploadingBatch || batchItems.length === 0}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl hover:brightness-110 transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUploadingBatch ? (
+                      `Publicando (${batchProgress.current}/${batchProgress.total})...`
+                    ) : (
+                      `🚀 Publicar ${batchItems.length} Mídia(s) no Canal`
+                    )}
+                  </button>
+                </div>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
