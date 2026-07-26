@@ -2175,6 +2175,7 @@ export default function AdminPanel({
                           <div>kawanyuri35@gmail.com</div>
                           <div>eukoosh@gmail.com</div>
                           <div>sg4924603@gmail.com</div>
+                          <div>lucasadriano16794@gmail.com</div>
                         </div>
                         <p>
                           <strong className="text-pink-400">Passo 5:</strong> Clique em <strong className="text-white">Salvar / Confirmar</strong>. Prontinho! O Google vai habilitar o login de vocês. Ao clicar em Conectar acima, basta prosseguir clicando no link <strong className="text-yellow-300">"Configurações Avançadas" &gt; "Acessar (não seguro)"</strong> no alerta do Google.
