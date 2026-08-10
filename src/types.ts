@@ -144,3 +144,31 @@ export interface Poll {
   isActive: boolean;
   totalVotes: number;
 }
+
+export type EventStatus = 'Em análise' | 'Aprovado' | 'Em breve' | 'Ao vivo' | 'Encerrado';
+
+export interface EventParticipant {
+  id: string;
+  eventId: string;
+  playerIdentifier: string; // e.g. "KOOSH#000"
+  registeredAt: number;
+}
+
+export interface CommunityEvent {
+  id: string;
+  name: string;
+  description: string;
+  category: string; // e.g. Torneios, Festas, Esconder-Esconder, Encontros, Mini-Games, Outros
+  date: string; // e.g. "2026-08-15"
+  time: string; // e.g. "18:00"
+  bannerUrl: string;
+  organizerName: string; // e.g. "KOOSH#000"
+  organizerContact?: string;
+  rules: string;
+  maxParticipants?: number; // optional limit
+  status: EventStatus;
+  createdAt: number;
+  approvedAt?: number;
+  createdById?: string;
+  admin_secret?: string;
+}

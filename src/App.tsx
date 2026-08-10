@@ -18,6 +18,8 @@ import MissionsSection from './components/MissionsSection';
 import AppleProfileHeader from './components/AppleProfileHeader';
 import ArtesSection from './components/ArtesSection';
 import PollsSection from './components/PollsSection';
+import EventsSection from './components/EventsSection';
+import PWAInstaller from './components/PWAInstaller';
 import { 
   Sparkles, 
   Settings, 
@@ -174,7 +176,7 @@ export default function App() {
     } catch (e) {}
     return false;
   });
-  const [activeTab, setActiveTab] = useState<'inicio' | 'comunidade' | 'missoes' | 'artes'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'eventos' | 'comunidade' | 'missoes' | 'artes'>('inicio');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [continuedAsGuest, setContinuedAsGuest] = useState(false);
@@ -265,7 +267,7 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'artes', 'comunidade', 'missoes'];
+        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'comunidade', 'missoes'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
         if (pLower.includes('admin')) {
@@ -274,6 +276,8 @@ export default function App() {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
         } else if (pLower.includes('artes')) {
           targetPath = baseIsSpecial ? `/artes/${hashSuffix}` : (base ? `/${base}/artes/${hashSuffix}` : `/artes/${hashSuffix}`);
+        } else if (pLower.includes('evento')) {
+          targetPath = baseIsSpecial ? `/eventos/${hashSuffix}` : (base ? `/${base}/eventos/${hashSuffix}` : `/eventos/${hashSuffix}`);
         } else if (pLower.includes('comunidade')) {
           targetPath = baseIsSpecial ? `/comunidade/${hashSuffix}` : (base ? `/${base}/comunidade/${hashSuffix}` : `/comunidade/${hashSuffix}`);
         } else if (pLower.includes('missoes')) {
@@ -289,6 +293,8 @@ export default function App() {
           targetPath = `/inscricoes${hashSuffix}`;
         } else if (pLower.includes('artes')) {
           targetPath = `/artes${hashSuffix}`;
+        } else if (pLower.includes('evento')) {
+          targetPath = `/eventos${hashSuffix}`;
         } else if (pLower.includes('comunidade')) {
           targetPath = `/comunidade${hashSuffix}`;
         } else if (pLower.includes('missoes')) {
@@ -350,6 +356,8 @@ export default function App() {
     const pLower = currentPath.toLowerCase();
     if (pLower.includes('artes')) {
       setActiveTab('artes');
+    } else if (pLower.includes('evento')) {
+      setActiveTab('eventos');
     } else if (pLower.includes('comunidade') || pLower.includes('mural')) {
       setActiveTab('comunidade');
     } else if (pLower.includes('missoes') || pLower.includes('missao')) {
@@ -3053,14 +3061,19 @@ export default function App() {
           />
         ) : (
           <>
+            {/* PWA Installer & Offline Notification Bar */}
+            <div className="max-w-4xl mx-auto">
+              <PWAInstaller onAddXP={handleAddFanXP} triggerAudio={triggerAudio} />
+            </div>
+
             {/* Visual Navigation Tab Bar for "New Phase" - Neutral Elegant & Formal styling */}
-            <div className="max-w-4xl mx-auto mb-8 bg-zinc-900/90 p-2 sm:p-2.5 rounded-3xl border-2 border-purple-500/40 flex items-center justify-between gap-1 sm:gap-2 shadow-[0_4px_25px_rgba(139,92,246,0.2)] select-none">
+            <div className="max-w-4xl mx-auto mb-8 bg-zinc-900/90 p-2 sm:p-2.5 rounded-3xl border-2 border-purple-500/40 flex items-center justify-between gap-1 sm:gap-2 shadow-[0_4px_25px_rgba(139,92,246,0.2)] select-none overflow-x-auto scrollbar-none">
               <button
                 onClick={() => {
                   triggerAudio('tap');
                   navigateTo('/');
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'inicio'
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border-2 border-purple-400'
                     : 'text-gray-400 hover:text-white hover:bg-zinc-800'
@@ -3069,13 +3082,28 @@ export default function App() {
                 <span>🏠</span>
                 <span>Início</span>
               </button>
+
+              <button
+                onClick={() => {
+                  triggerAudio('tap');
+                  navigateTo('/eventos');
+                }}
+                className={`flex-1 min-w-[80px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  activeTab === 'eventos'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md border-2 border-pink-400'
+                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                }`}
+              >
+                <span>🎉</span>
+                <span>Eventos</span>
+              </button>
               
               <button
                 onClick={() => {
                   triggerAudio('tap');
                   navigateTo('/comunidade');
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'comunidade'
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border-2 border-purple-400'
                     : 'text-gray-400 hover:text-white hover:bg-zinc-800'
@@ -3090,7 +3118,7 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/missoes');
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'missoes'
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border-2 border-purple-400'
                     : 'text-gray-400 hover:text-white hover:bg-zinc-800'
@@ -3105,7 +3133,7 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/artes');
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'artes'
                     ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md border-2 border-pink-400'
                     : 'text-gray-400 hover:text-white hover:bg-zinc-800'
@@ -3279,6 +3307,18 @@ export default function App() {
                     </>
                   );
                 })()}
+              </div>
+            )}
+
+            {activeTab === 'eventos' && (
+              <div className="max-w-4xl mx-auto animate-fade-in" id="events-section-wrapper">
+                <EventsSection 
+                  isAdmin={isAdmin}
+                  currentUser={user}
+                  soundEnabled={soundEnabled}
+                  triggerAudio={triggerAudio}
+                  onAddXP={handleAddFanXP}
+                />
               </div>
             )}
 
