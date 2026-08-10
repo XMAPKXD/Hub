@@ -24,7 +24,8 @@ import {
   UserCheck, 
   FileCheck,
   Edit3,
-  ExternalLink
+  ExternalLink,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -94,6 +95,21 @@ export default function EventsSection({
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleShareEvent = (event: CommunityEvent) => {
+    if (triggerAudio) triggerAudio('tap');
+    const shareUrl = `${window.location.origin}${window.location.pathname}?evento=${event.id}#events-section-wrapper`;
+    if (navigator.share) {
+      navigator.share({
+        title: `Evento PK XD: ${event.name}`,
+        text: `🎉 Venha participar do evento "${event.name}" no PK XD Central!`,
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      showToast(`🔗 Link do evento "${event.name}" copiado!`);
+    }
   };
 
   // Subscribe to events & participants from Firestore
@@ -750,6 +766,15 @@ export default function EventsSection({
                   {/* Card Action Buttons */}
                   <div className="flex flex-wrap items-center gap-2 pt-2">
                     <button
+                      onClick={() => handleShareEvent(event)}
+                      className="py-2.5 px-3 bg-purple-950/60 hover:bg-purple-900 border border-purple-500/30 text-purple-200 font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                      title="Compartilhar Link do Evento"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-pink-400" />
+                      <span>Compartilhar 🔗</span>
+                    </button>
+
+                    <button
                       onClick={() => {
                         if (triggerAudio) triggerAudio('tap');
                         setShowDetailsModal(event);
@@ -757,7 +782,7 @@ export default function EventsSection({
                       className="flex-1 py-2.5 px-3 bg-neutral-800 hover:bg-neutral-750 text-neutral-200 font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <FileText className="w-3.5 h-3.5" />
-                      <span>Detalhes / Lista 📋</span>
+                      <span>Detalhes 📋</span>
                     </button>
 
                     {event.status !== 'Encerrado' && (

@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { Poll, PollOption } from '../types';
 import { playTapSound, playSuccessSound } from '../utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
-import { BarChart3, Vote, AlertCircle, CheckCircle2, History, PlusCircle, X, Send, Sparkles, Plus, Loader2 } from 'lucide-react';
+import { BarChart3, Vote, AlertCircle, CheckCircle2, History, PlusCircle, X, Send, Sparkles, Plus, Loader2, Share2, Copy, Image as ImageIcon, Upload, Link2, Check } from 'lucide-react';
 
 interface PollsSectionProps {
   onAddXP: (amount: number, reason: string) => void;
@@ -22,9 +22,14 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newQuestion, setNewQuestion] = useState('');
   const [newOptions, setNewOptions] = useState<string[]>(['', '']);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmittingPoll, setIsSubmittingPoll] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState<string | null>(null);
+  const [createdShareUrl, setCreatedShareUrl] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Load voted polls from localStorage
   useEffect(() => {
@@ -52,6 +57,7 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
           createdAt: data.createdAt || Date.now(),
           isActive: data.isActive !== false,
           totalVotes: data.totalVotes || 0,
+          imageUrl: data.imageUrl || undefined,
         });
       });
       setPolls(loadedPolls);
@@ -63,6 +69,38 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
 
     return () => unsubscribe();
   }, []);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        alert("⚠️ Por favor, escolha uma imagem menor que 3MB.");
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSharePoll = (poll: Poll) => {
+    playTapSound();
+    const shareUrl = `${window.location.origin}${window.location.pathname}?enquete=${poll.id}#polls-section`;
+    if (navigator.share) {
+      navigator.share({
+        title: `Enquete PK XD: ${poll.question}`,
+        text: `📊 Dê o seu voto na enquete "${poll.question}" no PK XD Central!`,
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      setToastMsg(`🔗 Link da enquete copiado com sucesso!`);
+      setTimeout(() => setToastMsg(null), 3000);
+    }
+  };
 
   const handleVote = async (pollId: string) => {
     const optionId = selectedOptions[pollId];
@@ -142,6 +180,8 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
     e.preventDefault();
     setModalError(null);
     setModalSuccess(null);
+    setCreatedShareUrl(null);
+    setCopiedLink(false);
 
     const cleanQ = newQuestion.trim();
     if (!cleanQ) {
@@ -180,33 +220,36 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
           votes: 0
         }));
 
+        const finalImgUrl = newImageUrl.trim() || undefined;
+
         await setDoc(pollRef, {
           id: pollId,
           question: cleanQ,
           options: optionsArray,
+          imageUrl: finalImgUrl,
           createdAt: Date.now(),
           isActive: true,
           totalVotes: 0,
           admin_secret: "pkxd2026_super_secret_admin_key"
         });
 
+        const shareUrl = `${window.location.origin}${window.location.pathname}?enquete=${pollId}#polls-section`;
+        setCreatedShareUrl(shareUrl);
+
         playSuccessSound();
         onAddXP(100, 'Criou uma nova Enquete Oficial! 📊');
         setModalSuccess("🎉 Enquete criada e publicada com sucesso no fã-clube!");
-        setTimeout(() => {
-          setShowCreateModal(false);
-          setNewQuestion('');
-          setNewOptions(['', '']);
-          setModalSuccess(null);
-        }, 1800);
       } else {
         // Regular fan submits a suggested poll
         const suggestionId = 'sug_poll_' + Date.now();
         const sugRef = doc(db, 'suggested_polls', suggestionId);
+        const finalImgUrl = newImageUrl.trim() || undefined;
+
         await setDoc(sugRef, {
           id: suggestionId,
           question: cleanQ,
           options: cleanOpts,
+          imageUrl: finalImgUrl,
           createdAt: Date.now(),
           authorName: localStorage.getItem('pkxd_nickname') || 'Fã Anonimo',
           status: 'pending'
@@ -219,6 +262,8 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
           setShowCreateModal(false);
           setNewQuestion('');
           setNewOptions(['', '']);
+          setNewImageUrl('');
+          setImageFile(null);
           setModalSuccess(null);
         }, 2200);
       }
@@ -250,6 +295,21 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
 
   return (
     <section id="polls-section" className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 space-y-8 text-left relative overflow-hidden">
+      {/* Toast Alert */}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed bottom-6 right-6 z-50 bg-cyan-950 border-2 border-cyan-400 text-white font-sans text-xs font-black uppercase px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4 text-cyan-300 animate-spin" />
+            <span>{toastMsg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Neon Glow elements */}
       <div className="absolute top-10 right-10 w-24 h-24 bg-cyan-500/5 rounded-full filter blur-2xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/5 rounded-full filter blur-2xl pointer-events-none" />
@@ -278,6 +338,9 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
             setShowCreateModal(true);
             setModalError(null);
             setModalSuccess(null);
+            setCreatedShareUrl(null);
+            setNewImageUrl('');
+            setImageFile(null);
           }}
           className="px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-sans font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-cyan-400/30 shrink-0"
         >
@@ -313,22 +376,45 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
             return (
               <div 
                 key={poll.id} 
-                className="bg-black/30 border border-white/5 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner relative group hover:border-cyan-500/20 transition-all duration-300"
+                className="bg-black/30 border border-white/5 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner relative group hover:border-cyan-500/20 transition-all duration-300 overflow-hidden"
               >
-                {/* Active Tag */}
+                {/* Active Tag & Share Button */}
                 <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-3">
                   <span className="text-[10px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 px-2.5 py-1 rounded-md font-sans font-black uppercase tracking-wider flex items-center gap-1">
                     <Vote className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
                     Enquete Ativa
                   </span>
                   
-                  {alreadyVoted && (
-                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-md font-sans font-black uppercase tracking-wider flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      Votado
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {alreadyVoted && (
+                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-md font-sans font-black uppercase tracking-wider flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Votado
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleSharePoll(poll)}
+                      className="px-3 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-sans font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      title="Compartilhar Enquete"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Compartilhar 🔗</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Optional Poll Photo Banner */}
+                {poll.imageUrl && (
+                  <div className="relative w-full max-h-60 rounded-xl overflow-hidden border border-white/10 bg-black/50">
+                    <img 
+                      src={poll.imageUrl} 
+                      alt={poll.question} 
+                      className="w-full h-full object-cover max-h-60 hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                )}
 
                 {/* Question */}
                 <h4 className="font-sans font-black text-white text-base sm:text-lg leading-snug">
@@ -432,14 +518,31 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
             {inactivePolls.map((poll) => (
               <div 
                 key={poll.id} 
-                className="bg-black/20 border border-white/5 rounded-2xl p-4.5 space-y-3 opacity-80 hover:opacity-100 transition-all duration-150"
+                className="bg-black/20 border border-white/5 rounded-2xl p-4.5 space-y-3 opacity-80 hover:opacity-100 transition-all duration-150 relative"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[9px] bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-0.5 rounded-md font-sans font-bold uppercase tracking-wider">
                     Encerrada
                   </span>
-                  <span className="text-[9px] font-mono text-zinc-500">{poll.totalVotes} votos</span>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-mono text-zinc-500">{poll.totalVotes} votos</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSharePoll(poll)}
+                      className="p-1 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded cursor-pointer"
+                      title="Compartilhar Enquete"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
+
+                {poll.imageUrl && (
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/5 bg-black">
+                    <img src={poll.imageUrl} alt={poll.question} className="w-full h-full object-cover" />
+                  </div>
+                )}
                 
                 <h5 className="font-sans font-black text-sm text-zinc-300 leading-snug">
                   {poll.question}
@@ -478,7 +581,7 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-cyan-500/30 rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 text-left shadow-2xl relative overflow-hidden"
+              className="bg-zinc-900 border border-cyan-500/30 rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-5 text-left shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
             >
               {/* Header Modal */}
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -514,6 +617,53 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
                     onChange={(e) => setNewQuestion(e.target.value)}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-xs font-semibold text-white focus:outline-none focus:border-cyan-400 transition-all"
                   />
+                </div>
+
+                {/* Option to Add Photo / Image */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-cyan-300">
+                    Foto / Banner da Enquete (Opcional 📸)
+                  </label>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-2 bg-zinc-950 hover:bg-zinc-800 border border-cyan-500/30 text-cyan-300 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-2 transition-all shrink-0">
+                        <Upload className="w-4 h-4" />
+                        <span>Carregar do Dispositivo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                      <span className="text-[10px] text-zinc-500 font-mono">ou insira um link:</span>
+                    </div>
+
+                    <input
+                      type="url"
+                      placeholder="https://exemplo.com/imagem_enquete.png"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
+                    />
+
+                    {newImageUrl && (
+                      <div className="relative rounded-xl overflow-hidden border border-cyan-500/30 h-36 bg-black">
+                        <img src={newImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewImageUrl('');
+                            setImageFile(null);
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-red-600 text-white rounded-lg transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -574,9 +724,50 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
                 )}
 
                 {modalSuccess && (
-                  <p className="text-xs text-emerald-300 bg-emerald-950/30 border border-emerald-500/20 p-3 rounded-xl font-sans font-bold">
-                    {modalSuccess}
-                  </p>
+                  <div className="space-y-3 bg-emerald-950/40 border border-emerald-500/30 p-3.5 rounded-xl text-left">
+                    <p className="text-xs text-emerald-300 font-sans font-bold">
+                      {modalSuccess}
+                    </p>
+
+                    {createdShareUrl && (
+                      <div className="space-y-1.5 pt-1 border-t border-emerald-500/20">
+                        <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider flex items-center gap-1">
+                          <Link2 className="w-3.5 h-3.5 text-emerald-300" />
+                          Link direto para compartilhar:
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={createdShareUrl}
+                            className="flex-1 bg-black/60 border border-emerald-500/30 rounded-lg px-2.5 py-1.5 text-[11px] text-emerald-200 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playTapSound();
+                              navigator.clipboard.writeText(createdShareUrl);
+                              setCopiedLink(true);
+                              setTimeout(() => setCopiedLink(false), 2500);
+                            }}
+                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                          >
+                            {copiedLink ? (
+                              <>
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span>Copiar</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 <div className="pt-2 flex justify-end gap-2">
@@ -585,29 +776,32 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
                     onClick={() => {
                       playTapSound();
                       setShowCreateModal(false);
+                      setCreatedShareUrl(null);
                     }}
                     className="px-4 py-2.5 text-xs font-bold text-zinc-400 hover:text-white rounded-xl transition-colors cursor-pointer"
                   >
-                    Cancelar
+                    {createdShareUrl ? 'Fechar' : 'Cancelar'}
                   </button>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmittingPoll}
-                    className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-white font-sans font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2"
-                  >
-                    {isSubmittingPoll ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Enviando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        <span>{isAdmin ? 'Publicar Enquete Oficial! 🚀' : 'Enviar Sugestão (+30 XP) 🔮'}</span>
-                      </>
-                    )}
-                  </button>
+                  {!createdShareUrl && (
+                    <button
+                      type="submit"
+                      disabled={isSubmittingPoll}
+                      className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-white font-sans font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      {isSubmittingPoll ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span>{isAdmin ? 'Publicar Enquete Oficial! 🚀' : 'Enviar Sugestão (+30 XP) 🔮'}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </form>
             </motion.div>

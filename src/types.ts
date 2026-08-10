@@ -143,6 +143,7 @@ export interface Poll {
   createdAt: number;
   isActive: boolean;
   totalVotes: number;
+  imageUrl?: string;
 }
 
 export type EventStatus = 'Em análise' | 'Aprovado' | 'Em breve' | 'Ao vivo' | 'Encerrado';
