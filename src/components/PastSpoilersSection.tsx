@@ -292,8 +292,10 @@ export default function PastSpoilersSection({ spoilers, isAdmin, onDelete, onEdi
           </p>
         </div>
       ) : (
-        /* Compact collection grids: perfect spacing and sleek visual sizes */
-        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        /* Compact collection grids: delimited scrollable container with max-height */
+        <div className="relative z-10 space-y-3">
+          <div className="max-h-[520px] overflow-y-auto pr-1.5 sm:pr-2 space-y-4 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-black/30">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {spoilers.map((spoil) => {
           const isDateValid = spoil.createdAt && !isNaN(new Date(spoil.createdAt).getTime());
           const formattedDate = isDateValid
@@ -454,6 +456,15 @@ export default function PastSpoilersSection({ spoilers, isAdmin, onDelete, onEdi
             </div>
           );
         })}
+            </div>
+          </div>
+          {spoilers.length > 3 && (
+            <div className="text-center pt-1 border-t border-white/5">
+              <span className="text-[10px] font-mono text-neutral-400 bg-black/50 px-3 py-1 rounded-full border border-white/10 inline-flex items-center gap-1">
+                <span>↕ Role o painel acima para ver os {spoilers.length} spoilers</span>
+              </span>
+            </div>
+          )}
         </div>
       )}
 

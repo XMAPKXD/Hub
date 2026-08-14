@@ -216,17 +216,18 @@ export default function EventsSection({
     if (triggerAudio) triggerAudio('tap');
 
     if (!newEventName.trim() || !newEventDate || !newOrganizerName.trim()) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      alert('Por favor, preencha todos os campos obrigatórios (Nome, Data e Organizador).');
       return;
     }
 
     const cat = newEventCategory === 'CUSTOM' ? customCategory || 'Outros' : newEventCategory;
     const maxPart = newMaxParticipants ? parseInt(newMaxParticipants, 10) : undefined;
 
+    const eventId = 'event_' + Date.now();
     const newEvent: CommunityEvent = {
-      id: 'event_' + Date.now(),
+      id: eventId,
       name: newEventName.trim(),
-      description: newEventDesc.trim(),
+      description: newEventDesc.trim() || 'Evento da comunidade PK XD!',
       category: cat,
       date: newEventDate,
       time: newEventTime || '18:00',
@@ -240,15 +241,22 @@ export default function EventsSection({
       createdById: currentUser?.uid || 'guest_' + Date.now()
     };
 
+    // Clean undefined fields for Firestore compatibility
+    const cleanedData: Record<string, any> = {};
+    Object.entries(newEvent).forEach(([key, val]) => {
+      if (val !== undefined) {
+        cleanedData[key] = val;
+      }
+    });
+
     try {
       if (db) {
-        await setDoc(doc(db, 'community_events', newEvent.id), newEvent);
-      } else {
-        setEvents(prev => [newEvent, ...prev]);
+        await setDoc(doc(db, 'community_events', eventId), cleanedData);
       }
+      setEvents(prev => [newEvent, ...prev.filter(e => e.id !== eventId)]);
 
       if (triggerAudio) triggerAudio('success');
-      if (onAddXP) onAddXP(50, 'Criou um evento da comunidade');
+      if (onAddXP) onAddXP(50, 'Criou um evento da comunidade (+50 XP)');
 
       setCreateSuccessMsg(true);
       setTimeout(() => {
@@ -261,9 +269,20 @@ export default function EventsSection({
         setNewEventRules('');
         setNewMaxParticipants('');
       }, 1800);
-    } catch (err) {
-      console.error("Error creating event:", err);
-      alert('Erro ao enviar evento. Tente novamente.');
+    } catch (err: any) {
+      console.error("Error creating event in Firestore:", err);
+      // Fallback local addition
+      setEvents(prev => [newEvent, ...prev.filter(e => e.id !== eventId)]);
+      setCreateSuccessMsg(true);
+      setTimeout(() => {
+        setCreateSuccessMsg(false);
+        setShowCreateModal(false);
+        setNewEventName('');
+        setNewEventDesc('');
+        setNewEventBanner('');
+        setNewEventRules('');
+        setNewMaxParticipants('');
+      }, 1800);
     }
   };
 

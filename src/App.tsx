@@ -19,6 +19,7 @@ import AppleProfileHeader from './components/AppleProfileHeader';
 import ArtesSection from './components/ArtesSection';
 import PollsSection from './components/PollsSection';
 import EventsSection from './components/EventsSection';
+import PassportSection from './components/PassportSection';
 import PWAInstaller from './components/PWAInstaller';
 import { 
   Sparkles, 
@@ -267,13 +268,15 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'comunidade', 'missoes'];
+        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'comunidade', 'missoes'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
         if (pLower.includes('admin')) {
           targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
         } else if (pLower.includes('inscric')) {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
+        } else if (pLower.includes('passaporte')) {
+          targetPath = baseIsSpecial ? `/passaporte/${hashSuffix}` : (base ? `/${base}/passaporte/${hashSuffix}` : `/passaporte/${hashSuffix}`);
         } else if (pLower.includes('artes')) {
           targetPath = baseIsSpecial ? `/artes/${hashSuffix}` : (base ? `/${base}/artes/${hashSuffix}` : `/artes/${hashSuffix}`);
         } else if (pLower.includes('evento')) {
@@ -291,6 +294,8 @@ export default function App() {
           targetPath = `/admin${hashSuffix}`;
         } else if (pLower.includes('inscric')) {
           targetPath = `/inscricoes${hashSuffix}`;
+        } else if (pLower.includes('passaporte')) {
+          targetPath = `/passaporte${hashSuffix}`;
         } else if (pLower.includes('artes')) {
           targetPath = `/artes${hashSuffix}`;
         } else if (pLower.includes('evento')) {
@@ -358,6 +363,8 @@ export default function App() {
       setActiveTab('artes');
     } else if (pLower.includes('evento')) {
       setActiveTab('eventos');
+    } else if (pLower.includes('passaporte')) {
+      setActiveTab('passaporte');
     } else if (pLower.includes('comunidade') || pLower.includes('mural')) {
       setActiveTab('comunidade');
     } else if (pLower.includes('missoes') || pLower.includes('missao')) {
@@ -3088,7 +3095,7 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/eventos');
                 }}
-                className={`flex-1 min-w-[80px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[75px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeTab === 'eventos'
                     ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md border-2 border-pink-400'
                     : 'text-gray-400 hover:text-white hover:bg-zinc-800'
@@ -3096,6 +3103,21 @@ export default function App() {
               >
                 <span>🎉</span>
                 <span>Eventos</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  triggerAudio('tap');
+                  navigateTo('/passaporte');
+                }}
+                className={`flex-1 min-w-[85px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  activeTab === 'passaporte'
+                    ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white shadow-md border-2 border-yellow-400'
+                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                }`}
+              >
+                <span>🛂</span>
+                <span>Passaporte</span>
               </button>
               
               <button
@@ -3318,6 +3340,18 @@ export default function App() {
                   soundEnabled={soundEnabled}
                   triggerAudio={triggerAudio}
                   onAddXP={handleAddFanXP}
+                />
+              </div>
+            )}
+
+            {activeTab === 'passaporte' && (
+              <div className="max-w-4xl mx-auto animate-fade-in" id="passport-section-wrapper">
+                <PassportSection 
+                  currentUser={user}
+                  isAdmin={isAdmin}
+                  fanXP={fanXP}
+                  onAddXP={handleAddFanXP}
+                  triggerAudio={triggerAudio}
                 />
               </div>
             )}

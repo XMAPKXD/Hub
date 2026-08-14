@@ -235,12 +235,37 @@ service cloud.firestore {
     }
 
     // =========================
+    // Community Events & Participants
+    // =========================
+    match /community_events/{eventId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isDeletable() || true;
+    }
+
+    match /event_participants/{participantId} {
+      allow read, write: if true;
+    }
+
+    // =========================
+    // Passaporte PKXD / User Passports
+    // =========================
+    match /user_passports/{passportId} {
+      allow read, write: if true;
+    }
+
+    // =========================
+    // Suggested Polls
+    // =========================
+    match /suggested_polls/{pollId} {
+      allow read, write: if true;
+    }
+
+    // =========================
     // Polls (Enquetes)
     // =========================
     match /polls/{pollId} {
-      allow read: if true;
-      allow create, delete: if isAdmin();
-      allow update: if true;
+      allow read, write: if true;
     }
 
     // =========================

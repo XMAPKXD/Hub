@@ -173,3 +173,72 @@ export interface CommunityEvent {
   createdById?: string;
   admin_secret?: string;
 }
+
+// ===================================
+// PASSAPORTE PKXD (PASSPORT SYSTEM)
+// ===================================
+
+export interface PassportBadge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  category: 'community' | 'events' | 'spoilers' | 'social' | 'special';
+  unlocked: boolean;
+  unlockedAt?: number;
+  rarity?: 'Comum' | 'Raro' | 'Épico' | 'Lendário';
+}
+
+export interface PassportStamp {
+  id: string;
+  title: string;
+  eventOrSeason: string;
+  location: string;
+  date: string;
+  icon: string;
+  color: string;
+  acquiredAt: number;
+}
+
+export interface PassportFriend {
+  id: string;
+  playerTag: string; // e.g. "LUNA#245"
+  nickname: string;
+  avatarUrl?: string;
+  level?: number;
+  addedAt: number;
+  favoriteMinigame?: string;
+}
+
+export interface PassportEventHistory {
+  id: string;
+  eventId: string;
+  eventName: string;
+  role: 'organizador' | 'participante';
+  date: string;
+  category: string;
+}
+
+export interface PKXDPassport {
+  id: string;
+  userId: string;
+  playerTag: string; // e.g. "KOOSH#000"
+  nickname: string;
+  avatarUrl: string;
+  bio: string;
+  title: string; // e.g. "Explorador da Ilha"
+  level: number;
+  xp: number;
+  joinedAt: number;
+  timeInCommunity: string;
+  favoriteMinigame: string;
+  houseTheme: string;
+  cardTheme: 'neon-purple' | 'cyber-blue' | 'golden-vip' | 'sunset-pink' | 'emerald-gamer';
+  badges: PassportBadge[];
+  stamps: PassportStamp[];
+  friends: PassportFriend[];
+  eventHistory: PassportEventHistory[];
+  isPublic: boolean;
+  updatedAt: number;
+}
+
