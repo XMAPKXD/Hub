@@ -2,18 +2,36 @@
 <html lang="pt-BR" class="notranslate">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="google" content="notranslate" />
     <meta http-equiv="content-language" content="pt-BR" />
-    <title>PKXD Central</title>
+    <title>PKXD Central - Central Oficial da Comunidade</title>
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#7c3aed" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PKXD Central" />
     <link rel="apple-touch-icon" href="./favicon.png" />
     <link rel="icon" type="image/png" href="./favicon.png" />
-    <script type="module" crossorigin src="./assets/main-BO-tKkzb.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/main-DyquTTld.css">
+
+    <!-- SPA 404 Route Restoration for custom domains (e.g. pkxdcentral.site) and GitHub Pages -->
+    <script type="text/javascript">
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var redirectPath = params.get('p') || params.get('redirect');
+        if (redirectPath) {
+          var decoded = decodeURIComponent(redirectPath);
+          var q = params.get('q');
+          var cleanSearch = q ? '?' + decodeURIComponent(q) : '';
+          var newUrl = decoded + cleanSearch + window.location.hash;
+          window.history.replaceState(null, null, newUrl);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/main-D7_VUMT0.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/main-oOvVwQYB.css">
   </head>
-  <body>
+  <body class="bg-[#09090b] text-white">
     <div id="root"></div>
   </body>
 </html>
