@@ -51,6 +51,41 @@ const CATEGORIES = [
   "Outros"
 ];
 
+const DEFAULT_COMMUNITY_EVENTS: CommunityEvent[] = [
+  {
+    id: 'event_crazy_run_mega',
+    name: 'Mega Torneio Crazy Run Central 🏆',
+    description: 'Batalha de velocidade eletrizante no circuito do Crazy Run! Venha disputar o troféu da Central com outros jogadores da comunidade!',
+    category: 'Torneios',
+    date: '2026-08-20',
+    time: '18:00',
+    bannerUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
+    organizerName: 'PKC Central',
+    rules: 'Proibido trapacear. Chegar com 5 minutos de antecedência no mapa.',
+    maxParticipants: 50,
+    status: 'Aprovado',
+    createdAt: Date.now() - 3 * 24 * 3600 * 1000,
+    approvedAt: Date.now() - 3 * 24 * 3600 * 1000,
+    createdById: 'admin_official'
+  },
+  {
+    id: 'event_festa_desfile',
+    name: 'Grande Desfile Fashion & Festa na Piscina 🎉',
+    description: 'Mostre seu melhor look e participe do desfile oficial da Ilha! Teremos fotos, música e muita diversão com a galera.',
+    category: 'Festas',
+    date: '2026-08-25',
+    time: '19:30',
+    bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
+    organizerName: 'LUNA STAR',
+    rules: 'Venha com seu avatar mais estiloso! Respeite a fila do tapete vermelho.',
+    maxParticipants: 40,
+    status: 'Aprovado',
+    createdAt: Date.now() - 2 * 24 * 3600 * 1000,
+    approvedAt: Date.now() - 2 * 24 * 3600 * 1000,
+    createdById: 'admin_official'
+  }
+];
+
 export default function EventsSection({
   isAdmin,
   currentUser,
@@ -58,8 +93,31 @@ export default function EventsSection({
   triggerAudio,
   onAddXP
 }: EventsSectionProps) {
-  const [events, setEvents] = useState<CommunityEvent[]>([]);
-  const [participants, setParticipants] = useState<EventParticipant[]>([]);
+  const [events, setEvents] = useState<CommunityEvent[]>(() => {
+    try {
+      const saved = localStorage.getItem('pkxd_custom_events');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return DEFAULT_COMMUNITY_EVENTS;
+  });
+  const [participants, setParticipants] = useState<EventParticipant[]>(() => {
+    try {
+      const saved = localStorage.getItem('pkxd_event_participants');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [
+      { id: 'part_sample_1', eventId: 'event_crazy_run_mega', playerIdentifier: 'LUNA#245', registeredAt: Date.now() - 3600000 },
+      { id: 'part_sample_2', eventId: 'event_crazy_run_mega', playerIdentifier: 'GABRIEL#000', registeredAt: Date.now() - 1800000 }
+    ];
+  });
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const [statusFilter, setStatusFilter] = useState<string>("TODOS");
 
@@ -77,7 +135,7 @@ export default function EventsSection({
   const [newEventDate, setNewEventDate] = useState('');
   const [newEventTime, setNewEventTime] = useState('');
   const [newEventBanner, setNewEventBanner] = useState('');
-  const [newOrganizerName, setNewOrganizerName] = useState('');
+  const [newOrganizerName, setNewOrganizerName] = useState(currentUser?.displayName || '');
   const [newEventRules, setNewEventRules] = useState('');
   const [newMaxParticipants, setNewMaxParticipants] = useState<string>('');
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
@@ -119,27 +177,37 @@ export default function EventsSection({
     // Listen to community_events
     const eventsRef = collection(db, 'community_events');
     const unsubEvents = onSnapshot(eventsRef, (snapshot) => {
-      const list: CommunityEvent[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push({ id: docSnap.id, ...docSnap.data() } as CommunityEvent);
-      });
-      // Sort by creation date descending
-      list.sort((a, b) => b.createdAt - a.createdAt);
-      setEvents(list);
+      if (!snapshot.empty) {
+        const list: CommunityEvent[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() } as CommunityEvent);
+        });
+        // Sort by creation date descending
+        list.sort((a, b) => b.createdAt - a.createdAt);
+        setEvents(list);
+        try {
+          localStorage.setItem('pkxd_custom_events', JSON.stringify(list));
+        } catch (e) {}
+      }
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'community_events');
+      console.warn("Firestore events sync warning (using local):", error);
     });
 
     // Listen to event_participants
     const partRef = collection(db, 'event_participants');
     const unsubPart = onSnapshot(partRef, (snapshot) => {
-      const list: EventParticipant[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push({ id: docSnap.id, ...docSnap.data() } as EventParticipant);
-      });
-      setParticipants(list);
+      if (!snapshot.empty) {
+        const list: EventParticipant[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() } as EventParticipant);
+        });
+        setParticipants(list);
+        try {
+          localStorage.setItem('pkxd_event_participants', JSON.stringify(list));
+        } catch (e) {}
+      }
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'event_participants');
+      console.warn("Firestore participants sync warning:", error);
     });
 
     return () => {
@@ -170,17 +238,9 @@ export default function EventsSection({
         return ev.status === 'Encerrado';
       }
 
-      // Default: Non-admins don't see "Em análise" unless it's in all list if approved or if user created it
-      if (!isAdmin && ev.status === 'Em análise') {
-        if (currentUser && ev.createdById === currentUser.uid) {
-          return true;
-        }
-        return false;
-      }
-
       return true;
     });
-  }, [events, selectedCategory, statusFilter, isAdmin, currentUser]);
+  }, [events, selectedCategory, statusFilter]);
 
   // Count pending events for Admin alert
   const pendingEventsCount = useMemo(() => {
@@ -227,18 +287,18 @@ export default function EventsSection({
     const newEvent: CommunityEvent = {
       id: eventId,
       name: newEventName.trim(),
-      description: newEventDesc.trim() || 'Evento da comunidade PK XD!',
+      description: newEventDesc.trim() || 'Evento oficial da comunidade PK XD!',
       category: cat,
       date: newEventDate,
       time: newEventTime || '18:00',
       bannerUrl: newEventBanner.trim() || 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
-      organizerName: newOrganizerName.trim().toUpperCase(),
+      organizerName: newOrganizerName.trim(),
       rules: newEventRules.trim() || 'Respeitar os demais jogadores e seguir as instruções do organizador.',
       maxParticipants: maxPart,
-      status: isAdmin ? 'Aprovado' : 'Em análise',
+      status: 'Aprovado',
       createdAt: Date.now(),
-      approvedAt: isAdmin ? Date.now() : undefined,
-      createdById: currentUser?.uid || 'guest_' + Date.now()
+      approvedAt: Date.now(),
+      createdById: currentUser?.uid || 'user_' + Date.now()
     };
 
     // Clean undefined fields for Firestore compatibility
@@ -249,41 +309,40 @@ export default function EventsSection({
       }
     });
 
+    // Update local state immediately so user sees their event right away!
+    setEvents(prev => {
+      const updated = [newEvent, ...prev.filter(e => e.id !== eventId)];
+      try {
+        localStorage.setItem('pkxd_custom_events', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
     try {
       if (db) {
         await setDoc(doc(db, 'community_events', eventId), cleanedData);
       }
-      setEvents(prev => [newEvent, ...prev.filter(e => e.id !== eventId)]);
-
-      if (triggerAudio) triggerAudio('success');
-      if (onAddXP) onAddXP(50, 'Criou um evento da comunidade (+50 XP)');
-
-      setCreateSuccessMsg(true);
-      setTimeout(() => {
-        setCreateSuccessMsg(false);
-        setShowCreateModal(false);
-        // Reset form
-        setNewEventName('');
-        setNewEventDesc('');
-        setNewEventBanner('');
-        setNewEventRules('');
-        setNewMaxParticipants('');
-      }, 1800);
     } catch (err: any) {
-      console.error("Error creating event in Firestore:", err);
-      // Fallback local addition
-      setEvents(prev => [newEvent, ...prev.filter(e => e.id !== eventId)]);
-      setCreateSuccessMsg(true);
-      setTimeout(() => {
-        setCreateSuccessMsg(false);
-        setShowCreateModal(false);
-        setNewEventName('');
-        setNewEventDesc('');
-        setNewEventBanner('');
-        setNewEventRules('');
-        setNewMaxParticipants('');
-      }, 1800);
+      console.warn("Could not sync event to remote Firestore, saved locally:", err);
     }
+
+    if (triggerAudio) triggerAudio('success');
+    if (onAddXP) onAddXP(50, 'Criou um evento da comunidade (+50 XP)');
+
+    setCreateSuccessMsg(true);
+    setTimeout(() => {
+      setCreateSuccessMsg(false);
+      setShowCreateModal(false);
+      // Reset form
+      setNewEventName('');
+      setNewEventDesc('');
+      setNewEventBanner('');
+      setNewEventRules('');
+      setNewMaxParticipants('');
+      setNewEventDate('');
+      setNewEventTime('');
+      showToast('🎉 Evento criado e publicado com sucesso!');
+    }, 1200);
   };
 
   // Handle Status Change (Admin)
@@ -879,9 +938,9 @@ export default function EventsSection({
                     <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center mx-auto">
                       <Check className="w-8 h-8" />
                     </div>
-                    <h3 className="font-sans font-black text-xl text-white uppercase">Evento Enviado com Sucesso!</h3>
+                    <h3 className="font-sans font-black text-xl text-white uppercase">Evento Publicado com Sucesso!</h3>
                     <p className="text-xs text-neutral-300 max-w-md mx-auto">
-                      Seu evento foi registrado e ficará <strong className="text-amber-300">Em Análise</strong> pela nossa equipe. Assim que for aprovado, ele será publicado na plataforma!
+                      Seu evento já está disponível e visível para toda a comunidade PK XD participar e confirmar presença! 🎉
                     </p>
                   </div>
                 ) : (
@@ -900,11 +959,11 @@ export default function EventsSection({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-extrabold uppercase text-neutral-400">Seu Nome / Identificador PKXD *</label>
+                        <label className="text-[10px] font-extrabold uppercase text-neutral-400">Seu Nome / Nickname *</label>
                         <input
                           type="text"
                           required
-                          placeholder="Ex: KOOSH#000"
+                          placeholder="Ex: Seu Nickname ou Nome"
                           value={newOrganizerName}
                           onChange={(e) => setNewOrganizerName(e.target.value)}
                           className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500 font-bold"
@@ -1047,7 +1106,7 @@ export default function EventsSection({
                     type="submit"
                     className="flex-1 py-2.5 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
                   >
-                    Enviar para Análise 🚀
+                    Publicar Evento 🚀
                   </button>
                 </div>
               )}

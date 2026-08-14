@@ -165,12 +165,12 @@ const DEFAULT_STAMPS: PassportStamp[] = [
 ];
 
 const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80'
+  'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Armor&backgroundColor=b6e3f4',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Star&backgroundColor=ffd5dc',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Gamer&backgroundColor=c0aede',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Cyber&backgroundColor=d1d4f9',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Flame&backgroundColor=ffdfbf',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Neon&backgroundColor=c1f2d5'
 ];
 
 export default function PassportSection({
@@ -215,16 +215,19 @@ export default function PassportSection({
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        // If current user has a photoURL and the saved one is stock or missing, use currentUser.photoURL!
+        const effectiveAvatar = currentUser?.photoURL || (parsed.avatarUrl && !parsed.avatarUrl.includes('images.unsplash.com') ? parsed.avatarUrl : PRESET_AVATARS[0]);
         return {
           ...parsed,
+          avatarUrl: effectiveAvatar,
           level: userLevel,
           xp: fanXP
         };
       } catch (e) {}
     }
 
-    const savedTag = localStorage.getItem('pkxd_player_tag') || 'JOGADOR#000';
-    const savedNick = localStorage.getItem('pkxd_nickname') || 'Explorador';
+    const savedTag = localStorage.getItem('pkxd_player_tag') || (currentUser?.displayName ? currentUser.displayName.toUpperCase() : 'JOGADOR');
+    const savedNick = localStorage.getItem('pkxd_nickname') || currentUser?.displayName || 'Explorador';
 
     return {
       id: currentUser?.uid || 'passport_' + Date.now(),
@@ -246,7 +249,7 @@ export default function PassportSection({
       friends: [
         {
           id: 'friend_1',
-          playerTag: 'LUNA#245',
+          playerTag: 'LunaStar',
           nickname: 'LunaStar',
           avatarUrl: PRESET_AVATARS[1],
           level: 7,
@@ -255,7 +258,7 @@ export default function PassportSection({
         },
         {
           id: 'friend_2',
-          playerTag: 'GABRIEL#000',
+          playerTag: 'GabePKXD',
           nickname: 'GabePKXD',
           avatarUrl: PRESET_AVATARS[2],
           level: 12,
@@ -266,16 +269,16 @@ export default function PassportSection({
       eventHistory: [
         {
           id: 'ev_1',
-          eventName: 'Torneio Crazy Run Central',
+          eventName: 'Mega Torneio Crazy Run Central',
           role: 'participante',
-          date: '10/08/2024',
+          date: '20/08/2026',
           category: 'Mini-games'
         },
         {
           id: 'ev_2',
-          eventName: 'Encontro de Creators & Spoilers',
-          role: 'organizador',
-          date: '02/08/2024',
+          eventName: 'Grande Desfile Fashion & Festa na Piscina',
+          role: 'participante',
+          date: '25/08/2026',
           category: 'Social'
         }
       ],
@@ -292,6 +295,21 @@ export default function PassportSection({
   const [editHouse, setEditHouse] = useState(passport.houseTheme);
   const [editTheme, setEditTheme] = useState(passport.cardTheme);
   const [editAvatar, setEditAvatar] = useState(passport.avatarUrl);
+
+  // Sync profile photo whenever currentUser changes
+  useEffect(() => {
+    if (currentUser?.photoURL) {
+      setPassport(prev => {
+        const updated = {
+          ...prev,
+          avatarUrl: currentUser.photoURL
+        };
+        localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+        return updated;
+      });
+      setEditAvatar(currentUser.photoURL);
+    }
+  }, [currentUser?.photoURL]);
 
   // Sync Level & XP on props change
   useEffect(() => {
@@ -324,7 +342,13 @@ export default function PassportSection({
         if (snap.exists()) {
           const data = snap.data() as PKXDPassport;
           setPassport(prev => {
-            const merged = { ...prev, ...data, level: userLevel, xp: fanXP };
+            const merged = { 
+              ...prev, 
+              ...data, 
+              avatarUrl: currentUser?.photoURL || data.avatarUrl || prev.avatarUrl,
+              level: userLevel, 
+              xp: fanXP 
+            };
             localStorage.setItem('pkxd_passport_data', JSON.stringify(merged));
             return merged;
           });
@@ -367,15 +391,12 @@ export default function PassportSection({
     }
   };
 
-  // Handle Edit Submit
+  // Handle Edit Submit (no mandatory '#')
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editNick.trim() || !editTag.trim()) return;
 
-    let formattedTag = editTag.trim().toUpperCase();
-    if (!formattedTag.includes('#')) {
-      formattedTag = formattedTag + '#000';
-    }
+    const formattedTag = editTag.trim();
 
     const updated: PKXDPassport = {
       ...passport,
@@ -386,7 +407,7 @@ export default function PassportSection({
       favoriteMinigame: editMinigame,
       houseTheme: editHouse.trim() || 'Mansão Gamer',
       cardTheme: editTheme,
-      avatarUrl: editAvatar,
+      avatarUrl: editAvatar || currentUser?.photoURL || PRESET_AVATARS[0],
       updatedAt: Date.now()
     };
 
@@ -407,8 +428,8 @@ export default function PassportSection({
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('A imagem deve ter no máximo 2MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 5MB.');
       return;
     }
     const reader = new FileReader();
@@ -420,20 +441,17 @@ export default function PassportSection({
     reader.readAsDataURL(file);
   };
 
-  // Handle Add Friend
+  // Handle Add Friend (no mandatory '#')
   const handleAddFriend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFriendTag.trim()) {
-      setFriendError('Insira a Tag de PK XD do amigo.');
+      setFriendError('Insira o Nome ou Tag do amigo.');
       return;
     }
 
-    let formattedTag = newFriendTag.trim().toUpperCase();
-    if (!formattedTag.includes('#')) {
-      formattedTag = formattedTag + '#000';
-    }
+    const formattedTag = newFriendTag.trim();
 
-    if (passport.friends.some(f => f.playerTag.toUpperCase() === formattedTag)) {
+    if (passport.friends.some(f => f.playerTag.toLowerCase() === formattedTag.toLowerCase())) {
       setFriendError('Este amigo já está na sua lista do Passaporte!');
       return;
     }
@@ -441,8 +459,8 @@ export default function PassportSection({
     const newFriend: PassportFriend = {
       id: 'friend_' + Date.now(),
       playerTag: formattedTag,
-      nickname: newFriendNick.trim() || formattedTag.split('#')[0],
-      avatarUrl: PRESET_AVATARS[Math.floor(Math.random() * PRESET_AVATARS.length)],
+      nickname: newFriendNick.trim() || formattedTag,
+      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(formattedTag)}&backgroundColor=b6e3f4`,
       level: Math.floor(Math.random() * 15) + 1,
       favoriteMinigame: newFriendGame,
       addedAt: Date.now()
@@ -1220,14 +1238,14 @@ export default function PassportSection({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Identificador / Tag *</label>
+                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Identificador / Tag ou Nick *</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: KOOSH#000"
+                    placeholder="Ex: KOOSH ou SeuNick"
                     value={editTag}
                     onChange={(e) => setEditTag(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-mono font-bold uppercase focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold uppercase focus:outline-none focus:border-purple-500"
                   />
                 </div>
               </div>
@@ -1317,18 +1335,58 @@ export default function PassportSection({
                 </div>
               </div>
 
-              {/* Avatar Upload */}
-              <div className="space-y-2 border border-white/10 bg-black/30 p-3 rounded-2xl">
-                <label className="block text-[10px] font-extrabold uppercase text-neutral-400">Foto do Avatar</label>
+              {/* Avatar Options & Selection */}
+              <div className="space-y-2.5 border border-white/10 bg-black/30 p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-extrabold uppercase text-neutral-300">Foto do Avatar & Perfil</label>
+                  {currentUser?.photoURL && (
+                    <button
+                      type="button"
+                      onClick={() => setEditAvatar(currentUser.photoURL!)}
+                      className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 underline cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Usar Foto da Minha Conta</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Selected Preview and Upload button */}
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/20 bg-black flex-shrink-0">
-                    <img src={editAvatar} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-purple-400/50 bg-black flex-shrink-0 shadow-md">
+                    <img 
+                      src={editAvatar} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover" 
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as any).src = PRESET_AVATARS[0];
+                      }}
+                    />
                   </div>
                   <label className="flex-1 flex items-center justify-center gap-2 border border-dashed border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 py-2.5 px-3 rounded-xl text-xs font-bold text-purple-300 cursor-pointer transition-all">
                     <UploadCloud className="w-4 h-4" />
-                    <span>Enviar Foto</span>
+                    <span>Enviar Foto da Galeria</span>
                     <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                   </label>
+                </div>
+
+                {/* Preset Avatars */}
+                <div className="space-y-1 pt-1 border-t border-white/5">
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase">Ou escolha um avatar gamer:</span>
+                  <div className="flex items-center gap-2 overflow-x-auto py-1">
+                    {PRESET_AVATARS.map((avatarUrl, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setEditAvatar(avatarUrl)}
+                        className={`w-10 h-10 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all cursor-pointer ${
+                          editAvatar === avatarUrl ? 'border-pink-400 scale-110 shadow-md' : 'border-white/10 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={avatarUrl} alt={`Avatar ${idx}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -1374,16 +1432,16 @@ export default function PassportSection({
 
             <form onSubmit={handleAddFriend} className="space-y-3.5">
               <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase text-neutral-400">Tag de PK XD do Amigo *</label>
+                <label className="text-[10px] font-extrabold uppercase text-neutral-400">Nome ou Tag do Amigo *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: LUNA#245 ou GABRIEL#000"
+                  placeholder="Ex: LunaStar ou Gabriel"
                   value={newFriendTag}
                   onChange={(e) => setNewFriendTag(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-black/60 border border-white/15 rounded-xl text-sm text-white font-mono font-bold uppercase focus:outline-none focus:border-pink-500"
+                  className="w-full px-3 py-2.5 bg-black/60 border border-white/15 rounded-xl text-sm text-white font-bold uppercase focus:outline-none focus:border-pink-500"
                 />
-                <p className="text-[10px] text-neutral-400">Digite com o # e os números.</p>
+                <p className="text-[10px] text-neutral-400">Digite o nickname ou identificador do amigo.</p>
               </div>
 
               <div className="space-y-1">
