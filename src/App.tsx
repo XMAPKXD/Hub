@@ -15,7 +15,6 @@ import PastSpoilersSection from './components/PastSpoilersSection';
 import ApplicationsSection from './components/ApplicationsSection';
 import SocialSection from './components/SocialSection';
 import MissionsSection from './components/MissionsSection';
-import AppleProfileHeader from './components/AppleProfileHeader';
 import ArtesSection from './components/ArtesSection';
 import PollsSection from './components/PollsSection';
 import EventsSection from './components/EventsSection';
@@ -46,7 +45,22 @@ import {
   ThumbsUp,
   ThumbsDown,
   Mail,
-  ShieldCheck
+  ShieldCheck,
+  Home,
+  Calendar,
+  Target,
+  Palette,
+  Zap,
+  Globe,
+  Key,
+  Bell,
+  Clock,
+  Video,
+  TrendingUp,
+  CheckCircle2,
+  FileText,
+  Radio,
+  Check
 } from 'lucide-react';
 import { playTapSound, playLevelUpSound, playSuccessSound } from './utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
@@ -2628,7 +2642,7 @@ export default function App() {
               }`}
               title="Acessar Passaporte PKXD"
             >
-              <span>🛂</span>
+              <Sparkles className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Passaporte</span>
               <span className="bg-purple-950/60 text-yellow-300 text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
                 Lv.{fanLevel}
@@ -2682,7 +2696,7 @@ export default function App() {
             >
               <Compass className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições'}</span>
-              <span className="sm:hidden">📝</span>
+              <span className="sm:hidden text-xs font-bold font-sans">INSCR.</span>
             </button>
 
             {/* Admin toggle Button */}
@@ -2693,8 +2707,8 @@ export default function App() {
               }}
               className={`p-2 sm:px-3.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 ${
                 showAdminPanel 
-                  ? 'bg-yellow-400 text-purple-950 border-yellow-300' 
-                  : 'bg-purple-900/80 text-gray-200 border-purple-500/50 hover:bg-purple-800'
+                ? 'bg-yellow-400 text-purple-950 border-yellow-300' 
+                : 'bg-purple-900/80 text-gray-200 border-purple-500/50 hover:bg-purple-800'
               }`}
             >
               <Settings className={`w-3.5 h-3.5 ${showAdminPanel ? 'animate-spin' : ''}`} />
@@ -2743,7 +2757,7 @@ export default function App() {
                 className="inline-flex items-center gap-2 bg-[#25D366]/20 border-2 border-[#25D366]/60 text-[#25D366] font-sans font-black text-xs p-2.5 px-5 rounded-full hover:scale-[1.03] transition-all cursor-pointer shadow-lg"
               >
                 <MessageCircle className="w-4 h-4 fill-[#25D366]" />
-                Acessar Canal no WhatsApp! 🚀
+                Acessar Canal no WhatsApp
               </a>
             </div>
 
@@ -2753,20 +2767,6 @@ export default function App() {
 
       {/* Main Grid Area */}
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8 pt-4">
-        
-        {/* Apple Style Premium Profile Header */}
-        {!isAdminRoute && activeTab !== 'artes' && (
-          <AppleProfileHeader
-            user={user}
-            fanLevel={fanLevel}
-            fanXP={fanXP}
-            soundEnabled={soundEnabled}
-            triggerAudio={triggerAudio}
-            showAdminPanel={showAdminPanel}
-            setShowAdminPanel={setShowAdminPanel}
-            isAdmin={isAdmin}
-          />
-        )}
         
         {/* Admin Panel / Google Login Area */}
         {showAdminPanel && (
@@ -3121,21 +3121,21 @@ export default function App() {
               <PWAInstaller onAddXP={handleAddFanXP} triggerAudio={triggerAudio} />
             </div>
 
-            {/* Visual Navigation Tab Bar - High-tier Floating Navigation Dock */}
-            <div className="max-w-4xl mx-auto mb-8 bg-zinc-950/85 backdrop-blur-xl p-2 sm:p-2.5 rounded-3xl border-2 border-purple-500/30 flex items-center justify-between gap-1.5 sm:gap-2 shadow-[0_10px_35px_rgba(0,0,0,0.5)] select-none overflow-x-auto scrollbar-none sticky top-16 z-20">
+            {/* Visual Navigation Tab Bar - High-tier Responsive Navigation Dock */}
+            <div className="max-w-4xl mx-auto mb-8 bg-zinc-950/90 backdrop-blur-xl p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl border border-purple-500/30 grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2 shadow-[0_10px_35px_rgba(0,0,0,0.5)] select-none sticky top-14 sm:top-16 z-20">
               <button
                 onClick={() => {
                   triggerAudio('tap');
                   navigateTo('/');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'inicio'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400 scale-[1.02]'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span className="text-base sm:text-lg">🏠</span>
-                <span>Início</span>
+                <Home className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Início</span>
               </button>
 
               <button
@@ -3143,14 +3143,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/eventos');
                 }}
-                className={`flex-1 min-w-[75px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'eventos'
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400 scale-[1.02]'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span className="text-base sm:text-lg">🎉</span>
-                <span>Eventos</span>
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Eventos</span>
               </button>
 
               <button
@@ -3158,15 +3158,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/passaporte');
                 }}
-                className={`flex-1 min-w-[85px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 relative ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center relative ${
                   activeTab === 'passaporte'
-                    ? 'bg-gradient-to-r from-yellow-500 via-pink-600 to-purple-600 text-white shadow-[0_4px_20px_rgba(234,179,8,0.4)] border-2 border-yellow-300 scale-[1.03]'
+                    ? 'bg-gradient-to-r from-yellow-500 via-pink-600 to-purple-600 text-white shadow-[0_4px_20px_rgba(234,179,8,0.4)] border border-yellow-300'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span className="text-base sm:text-lg">🛂</span>
-                <span>Passaporte</span>
-                <span className="hidden lg:inline-block w-2 h-2 rounded-full bg-yellow-400 animate-ping absolute top-2 right-2" />
+                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Passaporte</span>
               </button>
               
               <button
@@ -3174,14 +3173,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/comunidade');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'comunidade'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400 scale-[1.02]'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span className="text-base sm:text-lg">👥</span>
-                <span>Mural</span>
+                <Users className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Mural</span>
               </button>
 
               <button
@@ -3189,14 +3188,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/missoes');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'missoes'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400 scale-[1.02]'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span className="text-base sm:text-lg">🎯</span>
-                <span>Missões</span>
+                <Target className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Missões</span>
               </button>
 
               <button
@@ -3204,14 +3203,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/artes');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'artes'
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400 scale-[1.02]'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span className="text-base sm:text-lg">🎨</span>
-                <span>Artes</span>
+                <Palette className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Artes</span>
               </button>
             </div>
 
@@ -3477,44 +3476,6 @@ export default function App() {
                 />
               </div>
             )}
-
-            {/* Extra Information: FAQ/Guide cards */}
-            <div className="bg-zinc-900/40 rounded-3xl border border-white/5 p-6 sm:p-8 space-y-6 text-left select-none">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-yellow-300 fill-yellow-300" />
-                <h3 className="font-sans font-black text-xl text-white uppercase tracking-wide">
-                  Sobre o PKXD Central
-                </h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
-                
-                <div className="space-y-1.5 p-4 rounded-xl bg-black/30 border border-white/5">
-                  <span className="text-xl">⚡</span>
-                  <h4 className="font-bold text-sm text-cyan-300">Notícias Oficiais</h4>
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    Nossa equipe monitora constantemente as redes oficiais do PK XD para entregar conteúdos confirmados aos leitores. Não divulgamos informações vazadas e nunca vasculhamos os arquivos internos do jogo.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 p-4 rounded-xl bg-black/30 border border-white/5">
-                  <span className="text-xl">📹</span>
-                  <h4 className="font-bold text-sm text-pink-300">Acompanhe as Lives e Canais</h4>
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    Nós não mostramos códigos já prontos! Em vez disso, nós divulgamos e direcionamos você para as lives, vídeos e posts do Instagram onde os códigos originais vão aparecer. Podem confiar de olhos fechados: todas as transmissões e mídias recomendadas aqui pertencem exclusivamente a Creators Oficiais parceiros do PK XD.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 p-4 rounded-xl bg-black/30 border border-white/5">
-                  <span className="text-xl">📈</span>
-                  <h4 className="font-bold text-sm text-yellow-300">Comunidade Viva</h4>
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    Mais do que apenas um site, somos uma central parceira focada em unir os jogadores de PK XD. Venha debater teorias e trocar itens virtuais com a gente!
-                  </p>
-                </div>
-
-              </div>
-            </div>
           </>
         )}
 
@@ -3641,7 +3602,7 @@ export default function App() {
                           id: 'countdown-card-root', 
                           title: 'Spoilers Semanais', 
                           desc: 'Contagem regressiva e spoilers oficiais em vigor', 
-                          badge: '⏱️ Ativo', 
+                          badge: 'Ativo', 
                           badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
                           glowColor: 'group-hover:border-emerald-500/40 group-hover:bg-emerald-500/[0.02]',
                           sideColor: 'bg-emerald-500'
@@ -3650,7 +3611,7 @@ export default function App() {
                           id: 'past-spoilers-history-section-wrapper', 
                           title: 'Spoilers Antigos', 
                           desc: 'Bandeja histórica de spoilers e histórias arquivadas', 
-                          badge: '🔮 Histórico', 
+                          badge: 'Histórico', 
                           badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
                           glowColor: 'group-hover:border-purple-500/40 group-hover:bg-purple-500/[0.02]',
                           sideColor: 'bg-purple-500'
@@ -3659,7 +3620,7 @@ export default function App() {
                           id: 'fan-level-section-wrapper', 
                           title: 'Nível de Fã Extra', 
                           desc: 'Subir de nível e coletar insígnias oficiais de fã', 
-                          badge: '🏆 Desafios', 
+                          badge: 'Desafios', 
                           badgeColor: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
                           glowColor: 'group-hover:border-pink-500/40 group-hover:bg-pink-500/[0.02]',
                           sideColor: 'bg-pink-500'
@@ -3668,7 +3629,7 @@ export default function App() {
                           id: 'promo-code-redeemer-section-wrapper', 
                           title: 'Resgatar Códigos', 
                           desc: 'Promo codes ativos nos últimos 7 dias', 
-                          badge: '🎟️ Ativos', 
+                          badge: 'Códigos', 
                           badgeColor: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
                           glowColor: 'group-hover:border-yellow-500/40 group-hover:bg-yellow-500/[0.02]',
                           sideColor: 'bg-yellow-400'
@@ -3677,7 +3638,7 @@ export default function App() {
                           id: 'featured-videos-section-wrapper', 
                           title: 'Vídeos Destaques', 
                           desc: 'Tutoriais de moedas e gameplays recomendadas', 
-                          badge: '🎥 Vídeos', 
+                          badge: 'Vídeos', 
                           badgeColor: 'bg-red-500/10 text-red-400 border-red-500/20',
                           glowColor: 'group-hover:border-red-500/40 group-hover:bg-red-500/[0.02]',
                           sideColor: 'bg-red-500'
@@ -3686,7 +3647,7 @@ export default function App() {
                           id: 'best-shorts-section-wrapper', 
                           title: 'Shorts Virais', 
                           desc: 'Vídeos curtos e engraçados da comunidade', 
-                          badge: '📱 Shorts', 
+                          badge: 'Shorts', 
                           badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
                           glowColor: 'group-hover:border-cyan-500/40 group-hover:bg-cyan-500/[0.02]',
                           sideColor: 'bg-cyan-400'
@@ -3695,7 +3656,7 @@ export default function App() {
                           id: 'theories-section-wrapper', 
                           title: 'Teorias dos Fãs', 
                           desc: 'Segredos ocultos e suposições da atualização', 
-                          badge: '📜 Fórum', 
+                          badge: 'Fórum', 
                           badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
                           glowColor: 'group-hover:border-amber-500/40 group-hover:bg-amber-500/[0.02]',
                           sideColor: 'bg-amber-500'
@@ -3757,7 +3718,8 @@ export default function App() {
                       onClick={() => { triggerAudio('tap'); navigateTo('/inscricoes#admin'); }}
                       className="w-full py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-500 text-white font-sans font-black text-[10px] sm:text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:shadow-[0_0_25px_rgba(168,85,247,0.4)] border border-indigo-500/30 cursor-pointer"
                     >
-                      <span>🔐 CANDIDATAR A ADMIN 🌟</span>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>CANDIDATAR A ADMIN</span>
                     </motion.button>
 
                     <motion.a 
