@@ -574,6 +574,23 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+
+        // Sync account name into localStorage tags if generic or empty
+        const accountName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : '');
+        if (accountName) {
+          const curTag = localStorage.getItem('pkxd_player_tag');
+          const curNick = localStorage.getItem('pkxd_nickname');
+          if (!curTag || curTag === 'JOGADOR' || curTag === 'JOGADOR#000' || curTag === 'GUEST') {
+            localStorage.setItem('pkxd_player_tag', accountName);
+          }
+          if (!curNick || curNick === 'Explorador' || curNick === 'Fã Secreto' || curNick === 'JOGADOR') {
+            localStorage.setItem('pkxd_nickname', accountName);
+          }
+          if (!localStorage.getItem('pkxd_username_nickname')) {
+            localStorage.setItem('pkxd_username_nickname', accountName);
+          }
+        }
+
         if (currentUser.email) {
           const email = currentUser.email.toLowerCase().trim();
           const adminEmails = [

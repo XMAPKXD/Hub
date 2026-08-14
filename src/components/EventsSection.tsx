@@ -60,7 +60,7 @@ const DEFAULT_COMMUNITY_EVENTS: CommunityEvent[] = [
     date: '2026-08-20',
     time: '18:00',
     bannerUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
-    organizerName: 'PKC Central',
+    organizerName: 'PK XD Central',
     rules: 'Proibido trapacear. Chegar com 5 minutos de antecedência no mapa.',
     maxParticipants: 50,
     status: 'Aprovado',

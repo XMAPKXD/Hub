@@ -49,7 +49,7 @@ const DEFAULT_BADGES: PassportBadge[] = [
   {
     id: 'badge_pioneer',
     title: 'Pioneiro da Central',
-    description: 'Acessou e explorou a plataforma PKC Central.',
+    description: 'Acessou e explorou a plataforma PK XD.',
     icon: '🌟',
     category: 'community',
     unlocked: true,
@@ -87,7 +87,7 @@ const DEFAULT_BADGES: PassportBadge[] = [
   {
     id: 'badge_pwa_pro',
     title: 'Aplicativo Instalado',
-    description: 'Instalou o PKC Central como aplicativo no celular ou PC.',
+    description: 'Instalou o PK XD Central como aplicativo no celular ou PC.',
     icon: '📱',
     category: 'special',
     unlocked: false,
@@ -114,7 +114,7 @@ const DEFAULT_BADGES: PassportBadge[] = [
   {
     id: 'badge_friendly',
     title: 'Amigo da Ilha',
-    description: 'Conectou amigos ao seu Passaporte PKXD.',
+    description: 'Conectou amigos ao seu Passaporte PK XD.',
     icon: '🤝',
     category: 'social',
     unlocked: false,
@@ -131,38 +131,7 @@ const DEFAULT_BADGES: PassportBadge[] = [
   }
 ];
 
-const DEFAULT_STAMPS: PassportStamp[] = [
-  {
-    id: 'stamp_central_launch',
-    title: 'Abertura PKC Central',
-    eventOrSeason: 'Inauguração Oficial',
-    location: 'Central Plaza',
-    date: 'Agosto 2024',
-    icon: '🚀',
-    color: '#8b5cf6',
-    acquiredAt: Date.now() - 60 * 24 * 3600 * 1000
-  },
-  {
-    id: 'stamp_summer_fest',
-    title: 'Festa de Verão & Piscina',
-    eventOrSeason: 'Temporada Tropical',
-    location: 'Parque Aquático',
-    date: '2024',
-    icon: '🏖️',
-    color: '#06b6d4',
-    acquiredAt: Date.now() - 40 * 24 * 3600 * 1000
-  },
-  {
-    id: 'stamp_crazy_run',
-    title: 'Campeão Crazy Run',
-    eventOrSeason: 'Torneio de Velocidade',
-    location: 'Circuito dos Robôs',
-    date: '2024',
-    icon: '⚡',
-    color: '#ec4899',
-    acquiredAt: Date.now() - 15 * 24 * 3600 * 1000
-  }
-];
+const DEFAULT_STAMPS: PassportStamp[] = [];
 
 const PRESET_AVATARS = [
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Armor&backgroundColor=b6e3f4',
@@ -196,6 +165,7 @@ export default function PassportSection({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isAddStampModalOpen, setIsAddStampModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<PassportBadge | null>(null);
   
   // Notifications & Copy state
@@ -209,25 +179,69 @@ export default function PassportSection({
   const [newFriendGame, setNewFriendGame] = useState('Crazy Run');
   const [friendError, setFriendError] = useState('');
 
+  // Admin Stamp creation form state
+  const [newStampTitle, setNewStampTitle] = useState('');
+  const [newStampEvent, setNewStampEvent] = useState('');
+  const [newStampLocation, setNewStampLocation] = useState('Central Plaza');
+  const [newStampDate, setNewStampDate] = useState('2026');
+  const [newStampIcon, setNewStampIcon] = useState('🏆');
+  const [newStampColor, setNewStampColor] = useState('#8b5cf6');
+
   // Loaded passport data
   const [passport, setPassport] = useState<PKXDPassport>(() => {
+    const userAccountName = currentUser?.displayName || 
+      (currentUser?.email ? currentUser.email.split('@')[0] : '') || 
+      localStorage.getItem('pkxd_nickname') || 
+      localStorage.getItem('pkxd_username_nickname') || 
+      '';
+
     const saved = localStorage.getItem('pkxd_passport_data');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        // If current user has a real account name and the saved tag is JOGADOR or generic, replace with the account name
+        const isGenericTag = !parsed.playerTag || parsed.playerTag === 'JOGADOR' || parsed.playerTag === 'JOGADOR#000' || parsed.playerTag === 'GUEST';
+        const isGenericNick = !parsed.nickname || parsed.nickname === 'Explorador' || parsed.nickname === 'Fã Secreto' || parsed.nickname === 'JOGADOR';
+
+        const effectiveTag = (isGenericTag && userAccountName) ? userAccountName : (parsed.playerTag || userAccountName || 'Explorador');
+        const effectiveNick = (isGenericNick && userAccountName) ? userAccountName : (parsed.nickname || userAccountName || 'Explorador');
+
         // If current user has a photoURL and the saved one is stock or missing, use currentUser.photoURL!
         const effectiveAvatar = currentUser?.photoURL || (parsed.avatarUrl && !parsed.avatarUrl.includes('images.unsplash.com') ? parsed.avatarUrl : PRESET_AVATARS[0]);
+        // Clean out default mock stamps if any were saved
+        const effectiveStamps = (parsed.stamps || []).filter((s: PassportStamp) => 
+          s.id !== 'stamp_central_launch' && s.id !== 'stamp_summer_fest' && s.id !== 'stamp_crazy_run'
+        );
+        // Ensure badges match latest text/descriptions
+        const effectiveBadges = DEFAULT_BADGES.map(defB => {
+          const existing = (parsed.badges || []).find((b: PassportBadge) => b.id === defB.id);
+          return existing ? { ...defB, unlocked: existing.unlocked, unlockedAt: existing.unlockedAt } : defB;
+        });
+
         return {
           ...parsed,
+          userId: currentUser?.uid || parsed.userId || 'guest_user',
+          playerTag: effectiveTag,
+          nickname: effectiveNick,
           avatarUrl: effectiveAvatar,
           level: userLevel,
-          xp: fanXP
+          xp: fanXP,
+          badges: effectiveBadges,
+          stamps: effectiveStamps
         };
       } catch (e) {}
     }
 
-    const savedTag = localStorage.getItem('pkxd_player_tag') || (currentUser?.displayName ? currentUser.displayName.toUpperCase() : 'JOGADOR');
-    const savedNick = localStorage.getItem('pkxd_nickname') || currentUser?.displayName || 'Explorador';
+    const rawSavedTag = localStorage.getItem('pkxd_player_tag');
+    const rawSavedNick = localStorage.getItem('pkxd_nickname');
+
+    const savedTag = (rawSavedTag && rawSavedTag !== 'JOGADOR' && rawSavedTag !== 'JOGADOR#000')
+      ? rawSavedTag
+      : (userAccountName || 'Explorador');
+
+    const savedNick = (rawSavedNick && rawSavedNick !== 'Explorador' && rawSavedNick !== 'Fã Secreto' && rawSavedNick !== 'JOGADOR')
+      ? rawSavedNick
+      : (userAccountName || 'Explorador');
 
     return {
       id: currentUser?.uid || 'passport_' + Date.now(),
@@ -296,20 +310,41 @@ export default function PassportSection({
   const [editTheme, setEditTheme] = useState(passport.cardTheme);
   const [editAvatar, setEditAvatar] = useState(passport.avatarUrl);
 
-  // Sync profile photo whenever currentUser changes
+  // Sync profile photo and account name whenever currentUser changes
   useEffect(() => {
-    if (currentUser?.photoURL) {
+    if (currentUser) {
+      const accountName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : '');
+
       setPassport(prev => {
+        const isGenericTag = !prev.playerTag || prev.playerTag === 'JOGADOR' || prev.playerTag === 'JOGADOR#000' || prev.playerTag === 'GUEST' || prev.userId === 'guest_user';
+        const isGenericNick = !prev.nickname || prev.nickname === 'Explorador' || prev.nickname === 'Fã Secreto' || prev.nickname === 'JOGADOR' || prev.userId === 'guest_user';
+
+        const updatedTag = (isGenericTag && accountName) ? accountName : prev.playerTag;
+        const updatedNick = (isGenericNick && accountName) ? accountName : prev.nickname;
+        const updatedAvatar = currentUser.photoURL || prev.avatarUrl;
+
         const updated = {
           ...prev,
-          avatarUrl: currentUser.photoURL
+          userId: currentUser.uid,
+          playerTag: updatedTag,
+          nickname: updatedNick,
+          avatarUrl: updatedAvatar
         };
         localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+        localStorage.setItem('pkxd_player_tag', updated.playerTag);
+        localStorage.setItem('pkxd_nickname', updated.nickname);
         return updated;
       });
-      setEditAvatar(currentUser.photoURL);
+
+      if (accountName) {
+        setEditTag(prevTag => (!prevTag || prevTag === 'JOGADOR' || prevTag === 'JOGADOR#000' || prevTag === 'GUEST') ? accountName : prevTag);
+        setEditNick(prevNick => (!prevNick || prevNick === 'Explorador' || prevNick === 'Fã Secreto' || prevNick === 'JOGADOR') ? accountName : prevNick);
+      }
+      if (currentUser.photoURL) {
+        setEditAvatar(currentUser.photoURL);
+      }
     }
-  }, [currentUser?.photoURL]);
+  }, [currentUser?.uid, currentUser?.displayName, currentUser?.email, currentUser?.photoURL]);
 
   // Sync Level & XP on props change
   useEffect(() => {
@@ -341,15 +376,25 @@ export default function PassportSection({
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = snap.data() as PKXDPassport;
+          const accountName = currentUser?.displayName || (currentUser?.email ? currentUser.email.split('@')[0] : '');
+          const isGenericTag = !data.playerTag || data.playerTag === 'JOGADOR' || data.playerTag === 'JOGADOR#000';
+          const isGenericNick = !data.nickname || data.nickname === 'Explorador' || data.nickname === 'Fã Secreto' || data.nickname === 'JOGADOR';
+          const finalTag = (isGenericTag && accountName) ? accountName : (data.playerTag || accountName || 'Explorador');
+          const finalNick = (isGenericNick && accountName) ? accountName : (data.nickname || accountName || 'Explorador');
+
           setPassport(prev => {
             const merged = { 
               ...prev, 
-              ...data, 
+              ...data,
+              playerTag: finalTag,
+              nickname: finalNick,
               avatarUrl: currentUser?.photoURL || data.avatarUrl || prev.avatarUrl,
               level: userLevel, 
               xp: fanXP 
             };
             localStorage.setItem('pkxd_passport_data', JSON.stringify(merged));
+            localStorage.setItem('pkxd_player_tag', merged.playerTag);
+            localStorage.setItem('pkxd_nickname', merged.nickname);
             return merged;
           });
         }
@@ -358,7 +403,7 @@ export default function PassportSection({
       }
     }
     loadRemotePassport();
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, currentUser?.displayName, currentUser?.email]);
 
   // Generate QR Code
   useEffect(() => {
@@ -504,6 +549,62 @@ export default function PassportSection({
       const updated = {
         ...passport,
         friends: updatedFriends,
+        updatedAt: Date.now()
+      };
+      savePassport(updated);
+      if (triggerAudio) triggerAudio('tap');
+    }
+  };
+
+  // Handle Create Stamp (Admin)
+  const handleCreateStamp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStampTitle.trim()) return;
+
+    const newStamp: PassportStamp = {
+      id: 'stamp_' + Date.now(),
+      title: newStampTitle.trim(),
+      eventOrSeason: newStampEvent.trim() || 'Evento Oficial',
+      location: newStampLocation.trim() || 'Central Plaza',
+      date: newStampDate.trim() || '2026',
+      icon: newStampIcon.trim() || '🏆',
+      color: newStampColor || '#8b5cf6',
+      acquiredAt: Date.now()
+    };
+
+    const updatedStamps = [newStamp, ...(passport.stamps || [])];
+    const updated: PKXDPassport = {
+      ...passport,
+      stamps: updatedStamps,
+      updatedAt: Date.now()
+    };
+
+    savePassport(updated);
+    setNewStampTitle('');
+    setNewStampEvent('');
+    setNewStampLocation('Central Plaza');
+    setNewStampDate('2026');
+    setNewStampIcon('🏆');
+    setNewStampColor('#8b5cf6');
+    setIsAddStampModalOpen(false);
+
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.6 }
+    });
+
+    if (triggerAudio) triggerAudio('success');
+    if (onAddXP) onAddXP(25, 'Criou um novo Selo Oficial no Passaporte');
+  };
+
+  // Handle Delete Stamp (Admin)
+  const handleDeleteStamp = (stampId: string, stampTitle: string) => {
+    if (confirm(`Deseja realmente excluir o selo "${stampTitle}"?`)) {
+      const updatedStamps = (passport.stamps || []).filter(s => s.id !== stampId);
+      const updated: PKXDPassport = {
+        ...passport,
+        stamps: updatedStamps,
         updatedAt: Date.now()
       };
       savePassport(updated);
@@ -1001,7 +1102,7 @@ export default function PassportSection({
       {/* ========================================================= */}
       {activeTab === 'stamps' && (
         <div className="space-y-4 animate-fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
                 <BookmarkCheck className="w-5 h-5 text-cyan-400" />
@@ -1011,45 +1112,95 @@ export default function PassportSection({
                 Colecione os carimbos oficiais emitidos em temporadas comemorativas e grandes eventos de PK XD!
               </p>
             </div>
-            <div className="px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl font-mono text-xs font-bold text-cyan-300 self-start sm:self-center">
-              Selos Colecionados: {passport.stamps.length}
+            
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <div className="px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl font-mono text-xs font-bold text-cyan-300">
+                Selos: {passport.stamps.length}
+              </div>
+
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    if (triggerAudio) triggerAudio('tap');
+                    setIsAddStampModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Criar Selo (ADM)</span>
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {passport.stamps.map((stamp) => (
-              <div
-                key={stamp.id}
-                className="bg-zinc-900/80 border-2 border-white/10 hover:border-cyan-400/50 rounded-3xl p-5 shadow-xl transition-all relative overflow-hidden group"
-              >
-                {/* Stamp Postal Border Effect */}
-                <div className="absolute top-2 right-2 border-2 border-dashed border-white/20 rounded-full px-2 py-0.5 text-[8px] font-mono text-white/50 uppercase tracking-widest">
-                  OFFICIAL STAMP
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div 
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 shadow-lg border border-white/20 transform group-hover:rotate-6 transition-transform"
-                    style={{ backgroundColor: stamp.color ? `${stamp.color}30` : 'rgba(139,92,246,0.3)' }}
-                  >
-                    {stamp.icon}
-                  </div>
-
-                  <div className="space-y-1 flex-1">
-                    <h4 className="font-sans font-black text-base text-white uppercase">
-                      {stamp.title}
-                    </h4>
-                    <p className="text-xs text-cyan-300 font-bold">
-                      {stamp.eventOrSeason}
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      📍 {stamp.location || 'Central PK XD'} • 📅 {stamp.date}
-                    </p>
-                  </div>
-                </div>
+          {passport.stamps.length === 0 ? (
+            <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-dashed border-white/10 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto text-2xl">
+                <BookmarkCheck className="w-7 h-7" />
               </div>
-            ))}
-          </div>
+              <h4 className="font-sans font-black text-base text-white uppercase">Nenhum Selo Cadastrado</h4>
+              <p className="text-xs text-gray-400 max-w-md mx-auto">
+                Nenhum carimbo oficial registrado no momento. Novos selos e carimbos de eventos serão disponibilizados aqui!
+              </p>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    if (triggerAudio) triggerAudio('tap');
+                    setIsAddStampModalOpen(true);
+                  }}
+                  className="mt-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:brightness-110 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all inline-flex items-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Criar Primeiro Selo (Modo ADM)</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {passport.stamps.map((stamp) => (
+                <div
+                  key={stamp.id}
+                  className="bg-zinc-900/80 border-2 border-white/10 hover:border-cyan-400/50 rounded-3xl p-5 shadow-xl transition-all relative overflow-hidden group"
+                >
+                  {/* Stamp Postal Border Effect */}
+                  <div className="absolute top-2 right-2 border-2 border-dashed border-white/20 rounded-full px-2 py-0.5 text-[8px] font-mono text-white/50 uppercase tracking-widest">
+                    OFFICIAL STAMP
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div 
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 shadow-lg border border-white/20 transform group-hover:rotate-6 transition-transform"
+                      style={{ backgroundColor: stamp.color ? `${stamp.color}30` : 'rgba(139,92,246,0.3)' }}
+                    >
+                      {stamp.icon}
+                    </div>
+
+                    <div className="space-y-1 flex-1 pr-4">
+                      <h4 className="font-sans font-black text-base text-white uppercase">
+                        {stamp.title}
+                      </h4>
+                      <p className="text-xs text-cyan-300 font-bold">
+                        {stamp.eventOrSeason}
+                      </p>
+                      <p className="text-[11px] text-gray-400">
+                        📍 {stamp.location || 'Central PK XD'} • 📅 {stamp.date}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleDeleteStamp(stamp.id, stamp.title)}
+                      className="absolute bottom-3 right-3 p-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-lg border border-red-500/30 transition-all cursor-pointer z-10"
+                      title="Excluir Selo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1527,14 +1678,42 @@ export default function PassportSection({
               </div>
             )}
 
-            <div className="space-y-2">
-              <button
-                onClick={handleCopyLink}
-                className="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
-              >
-                {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
-                <span>{copiedLink ? 'Link do Passaporte Copiado!' : 'Copiar Link para Compartilhar'}</span>
-              </button>
+            <div className="space-y-3">
+              {/* Direct URL input preview */}
+              <div className="bg-black/60 border border-purple-500/30 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-left">
+                <div className="flex-1 overflow-hidden">
+                  <span className="block text-[9px] font-mono uppercase font-bold text-pink-400">Seu Link Oficial:</span>
+                  <span className="font-mono text-xs text-yellow-300 truncate block">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/?passaporte=${encodeURIComponent(passport.playerTag)}` : `https://pkxdcentral.site/?passaporte=${passport.playerTag}`}
+                  </span>
+                </div>
+                <button
+                  onClick={handleCopyLink}
+                  className="px-3 py-1.5 bg-pink-500 hover:bg-pink-600 active:scale-95 text-white font-sans font-black text-[11px] uppercase rounded-xl transition-all flex items-center gap-1 cursor-pointer flex-shrink-0"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedLink ? 'Copiado!' : 'Copiar'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                >
+                  {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
+                  <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
+                </button>
+
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`✨ Confira meu Passaporte Oficial no PK XD Central com minhas conquistas e medalhas!\n🎮 Meu Nick: ${passport.nickname}\n🆔 Tag: ${passport.playerTag}\n🛂 Acesse meu Passaporte: ${typeof window !== 'undefined' ? window.location.origin : 'https://pkxdcentral.site'}/?passaporte=${encodeURIComponent(passport.playerTag)}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                >
+                  <span>💬 Enviar no WhatsApp</span>
+                </a>
+              </div>
 
               <button
                 onClick={handleCopyTag}
@@ -1598,6 +1777,191 @@ export default function PassportSection({
                 </span>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: CRIAR NOVO SELO OFICIAL (MODO ADM) */}
+      {/* ========================================================= */}
+      {isAddStampModalOpen && isAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-zinc-900 border-2 border-cyan-500/50 rounded-3xl p-6 sm:p-8 w-full max-w-lg relative shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsAddStampModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="space-y-1">
+              <h3 className="font-sans font-black text-lg text-white uppercase tracking-wider flex items-center gap-2">
+                <BookmarkCheck className="w-5 h-5 text-cyan-400" />
+                Criar Selo Oficial (Modo ADM)
+              </h3>
+              <p className="text-xs text-gray-400">
+                Adicione carimbos comemorativos e oficiais ao Passaporte PK XD.
+              </p>
+            </div>
+
+            {/* Live Preview */}
+            <div className="p-4 bg-black/40 rounded-2xl border border-white/10 space-y-2">
+              <span className="text-[10px] font-mono uppercase text-gray-400 font-bold">Pré-visualização do Selo:</span>
+              <div className="bg-zinc-900 border-2 border-white/10 rounded-2xl p-4 relative overflow-hidden flex items-start gap-3">
+                <div className="absolute top-2 right-2 border border-dashed border-white/20 rounded-full px-2 py-0.5 text-[7px] font-mono text-white/50 uppercase">
+                  OFFICIAL STAMP
+                </div>
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-lg border border-white/20"
+                  style={{ backgroundColor: newStampColor ? `${newStampColor}30` : 'rgba(139,92,246,0.3)' }}
+                >
+                  {newStampIcon || '🏆'}
+                </div>
+                <div className="space-y-0.5 flex-1 pr-6">
+                  <h5 className="font-sans font-black text-sm text-white uppercase">
+                    {newStampTitle || 'Nome do Selo'}
+                  </h5>
+                  <p className="text-[11px] text-cyan-300 font-bold">
+                    {newStampEvent || 'Temporada / Evento'}
+                  </p>
+                  <p className="text-[10px] text-gray-400">
+                    📍 {newStampLocation || 'Central Plaza'} • 📅 {newStampDate || '2026'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateStamp} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-gray-300 font-bold uppercase mb-1">
+                  Título do Selo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Campeão Crazy Run"
+                  value={newStampTitle}
+                  onChange={(e) => setNewStampTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 focus:border-cyan-500 rounded-xl text-sm text-white outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-gray-300 font-bold uppercase mb-1">
+                    Evento ou Temporada
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Torneio de Velocidade"
+                    value={newStampEvent}
+                    onChange={(e) => setNewStampEvent(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 focus:border-cyan-500 rounded-xl text-sm text-white outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-gray-300 font-bold uppercase mb-1">
+                    Localização na Ilha
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Circuito dos Robôs"
+                    value={newStampLocation}
+                    onChange={(e) => setNewStampLocation(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 focus:border-cyan-500 rounded-xl text-sm text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-gray-300 font-bold uppercase mb-1">
+                  Data / Período
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 2026 ou Agosto 2026"
+                  value={newStampDate}
+                  onChange={(e) => setNewStampDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 focus:border-cyan-500 rounded-xl text-sm text-white outline-none"
+                />
+              </div>
+
+              {/* Icon selector */}
+              <div>
+                <label className="block text-xs font-mono text-gray-300 font-bold uppercase mb-1.5">
+                  Ícone / Emoji do Carimbo
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {['🏆', '🌟', '🚀', '🏖️', '⚡', '🎉', '👾', '👑', '🔥', '💎', '🐾', '🎮', '🎯', '🎃'].map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setNewStampIcon(emoji)}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border transition-all cursor-pointer ${
+                        newStampIcon === emoji
+                          ? 'bg-cyan-500/20 border-cyan-400 scale-110 shadow-md'
+                          : 'bg-black/40 border-white/10 hover:border-white/30'
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Ou digite outro emoji/ícone..."
+                  value={newStampIcon}
+                  onChange={(e) => setNewStampIcon(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-black/50 border border-white/10 focus:border-cyan-500 rounded-xl text-sm text-white outline-none"
+                />
+              </div>
+
+              {/* Color glow selector */}
+              <div>
+                <label className="block text-xs font-mono text-gray-300 font-bold uppercase mb-1.5">
+                  Cor de Destaque
+                </label>
+                <div className="flex flex-wrap gap-2.5">
+                  {[
+                    { name: 'Roxo', color: '#8b5cf6' },
+                    { name: 'Ciano', color: '#06b6d4' },
+                    { name: 'Rosa', color: '#ec4899' },
+                    { name: 'Dourado', color: '#eab308' },
+                    { name: 'Esmeralda', color: '#10b981' },
+                    { name: 'Laranja', color: '#f97316' }
+                  ].map((c) => (
+                    <button
+                      key={c.color}
+                      type="button"
+                      onClick={() => setNewStampColor(c.color)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all cursor-pointer ${
+                        newStampColor === c.color ? 'border-white scale-125 shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'
+                      }`}
+                      style={{ backgroundColor: c.color }}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStampModalOpen(false)}
+                  className="flex-1 py-3 bg-neutral-800 hover:bg-neutral-700 text-gray-300 font-bold text-xs uppercase rounded-xl transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Emitir Selo</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
