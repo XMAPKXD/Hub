@@ -2570,24 +2570,55 @@ export default function App() {
         </button>
       </div>
 
-      {/* Navigation Header - Matches the gorgeous solid PK XD Purple brand header from screenshot */}
-      <nav id="nav-header" className="sticky top-0 z-20 bg-purple-600 border-b-4 border-purple-800 select-none py-3.5 px-4 sm:px-6 shadow-xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      {/* Navigation Header - Premium PK XD Purple Header with responsive navigation */}
+      <nav id="nav-header" className="sticky top-0 z-30 bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-700 border-b-4 border-purple-900 select-none py-2.5 sm:py-3 px-3 sm:px-6 shadow-xl backdrop-blur-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           
-          {/* Brand Name - Site icon removed as requested & changed to PKXD Central */}
-          <div>
-            <h1 className="font-sans font-black text-xl sm:text-2xl tracking-tighter text-white uppercase drop-shadow-[0_2px_0_rgba(0,0,0,0.4)] transform skew-x-[-2deg]">
-              PKXD <span className="text-yellow-300">Central</span>
-            </h1>
-            <p className="font-sans text-[9px] sm:text-[10px] text-purple-200 font-extrabold uppercase tracking-widest leading-none">
-              Notícias, Spoilers e Códigos!
-            </p>
-          </div>
+          {/* Brand Name with Click to Home */}
+          <button
+            onClick={() => {
+              triggerAudio('tap');
+              navigateTo('/');
+            }}
+            className="text-left flex items-center gap-2 group cursor-pointer focus:outline-none"
+          >
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-yellow-300 font-black text-lg shadow-inner group-hover:scale-105 transition-transform">
+              ⚡
+            </div>
+            <div>
+              <h1 className="font-sans font-black text-lg sm:text-2xl tracking-tighter text-white uppercase drop-shadow-[0_2px_0_rgba(0,0,0,0.4)] transform skew-x-[-2deg] flex items-center gap-1">
+                PKXD <span className="text-yellow-300">Central</span>
+              </h1>
+              <p className="font-sans text-[8px] sm:text-[10px] text-purple-200 font-extrabold uppercase tracking-widest leading-none hidden xs:block">
+                Notícias, Spoilers e Códigos!
+              </p>
+            </div>
+          </button>
 
-          {/* Action Links */}
-          <div className="flex items-center gap-2">
+          {/* Action Links & Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
 
-            {/* Notification center bell with badge! */}
+            {/* Quick Passport Link in Top Nav */}
+            <button
+              onClick={() => {
+                triggerAudio('tap');
+                navigateTo('/passaporte');
+              }}
+              className={`p-2 sm:px-3 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md ${
+                activeTab === 'passaporte'
+                  ? 'bg-yellow-400 text-purple-950 border-yellow-300 shadow-yellow-400/20'
+                  : 'bg-purple-900/80 hover:bg-purple-800 text-white border-purple-400/40'
+              }`}
+              title="Acessar Passaporte PKXD"
+            >
+              <span>🛂</span>
+              <span className="hidden md:inline">Passaporte</span>
+              <span className="bg-purple-950/60 text-yellow-300 text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
+                Lv.{fanLevel}
+              </span>
+            </button>
+
+            {/* Notification center bell with badge */}
             <button 
               type="button"
               onClick={() => {
@@ -2595,7 +2626,6 @@ export default function App() {
                 const nextState = !isNotifOverlayOpen;
                 setIsNotifOverlayOpen(nextState);
                 if (nextState) {
-                  // Mark all current notifications as seen!
                   const currentIds = notificationList.map(n => n.id);
                   setSeenNotifIds(prev => {
                     const unique = Array.from(new Set([...prev, ...currentIds]));
@@ -2606,18 +2636,18 @@ export default function App() {
                   });
                 }
               }}
-              className="bg-purple-800 border-2 border-purple-500/50 p-2.5 px-3 rounded-2xl text-yellow-300 hover:bg-purple-900 transition-all cursor-pointer relative flex items-center gap-1.5 text-[11px] font-extrabold shadow-md"
+              className="bg-purple-900/80 border-2 border-purple-500/50 p-2 sm:p-2.5 rounded-2xl text-yellow-300 hover:bg-purple-800 transition-all cursor-pointer relative flex items-center gap-1 text-[11px] font-extrabold shadow-md active:scale-95"
               title="Central de Notificações Recentes"
             >
-              <BellRing className="w-3.5 h-3.5 animate-swing" />
+              <BellRing className="w-4 h-4 animate-swing" />
               {unreadCount > 0 && (
-                <span className="bg-pink-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full border border-purple-950">
+                <span className="bg-pink-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full border border-purple-950 absolute -top-1 -right-1 shadow">
                   {unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Page navigation tab */}
+            {/* Inscrições page navigation tab */}
             <button
               onClick={() => {
                 triggerAudio('tap');
@@ -2627,30 +2657,31 @@ export default function App() {
                   navigateTo('/inscricoes');
                 }
               }}
-              className={`p-2.5 px-3 sm:px-4 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md ${
+              className={`p-2 sm:px-3.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 ${
                 isApplicationsRoute
                   ? 'bg-gradient-to-r from-cyan-400 to-teal-400 text-purple-950 border-cyan-300 hover:brightness-110'
                   : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400 hover:brightness-110'
               }`}
             >
               <Compass className="w-3.5 h-3.5" />
-              <span>{isApplicationsRoute ? 'Voltar à Central' : 'Inscrições 📝'}</span>
+              <span className="hidden sm:inline">{isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições'}</span>
+              <span className="sm:hidden">📝</span>
             </button>
 
-            {/* Admin toggle Button design */}
+            {/* Admin toggle Button */}
             <button
               onClick={() => {
                 triggerAudio('tap');
                 setShowAdminPanel(!showAdminPanel);
               }}
-              className={`p-2.5 px-3 sm:px-4.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md ${
+              className={`p-2 sm:px-3.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 ${
                 showAdminPanel 
-                  ? 'bg-yellow-400 text-purple-950 border-yellow-250' 
-                  : 'bg-purple-800 text-gray-150 border-purple-500/50 hover:bg-purple-900'
+                  ? 'bg-yellow-400 text-purple-950 border-yellow-300' 
+                  : 'bg-purple-900/80 text-gray-200 border-purple-500/50 hover:bg-purple-800'
               }`}
             >
               <Settings className={`w-3.5 h-3.5 ${showAdminPanel ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{showAdminPanel ? 'Fechar Painel' : 'Modo Admin'}</span>
+              <span className="hidden sm:inline">{showAdminPanel ? 'Fechar' : 'Admin'}</span>
             </button>
           </div>
 
@@ -3073,20 +3104,20 @@ export default function App() {
               <PWAInstaller onAddXP={handleAddFanXP} triggerAudio={triggerAudio} />
             </div>
 
-            {/* Visual Navigation Tab Bar for "New Phase" - Neutral Elegant & Formal styling */}
-            <div className="max-w-4xl mx-auto mb-8 bg-zinc-900/90 p-2 sm:p-2.5 rounded-3xl border-2 border-purple-500/40 flex items-center justify-between gap-1 sm:gap-2 shadow-[0_4px_25px_rgba(139,92,246,0.2)] select-none overflow-x-auto scrollbar-none">
+            {/* Visual Navigation Tab Bar - High-tier Floating Navigation Dock */}
+            <div className="max-w-4xl mx-auto mb-8 bg-zinc-950/85 backdrop-blur-xl p-2 sm:p-2.5 rounded-3xl border-2 border-purple-500/30 flex items-center justify-between gap-1.5 sm:gap-2 shadow-[0_10px_35px_rgba(0,0,0,0.5)] select-none overflow-x-auto scrollbar-none sticky top-16 z-20">
               <button
                 onClick={() => {
                   triggerAudio('tap');
                   navigateTo('/');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
                   activeTab === 'inicio'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border-2 border-purple-400'
-                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400 scale-[1.02]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span>🏠</span>
+                <span className="text-base sm:text-lg">🏠</span>
                 <span>Início</span>
               </button>
 
@@ -3095,13 +3126,13 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/eventos');
                 }}
-                className={`flex-1 min-w-[75px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[75px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
                   activeTab === 'eventos'
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md border-2 border-pink-400'
-                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400 scale-[1.02]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span>🎉</span>
+                <span className="text-base sm:text-lg">🎉</span>
                 <span>Eventos</span>
               </button>
 
@@ -3110,14 +3141,15 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/passaporte');
                 }}
-                className={`flex-1 min-w-[85px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[85px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 relative ${
                   activeTab === 'passaporte'
-                    ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white shadow-md border-2 border-yellow-400'
-                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-gradient-to-r from-yellow-500 via-pink-600 to-purple-600 text-white shadow-[0_4px_20px_rgba(234,179,8,0.4)] border-2 border-yellow-300 scale-[1.03]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span>🛂</span>
+                <span className="text-base sm:text-lg">🛂</span>
                 <span>Passaporte</span>
+                <span className="hidden lg:inline-block w-2 h-2 rounded-full bg-yellow-400 animate-ping absolute top-2 right-2" />
               </button>
               
               <button
@@ -3125,13 +3157,13 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/comunidade');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
                   activeTab === 'comunidade'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border-2 border-purple-400'
-                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400 scale-[1.02]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span>👥</span>
+                <span className="text-base sm:text-lg">👥</span>
                 <span>Mural</span>
               </button>
 
@@ -3140,13 +3172,13 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/missoes');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
                   activeTab === 'missoes'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md border-2 border-purple-400'
-                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400 scale-[1.02]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span>🎯</span>
+                <span className="text-base sm:text-lg">🎯</span>
                 <span>Missões</span>
               </button>
 
@@ -3155,13 +3187,13 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/artes');
                 }}
-                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-4 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 sm:gap-2 py-3 px-2 sm:px-3.5 rounded-2xl font-sans text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
                   activeTab === 'artes'
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md border-2 border-pink-400'
-                    : 'text-gray-400 hover:text-white hover:bg-zinc-800'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400 scale-[1.02]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <span>🎨</span>
+                <span className="text-base sm:text-lg">🎨</span>
                 <span>Artes</span>
               </button>
             </div>

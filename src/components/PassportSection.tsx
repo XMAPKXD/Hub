@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { 
@@ -6,7 +6,6 @@ import {
   PassportBadge, 
   PassportStamp, 
   PassportFriend, 
-  PassportEventHistory, 
   CommunityEvent 
 } from '../types';
 import { 
@@ -22,20 +21,17 @@ import {
   Copy, 
   Check, 
   Gamepad2, 
-  Clock, 
   Trophy, 
   Plus, 
   Trash2, 
   X, 
   CheckCircle2, 
-  ExternalLink, 
   Flame, 
-  Camera, 
   UploadCloud, 
   ShieldCheck, 
   Star,
-  Zap,
-  Info
+  Search,
+  Filter
 } from 'lucide-react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -192,6 +188,10 @@ export default function PassportSection({
   // Active tab inside Passport
   const [activeTab, setActiveTab] = useState<'card' | 'badges' | 'stamps' | 'friends' | 'events'>('card');
   
+  // Filter for Badges
+  const [badgeFilter, setBadgeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
+  const [friendSearch, setFriendSearch] = useState('');
+
   // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
@@ -231,13 +231,13 @@ export default function PassportSection({
       userId: currentUser?.uid || 'guest_user',
       playerTag: savedTag,
       nickname: savedNick,
-      avatarUrl: currentUser?.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80',
+      avatarUrl: currentUser?.photoURL || PRESET_AVATARS[0],
       bio: 'Apaixonado por PK XD! Adoro disputar no Crazy Run, personalizar minha casa e curtir eventos com a galera!',
       title: isAdmin ? 'Lorde da Moderação' : 'Explorador da Ilha',
       level: userLevel,
       xp: fanXP,
       joinedAt: Date.now() - 45 * 24 * 3600 * 1000,
-      timeInCommunity: 'Membro Ativo (6 meses)',
+      timeInCommunity: 'Membro Ativo da Central',
       favoriteMinigame: 'Crazy Run',
       houseTheme: 'Mansão Gamer',
       cardTheme: 'neon-purple',
@@ -248,37 +248,42 @@ export default function PassportSection({
           id: 'friend_1',
           playerTag: 'LUNA#245',
           nickname: 'LunaStar',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-          level: 8,
-          addedAt: Date.now() - 20 * 24 * 3600 * 1000,
-          favoriteMinigame: 'Desfile da Ilha'
+          avatarUrl: PRESET_AVATARS[1],
+          level: 7,
+          favoriteMinigame: 'Corrida de Pets',
+          addedAt: Date.now() - 12 * 24 * 3600 * 1000
         },
         {
           id: 'friend_2',
-          playerTag: 'NINJA#999',
-          nickname: 'NinjaPro',
-          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+          playerTag: 'GABRIEL#000',
+          nickname: 'GabePKXD',
+          avatarUrl: PRESET_AVATARS[2],
           level: 12,
-          addedAt: Date.now() - 10 * 24 * 3600 * 1000,
-          favoriteMinigame: 'Crazy Run'
+          favoriteMinigame: 'Crazy Run',
+          addedAt: Date.now() - 5 * 24 * 3600 * 1000
         }
       ],
       eventHistory: [
         {
-          id: 'hist_1',
-          eventId: 'event_launch',
-          eventName: 'Mega Encontro de Criadores',
+          id: 'ev_1',
+          eventName: 'Torneio Crazy Run Central',
           role: 'participante',
           date: '10/08/2024',
-          category: 'Festas'
+          category: 'Mini-games'
+        },
+        {
+          id: 'ev_2',
+          eventName: 'Encontro de Creators & Spoilers',
+          role: 'organizador',
+          date: '02/08/2024',
+          category: 'Social'
         }
       ],
-      isPublic: true,
       updatedAt: Date.now()
     };
   });
 
-  // Edit form states
+  // Form edit states
   const [editNick, setEditNick] = useState(passport.nickname);
   const [editTag, setEditTag] = useState(passport.playerTag);
   const [editBio, setEditBio] = useState(passport.bio);
@@ -288,94 +293,98 @@ export default function PassportSection({
   const [editTheme, setEditTheme] = useState(passport.cardTheme);
   const [editAvatar, setEditAvatar] = useState(passport.avatarUrl);
 
-  // Sync with Firestore & localStorage
-  const savePassport = async (updated: PKXDPassport) => {
-    setPassport(updated);
-    try {
-      localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
-      localStorage.setItem('pkxd_player_tag', updated.playerTag);
-      localStorage.setItem('pkxd_nickname', updated.nickname);
-    } catch (e) {}
-
-    try {
-      if (db && currentUser?.uid) {
-        await setDoc(doc(db, 'user_passports', currentUser.uid), updated);
-      }
-    } catch (err) {
-      console.warn('Could not sync passport to Firestore:', err);
-    }
-  };
-
-  // Generate QR Code on load and when tag changes
+  // Sync Level & XP on props change
   useEffect(() => {
-    const passportUrl = `${window.location.origin}/?passaporte=${encodeURIComponent(passport.playerTag || passport.nickname)}`;
+    setPassport(prev => {
+      const updatedBadges = prev.badges.map(b => {
+        if (b.id === 'badge_legend' && userLevel >= 10 && !b.unlocked) {
+          return { ...b, unlocked: true, unlockedAt: Date.now() };
+        }
+        return b;
+      });
+
+      const updated = {
+        ...prev,
+        level: userLevel,
+        xp: fanXP,
+        badges: updatedBadges
+      };
+      localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+      return updated;
+    });
+  }, [userLevel, fanXP]);
+
+  // Load from Firestore on user mount
+  useEffect(() => {
+    async function loadRemotePassport() {
+      if (!currentUser?.uid || !db) return;
+      try {
+        const docRef = doc(db, 'pkxd_passports', currentUser.uid);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data() as PKXDPassport;
+          setPassport(prev => {
+            const merged = { ...prev, ...data, level: userLevel, xp: fanXP };
+            localStorage.setItem('pkxd_passport_data', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar passaporte do Firestore:', err);
+      }
+    }
+    loadRemotePassport();
+  }, [currentUser?.uid]);
+
+  // Generate QR Code
+  useEffect(() => {
+    const passportUrl = `${window.location.origin}/?passaporte=${encodeURIComponent(passport.playerTag)}`;
     QRCode.toDataURL(passportUrl, {
       width: 280,
-      margin: 2,
+      margin: 1.5,
       color: {
-        dark: '#7c3aed',
+        dark: '#1e1b4b',
         light: '#ffffff'
       }
     })
-      .then(url => {
-        setQrCodeDataUrl(url);
-      })
-      .catch(err => {
-        console.error('Error generating QR code:', err);
-      });
-  }, [passport.playerTag, passport.nickname]);
+      .then(url => setQrCodeDataUrl(url))
+      .catch(err => console.error('Erro gerando QR Code:', err));
+  }, [passport.playerTag]);
 
-  // Sync Level with FanXP updates
-  useEffect(() => {
-    if (passport.level !== userLevel || passport.xp !== fanXP) {
-      setPassport(prev => {
-        const nextBadges = [...prev.badges];
-        if (userLevel >= 10) {
-          const legendBadge = nextBadges.find(b => b.id === 'badge_legend');
-          if (legendBadge && !legendBadge.unlocked) {
-            legendBadge.unlocked = true;
-            legendBadge.unlockedAt = Date.now();
-          }
-        }
-        return {
-          ...prev,
-          level: userLevel,
-          xp: fanXP,
-          badges: nextBadges
-        };
-      });
+  // Save passport helper
+  const savePassport = async (newPassport: PKXDPassport) => {
+    setPassport(newPassport);
+    localStorage.setItem('pkxd_passport_data', JSON.stringify(newPassport));
+    localStorage.setItem('pkxd_player_tag', newPassport.playerTag);
+    localStorage.setItem('pkxd_nickname', newPassport.nickname);
+
+    if (currentUser?.uid && db) {
+      try {
+        await setDoc(doc(db, 'pkxd_passports', currentUser.uid), newPassport, { merge: true });
+      } catch (err) {
+        console.warn('Erro ao salvar passaporte no Firestore:', err);
+      }
     }
-  }, [fanXP, userLevel]);
+  };
 
-  // Check badges for PWA installation or other triggers
-  useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (isStandalone) {
-      setPassport(prev => {
-        const nextBadges = prev.badges.map(b => {
-          if (b.id === 'badge_pwa_pro' && !b.unlocked) {
-            return { ...b, unlocked: true, unlockedAt: Date.now() };
-          }
-          return b;
-        });
-        return { ...prev, badges: nextBadges };
-      });
-    }
-  }, []);
-
-  // Handle Edit form submission
+  // Handle Edit Submit
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (triggerAudio) triggerAudio('tap');
+    if (!editNick.trim() || !editTag.trim()) return;
+
+    let formattedTag = editTag.trim().toUpperCase();
+    if (!formattedTag.includes('#')) {
+      formattedTag = formattedTag + '#000';
+    }
 
     const updated: PKXDPassport = {
       ...passport,
-      nickname: editNick.trim() || passport.nickname,
-      playerTag: editTag.trim().toUpperCase() || passport.playerTag,
-      bio: editBio.trim() || passport.bio,
-      title: editTitle.trim() || passport.title,
+      nickname: editNick.trim(),
+      playerTag: formattedTag,
+      bio: editBio.trim() || 'Explorador da Ilha PK XD!',
+      title: editTitle,
       favoriteMinigame: editMinigame,
-      houseTheme: editHouse.trim() || passport.houseTheme,
+      houseTheme: editHouse.trim() || 'Mansão Gamer',
       cardTheme: editTheme,
       avatarUrl: editAvatar,
       updatedAt: Date.now()
@@ -390,59 +399,58 @@ export default function PassportSection({
       origin: { y: 0.6 }
     });
 
-    if (onAddXP) onAddXP(20, 'Atualizou o Passaporte PKXD');
+    if (triggerAudio) triggerAudio('success');
+    if (onAddXP) onAddXP(10, 'Atualizou perfil do Passaporte');
   };
 
-  // Handle Image Upload for avatar
+  // Avatar upload
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 2 * 1024 * 1024) {
       alert('A imagem deve ter no máximo 2MB.');
       return;
     }
-
     const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        setEditAvatar(reader.result);
+    reader.onload = (uploadEvent) => {
+      if (uploadEvent.target?.result) {
+        setEditAvatar(uploadEvent.target.result as string);
       }
     };
     reader.readAsDataURL(file);
   };
 
-  // Add friend
+  // Handle Add Friend
   const handleAddFriend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (triggerAudio) triggerAudio('tap');
-
-    const cleanTag = newFriendTag.trim().toUpperCase();
-    if (!cleanTag || !cleanTag.includes('#')) {
-      setFriendError('Digite a Tag completa com # (ex: LUNA#123)');
+    if (!newFriendTag.trim()) {
+      setFriendError('Insira a Tag de PK XD do amigo.');
       return;
     }
 
-    if (passport.friends.some(f => f.playerTag.toUpperCase() === cleanTag)) {
-      setFriendError('Esse amigo já está na sua lista!');
+    let formattedTag = newFriendTag.trim().toUpperCase();
+    if (!formattedTag.includes('#')) {
+      formattedTag = formattedTag + '#000';
+    }
+
+    if (passport.friends.some(f => f.playerTag.toUpperCase() === formattedTag)) {
+      setFriendError('Este amigo já está na sua lista do Passaporte!');
       return;
     }
 
     const newFriend: PassportFriend = {
       id: 'friend_' + Date.now(),
-      playerTag: cleanTag,
-      nickname: newFriendNick.trim() || cleanTag.split('#')[0],
+      playerTag: formattedTag,
+      nickname: newFriendNick.trim() || formattedTag.split('#')[0],
       avatarUrl: PRESET_AVATARS[Math.floor(Math.random() * PRESET_AVATARS.length)],
       level: Math.floor(Math.random() * 15) + 1,
-      addedAt: Date.now(),
-      favoriteMinigame: newFriendGame
+      favoriteMinigame: newFriendGame,
+      addedAt: Date.now()
     };
 
-    const updatedFriends = [newFriend, ...passport.friends];
-    
-    // Unlock friendly badge if 3+ friends
+    const updatedFriends = [...passport.friends, newFriend];
     const updatedBadges = passport.badges.map(b => {
-      if (b.id === 'badge_friendly' && updatedFriends.length >= 3 && !b.unlocked) {
+      if (b.id === 'badge_friendly' && !b.unlocked) {
         return { ...b, unlocked: true, unlockedAt: Date.now() };
       }
       return b;
@@ -468,6 +476,7 @@ export default function PassportSection({
     });
 
     if (onAddXP) onAddXP(15, 'Adicionou amigo ao Passaporte');
+    if (triggerAudio) triggerAudio('levelUp');
   };
 
   // Remove friend
@@ -480,6 +489,7 @@ export default function PassportSection({
         updatedAt: Date.now()
       };
       savePassport(updated);
+      if (triggerAudio) triggerAudio('tap');
     }
   };
 
@@ -506,25 +516,38 @@ export default function PassportSection({
   const getThemeGradients = (theme: PKXDPassport['cardTheme']) => {
     switch (theme) {
       case 'cyber-blue':
-        return 'from-blue-600 via-indigo-900 to-cyan-900 border-cyan-400/50 shadow-cyan-500/20';
+        return 'from-blue-600 via-indigo-900 to-cyan-950 border-cyan-400/60 shadow-[0_10px_35px_rgba(6,182,212,0.25)]';
       case 'golden-vip':
-        return 'from-amber-600 via-yellow-900 to-zinc-950 border-yellow-400/60 shadow-yellow-500/25';
+        return 'from-amber-600 via-yellow-900 to-zinc-950 border-yellow-400/70 shadow-[0_10px_35px_rgba(234,179,8,0.25)]';
       case 'sunset-pink':
-        return 'from-pink-600 via-purple-900 to-rose-950 border-pink-400/50 shadow-pink-500/20';
+        return 'from-pink-600 via-purple-900 to-rose-950 border-pink-400/60 shadow-[0_10px_35px_rgba(236,72,153,0.25)]';
       case 'emerald-gamer':
-        return 'from-emerald-600 via-teal-900 to-zinc-950 border-emerald-400/50 shadow-emerald-500/20';
+        return 'from-emerald-600 via-teal-900 to-zinc-950 border-emerald-400/60 shadow-[0_10px_35px_rgba(16,185,129,0.25)]';
       case 'neon-purple':
       default:
-        return 'from-purple-700 via-indigo-950 to-pink-950 border-purple-500/50 shadow-purple-500/25';
+        return 'from-purple-700 via-indigo-950 to-pink-950 border-purple-500/60 shadow-[0_10px_35px_rgba(168,85,247,0.25)]';
     }
   };
 
+  // Filtered badges
+  const filteredBadges = passport.badges.filter(b => {
+    if (badgeFilter === 'unlocked') return b.unlocked;
+    if (badgeFilter === 'locked') return !b.unlocked;
+    return true;
+  });
+
+  // Filtered friends
+  const filteredFriends = passport.friends.filter(f => 
+    f.nickname.toLowerCase().includes(friendSearch.toLowerCase()) ||
+    f.playerTag.toLowerCase().includes(friendSearch.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6 text-left animate-fade-in">
-      {/* Top Banner & Title */}
+    <div className="space-y-6 text-left animate-fade-in" id="passport-root-container">
+      {/* Top Banner & Header */}
       <div className="bg-gradient-to-r from-purple-950 via-zinc-900 to-indigo-950 border-2 border-purple-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/15 rounded-full filter blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/4 w-36 h-36 bg-pink-500/10 rounded-full filter blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-56 h-56 bg-purple-500/15 rounded-full filter blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-40 h-40 bg-pink-500/10 rounded-full filter blur-2xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
@@ -536,7 +559,7 @@ export default function PassportSection({
               PASSAPORTE <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-400">PK XD</span> 🛂
             </h2>
             <p className="font-sans text-xs sm:text-sm text-gray-300 max-w-xl leading-relaxed">
-              Seu registro oficial na Ilha! Colecione medalhas, selos de eventos, adicione amigos, suba de nível com suas atividades e gere seu QR Code exclusivo para compartilhar!
+              Seu documento oficial na Ilha! Colecione medalhas, carimbos de temporadas, conecte amigos, suba de nível com suas atividades e compartilhe seu QR Code exclusivo!
             </p>
           </div>
 
@@ -575,20 +598,20 @@ export default function PassportSection({
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 select-none">
+      {/* Modern Horizontal Tabs Navigation with smooth pill design */}
+      <div className="bg-zinc-900/90 p-1.5 sm:p-2 rounded-2xl border border-white/10 flex items-center gap-1.5 overflow-x-auto scrollbar-none shadow-lg">
         <button
           onClick={() => {
             if (triggerAudio) triggerAudio('tap');
             setActiveTab('card');
           }}
-          className={`py-3 px-3 rounded-2xl border-2 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'card'
-              ? 'bg-purple-600 text-white border-purple-400 shadow-[0_4px_15px_rgba(147,51,234,0.3)] scale-[1.02]'
-              : 'bg-zinc-900/80 text-gray-400 border-white/5 hover:border-purple-500/30 hover:text-white'
+              ? 'bg-purple-600 text-white shadow-md border border-purple-400/50 scale-[1.02]'
+              : 'text-gray-400 hover:text-white hover:bg-zinc-800'
           }`}
         >
-          <User className="w-4 h-4" />
+          <User className="w-4 h-4 text-purple-300" />
           <span>Cartão ID</span>
         </button>
 
@@ -597,10 +620,10 @@ export default function PassportSection({
             if (triggerAudio) triggerAudio('tap');
             setActiveTab('badges');
           }}
-          className={`py-3 px-3 rounded-2xl border-2 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+          className={`flex-1 min-w-[110px] py-2.5 px-3 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'badges'
-              ? 'bg-purple-600 text-white border-purple-400 shadow-[0_4px_15px_rgba(147,51,234,0.3)] scale-[1.02]'
-              : 'bg-zinc-900/80 text-gray-400 border-white/5 hover:border-purple-500/30 hover:text-white'
+              ? 'bg-purple-600 text-white shadow-md border border-purple-400/50 scale-[1.02]'
+              : 'text-gray-400 hover:text-white hover:bg-zinc-800'
           }`}
         >
           <Award className="w-4 h-4 text-yellow-300" />
@@ -612,10 +635,10 @@ export default function PassportSection({
             if (triggerAudio) triggerAudio('tap');
             setActiveTab('stamps');
           }}
-          className={`py-3 px-3 rounded-2xl border-2 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+          className={`flex-1 min-w-[95px] py-2.5 px-3 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'stamps'
-              ? 'bg-purple-600 text-white border-purple-400 shadow-[0_4px_15px_rgba(147,51,234,0.3)] scale-[1.02]'
-              : 'bg-zinc-900/80 text-gray-400 border-white/5 hover:border-purple-500/30 hover:text-white'
+              ? 'bg-purple-600 text-white shadow-md border border-purple-400/50 scale-[1.02]'
+              : 'text-gray-400 hover:text-white hover:bg-zinc-800'
           }`}
         >
           <BookmarkCheck className="w-4 h-4 text-cyan-300" />
@@ -627,10 +650,10 @@ export default function PassportSection({
             if (triggerAudio) triggerAudio('tap');
             setActiveTab('friends');
           }}
-          className={`py-3 px-3 rounded-2xl border-2 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'friends'
-              ? 'bg-purple-600 text-white border-purple-400 shadow-[0_4px_15px_rgba(147,51,234,0.3)] scale-[1.02]'
-              : 'bg-zinc-900/80 text-gray-400 border-white/5 hover:border-purple-500/30 hover:text-white'
+              ? 'bg-purple-600 text-white shadow-md border border-purple-400/50 scale-[1.02]'
+              : 'text-gray-400 hover:text-white hover:bg-zinc-800'
           }`}
         >
           <Users className="w-4 h-4 text-pink-300" />
@@ -642,10 +665,10 @@ export default function PassportSection({
             if (triggerAudio) triggerAudio('tap');
             setActiveTab('events');
           }}
-          className={`py-3 px-3 rounded-2xl border-2 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md col-span-2 sm:col-span-1 ${
+          className={`flex-1 min-w-[95px] py-2.5 px-3 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'events'
-              ? 'bg-purple-600 text-white border-purple-400 shadow-[0_4px_15px_rgba(147,51,234,0.3)] scale-[1.02]'
-              : 'bg-zinc-900/80 text-gray-400 border-white/5 hover:border-purple-500/30 hover:text-white'
+              ? 'bg-purple-600 text-white shadow-md border border-purple-400/50 scale-[1.02]'
+              : 'text-gray-400 hover:text-white hover:bg-zinc-800'
           }`}
         >
           <Calendar className="w-4 h-4 text-emerald-300" />
@@ -657,21 +680,21 @@ export default function PassportSection({
       {/* TAB 1: VISUAL PASSPORT CARD (HOLOGRAPHIC OFFICIAL CARD) */}
       {/* ========================================================= */}
       {activeTab === 'card' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in">
           {/* Main Holographic Card */}
           <div className="lg:col-span-7">
             <div className={`bg-gradient-to-br ${getThemeGradients(passport.cardTheme)} border-2 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden transition-all duration-300`}>
-              {/* Card Holographic Watermark & Noise */}
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full filter blur-xl pointer-events-none" />
-              <div className="absolute top-1/2 left-0 w-32 h-32 bg-purple-500/20 rounded-full filter blur-2xl pointer-events-none" />
+              {/* Holographic Watermark Glow */}
+              <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full filter blur-xl pointer-events-none" />
+              <div className="absolute top-1/2 left-0 w-36 h-36 bg-purple-500/20 rounded-full filter blur-2xl pointer-events-none" />
               <div className="absolute bottom-2 right-4 font-mono text-[9px] text-white/30 uppercase tracking-widest select-none">
                 PKXD CITIZENSHIP CARD • ID #{passport.playerTag.replace('#', '')}
               </div>
 
-              {/* Card Top Header */}
+              {/* Card Header */}
               <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
                     <ShieldCheck className="w-5 h-5 text-yellow-300" />
                   </div>
                   <div>
@@ -701,7 +724,7 @@ export default function PassportSection({
                       className="w-full h-full object-cover rounded-xl"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        (e.target as any).src = 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80';
+                        (e.target as any).src = PRESET_AVATARS[0];
                       }}
                     />
                   </div>
@@ -807,6 +830,7 @@ export default function PassportSection({
                 <button
                   onClick={() => setIsShareModalOpen(true)}
                   className="py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-purple-300 border border-purple-500/30 font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                  title="Compartilhar"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                 </button>
@@ -853,8 +877,8 @@ export default function PassportSection({
       {/* TAB 2: MEDALHAS & CONQUISTAS (BADGES) */}
       {/* ========================================================= */}
       {activeTab === 'badges' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
                 <Award className="w-5 h-5 text-yellow-400" />
@@ -864,13 +888,38 @@ export default function PassportSection({
                 Ganhe XP, participe de enquetes, adicione amigos e explore a Central para desbloquear todas as medalhas!
               </p>
             </div>
-            <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-xl font-mono text-xs font-bold text-yellow-300 self-start sm:self-center">
-              Desbloqueadas: {passport.badges.filter(b => b.unlocked).length} / {passport.badges.length}
+
+            {/* Filter pills */}
+            <div className="flex items-center gap-1.5 self-start sm:self-center bg-black/40 p-1 rounded-xl border border-white/10">
+              <button
+                onClick={() => setBadgeFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all ${
+                  badgeFilter === 'all' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Todas ({passport.badges.length})
+              </button>
+              <button
+                onClick={() => setBadgeFilter('unlocked')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all ${
+                  badgeFilter === 'unlocked' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Desbloqueadas ({passport.badges.filter(b => b.unlocked).length})
+              </button>
+              <button
+                onClick={() => setBadgeFilter('locked')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all ${
+                  badgeFilter === 'locked' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Bloqueadas ({passport.badges.filter(b => !b.unlocked).length})
+              </button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {passport.badges.map((badge) => (
+            {filteredBadges.map((badge) => (
               <div
                 key={badge.id}
                 onClick={() => setSelectedBadge(badge)}
@@ -888,12 +937,12 @@ export default function PassportSection({
                   {badge.icon}
                 </div>
 
-                <div className="space-y-1 flex-1">
+                <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-sans font-black text-sm text-white uppercase">
+                    <h4 className="font-sans font-black text-sm text-white uppercase truncate">
                       {badge.title}
                     </h4>
-                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full uppercase font-bold ${
+                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full uppercase font-bold flex-shrink-0 ${
                       badge.rarity === 'Lendário'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         : badge.rarity === 'Épico'
@@ -906,7 +955,7 @@ export default function PassportSection({
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-300 leading-relaxed">
+                  <p className="text-xs text-gray-300 leading-relaxed line-clamp-2">
                     {badge.description}
                   </p>
 
@@ -933,7 +982,7 @@ export default function PassportSection({
       {/* TAB 3: SELOS ESPECIAIS & CARIMBOS (STAMPS) */}
       {/* ========================================================= */}
       {activeTab === 'stamps' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
@@ -953,47 +1002,35 @@ export default function PassportSection({
             {passport.stamps.map((stamp) => (
               <div
                 key={stamp.id}
-                className="bg-zinc-900/80 border-2 border-white/10 hover:border-cyan-500/40 rounded-3xl p-5 relative overflow-hidden transition-all shadow-lg group"
+                className="bg-zinc-900/80 border-2 border-white/10 hover:border-cyan-400/50 rounded-3xl p-5 shadow-xl transition-all relative overflow-hidden group"
               >
-                {/* Stamp visual decorative border */}
-                <div className="border-2 border-dashed border-cyan-500/30 rounded-2xl p-4 bg-black/40 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-4xl filter drop-shadow">{stamp.icon}</span>
-                    <span className="text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
-                      {stamp.date}
-                    </span>
+                {/* Stamp Postal Border Effect */}
+                <div className="absolute top-2 right-2 border-2 border-dashed border-white/20 rounded-full px-2 py-0.5 text-[8px] font-mono text-white/50 uppercase tracking-widest">
+                  OFFICIAL STAMP
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div 
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 shadow-lg border border-white/20 transform group-hover:rotate-6 transition-transform"
+                    style={{ backgroundColor: stamp.color ? `${stamp.color}30` : 'rgba(139,92,246,0.3)' }}
+                  >
+                    {stamp.icon}
                   </div>
 
-                  <div className="space-y-1">
-                    <h4 className="font-sans font-black text-sm text-white uppercase tracking-wide">
+                  <div className="space-y-1 flex-1">
+                    <h4 className="font-sans font-black text-base text-white uppercase">
                       {stamp.title}
                     </h4>
+                    <p className="text-xs text-cyan-300 font-bold">
+                      {stamp.eventOrSeason}
+                    </p>
                     <p className="text-[11px] text-gray-400">
-                      Temporada: <strong className="text-cyan-300">{stamp.eventOrSeason}</strong>
+                      📍 {stamp.location || 'Central PK XD'} • 📅 {stamp.date}
                     </p>
-                    <p className="text-[10px] text-gray-500 font-mono">
-                      📍 Local: {stamp.location}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-gray-400">
-                    <span>CARIMBO AUTÊNTICO</span>
-                    <span className="text-emerald-400 font-bold">✓ VÁLIDO</span>
                   </div>
                 </div>
               </div>
             ))}
-
-            {/* Claim New Stamp Card */}
-            <div className="border-2 border-dashed border-purple-500/30 bg-purple-950/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-3 hover:bg-purple-950/20 transition-all">
-              <div className="w-12 h-12 rounded-full bg-purple-500/20 text-purple-300 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 animate-pulse" />
-              </div>
-              <h4 className="font-sans font-black text-sm text-white uppercase">Novo Carimbo em Breve!</h4>
-              <p className="text-xs text-gray-400 max-w-xs">
-                Participe dos eventos ao vivo na Central de Eventos para receber novos carimbos de temporada!
-              </p>
-            </div>
           </div>
         </div>
       )}
@@ -1002,7 +1039,7 @@ export default function PassportSection({
       {/* TAB 4: AMIGOS DA ILHA (FRIENDS LIST) */}
       {/* ========================================================= */}
       {activeTab === 'friends' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
@@ -1013,30 +1050,46 @@ export default function PassportSection({
                 Adicione as Tags de PK XD dos seus amigos para acompanhar seus níveis e minigames favoritos!
               </p>
             </div>
-            <button
-              onClick={() => {
-                if (triggerAudio) triggerAudio('tap');
-                setFriendError('');
-                setIsAddFriendModalOpen(true);
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:brightness-110 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-md self-start sm:self-center"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Adicionar Amigo</span>
-            </button>
+            
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar amigo..."
+                  value={friendSearch}
+                  onChange={(e) => setFriendSearch(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-pink-500 w-36 sm:w-44"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  if (triggerAudio) triggerAudio('tap');
+                  setFriendError('');
+                  setIsAddFriendModalOpen(true);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:brightness-110 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Adicionar Amigo</span>
+              </button>
+            </div>
           </div>
 
-          {passport.friends.length === 0 ? (
+          {filteredFriends.length === 0 ? (
             <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-dashed border-white/10 space-y-3">
               <Users className="w-12 h-12 text-gray-500 mx-auto" />
-              <h4 className="font-sans font-bold text-white text-sm">Nenhum amigo adicionado ainda</h4>
+              <h4 className="font-sans font-bold text-white text-sm">
+                {passport.friends.length === 0 ? 'Nenhum amigo adicionado ainda' : 'Nenhum amigo encontrado na busca'}
+              </h4>
               <p className="text-xs text-gray-400 max-w-sm mx-auto">
                 Clique no botão "Adicionar Amigo" acima e insira a Tag de PK XD dos seus colegas de jogo!
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {passport.friends.map((friend) => (
+              {filteredFriends.map((friend) => (
                 <div
                   key={friend.id}
                   className="bg-zinc-900/80 border border-white/10 hover:border-pink-500/40 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md transition-all group"
@@ -1082,7 +1135,7 @@ export default function PassportSection({
       {/* TAB 5: HISTÓRICO DE EVENTOS */}
       {/* ========================================================= */}
       {activeTab === 'events' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
@@ -1137,10 +1190,10 @@ export default function PassportSection({
       {/* ========================================================= */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-zinc-900 border-2 border-purple-500/50 rounded-3xl p-6 sm:p-8 w-full max-w-lg relative shadow-2xl space-y-5 my-8 text-left">
+          <div className="bg-zinc-900 border-2 border-purple-500/50 rounded-3xl p-6 sm:p-8 w-full max-w-lg relative shadow-2xl space-y-5 my-8 text-left max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setIsEditModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full cursor-pointer"
+              className="absolute top-4 right-4 p-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full cursor-pointer transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1162,7 +1215,7 @@ export default function PassportSection({
                     placeholder="Ex: Koosh"
                     value={editNick}
                     onChange={(e) => setEditNick(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-purple-500"
                   />
                 </div>
 
@@ -1174,7 +1227,7 @@ export default function PassportSection({
                     placeholder="Ex: KOOSH#000"
                     value={editTag}
                     onChange={(e) => setEditTag(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-mono font-bold uppercase"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-mono font-bold uppercase focus:outline-none focus:border-purple-500"
                   />
                 </div>
               </div>
@@ -1184,7 +1237,7 @@ export default function PassportSection({
                 <select
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer"
+                  className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer focus:outline-none focus:border-purple-500"
                 >
                   <option value="Explorador da Ilha">🌟 Explorador da Ilha</option>
                   <option value="Caçador de Spoilers">🔮 Caçador de Spoilers</option>
@@ -1204,7 +1257,7 @@ export default function PassportSection({
                   value={editBio}
                   onChange={(e) => setEditBio(e.target.value)}
                   placeholder="Conte um pouco sobre suas aventuras no PK XD..."
-                  className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white"
+                  className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -1214,7 +1267,7 @@ export default function PassportSection({
                   <select
                     value={editMinigame}
                     onChange={(e) => setEditMinigame(e.target.value)}
-                    className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer"
+                    className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer focus:outline-none focus:border-purple-500"
                   >
                     <option value="Crazy Run">⚡ Crazy Run</option>
                     <option value="Corrida de Pets">🐾 Corrida de Pets</option>
@@ -1233,7 +1286,7 @@ export default function PassportSection({
                     value={editHouse}
                     onChange={(e) => setEditHouse(e.target.value)}
                     placeholder="Ex: Mansão Gamer, Castelo Mágico"
-                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-purple-500"
                   />
                 </div>
               </div>
@@ -1254,7 +1307,7 @@ export default function PassportSection({
                       type="button"
                       onClick={() => setEditTheme(t.id as any)}
                       className={`p-2 rounded-xl border text-[10px] font-bold text-white flex flex-col items-center gap-1 cursor-pointer transition-all ${
-                        editTheme === t.id ? 'border-white scale-105 shadow-md' : 'border-white/10 opacity-60'
+                        editTheme === t.id ? 'border-white scale-105 shadow-md bg-white/10' : 'border-white/10 opacity-60'
                       }`}
                     >
                       <span className={`w-4 h-4 rounded-full ${t.color}`} />
@@ -1273,7 +1326,7 @@ export default function PassportSection({
                   </div>
                   <label className="flex-1 flex items-center justify-center gap-2 border border-dashed border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 py-2.5 px-3 rounded-xl text-xs font-bold text-purple-300 cursor-pointer transition-all">
                     <UploadCloud className="w-4 h-4" />
-                    <span>Enviar Foto do Celular / PC</span>
+                    <span>Enviar Foto</span>
                     <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                   </label>
                 </div>
@@ -1328,9 +1381,9 @@ export default function PassportSection({
                   placeholder="Ex: LUNA#245 ou GABRIEL#000"
                   value={newFriendTag}
                   onChange={(e) => setNewFriendTag(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-black/60 border border-white/15 rounded-xl text-sm text-white font-mono font-bold uppercase"
+                  className="w-full px-3 py-2.5 bg-black/60 border border-white/15 rounded-xl text-sm text-white font-mono font-bold uppercase focus:outline-none focus:border-pink-500"
                 />
-                <p className="text-[10px] text-neutral-400">Digite exatamente com o # e os números.</p>
+                <p className="text-[10px] text-neutral-400">Digite com o # e os números.</p>
               </div>
 
               <div className="space-y-1">
@@ -1340,7 +1393,7 @@ export default function PassportSection({
                   placeholder="Ex: Luna"
                   value={newFriendNick}
                   onChange={(e) => setNewFriendNick(e.target.value)}
-                  className="w-full px-3 py-2 bg-black/60 border border-white/15 rounded-xl text-xs text-white font-bold"
+                  className="w-full px-3 py-2 bg-black/60 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-pink-500"
                 />
               </div>
 
@@ -1349,7 +1402,7 @@ export default function PassportSection({
                 <select
                   value={newFriendGame}
                   onChange={(e) => setNewFriendGame(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer"
+                  className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer focus:outline-none focus:border-pink-500"
                 >
                   <option value="Crazy Run">⚡ Crazy Run</option>
                   <option value="Corrida de Pets">🐾 Corrida de Pets</option>
