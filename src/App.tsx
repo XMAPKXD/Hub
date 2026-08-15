@@ -7,7 +7,6 @@ import WhatsAppPromo from './components/WhatsAppPromo';
 import PartnerChannelPromo from './components/PartnerChannelPromo';
 import AdminPanel from './components/AdminPanel';
 import PromoCodeRedeemer from './components/PromoCodeRedeemer';
-import UpcomingStreamsSection from './components/UpcomingStreamsSection';
 import FeaturedVideos from './components/FeaturedVideos';
 import TheoriesSection from './components/TheoriesSection';
 import BestShorts from './components/BestShorts';
@@ -3534,16 +3533,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* PRÓXIMOS VÍDEOS/LIVES COM CÓDIGOS SECTION */}
-                      <div className="max-w-4xl mx-auto" id="upcoming-streams-section-wrapper">
-                        <UpcomingStreamsSection 
-                          isAdmin={isAdmin}
-                          currentUser={user}
-                          onAddXP={handleAddFanXP}
-                          triggerAudio={triggerAudio}
-                        />
-                      </div>
-
                       {/* Promo Code Redeemer Panel with 7-Day Expirations */}
                       <div className="max-w-4xl mx-auto" id="promo-code-redeemer-section-wrapper">
                         <PromoCodeRedeemer 
@@ -3840,15 +3829,6 @@ export default function App() {
                           badgeColor: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
                           glowColor: 'group-hover:border-pink-500/40 group-hover:bg-pink-500/[0.02]',
                           sideColor: 'bg-pink-500'
-                        },
-                        { 
-                          id: 'upcoming-streams-section-wrapper', 
-                          title: 'Lives & Vídeos com Códigos', 
-                          desc: 'Próximas transmissões e cupons de gemas', 
-                          badge: 'Lives ⚡', 
-                          badgeColor: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-                          glowColor: 'group-hover:border-yellow-500/40 group-hover:bg-yellow-500/[0.02]',
-                          sideColor: 'bg-yellow-400'
                         },
                         { 
                           id: 'promo-code-redeemer-section-wrapper', 
