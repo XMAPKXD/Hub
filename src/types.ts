@@ -242,3 +242,20 @@ export interface PKXDPassport {
   updatedAt: number;
 }
 
+export interface UpcomingStreamItem {
+  id: string;
+  title: string;
+  creatorOrChannel: string;
+  streamType: 'live_codes' | 'spoiler_premiere' | 'special_event' | 'gem_giveaway';
+  platform: 'youtube' | 'twitch' | 'whatsapp' | 'pkxd';
+  scheduledDate: string; // ISO string e.g. "2026-08-16T18:30:00"
+  targetUrl: string;
+  rewardsSummary: string; // e.g. "3 Códigos de 50 Gemas + 10.000 Moedas"
+  hintsOrInstructions?: string; // e.g. "Os códigos aparecem na tela durante o Crazy Run!"
+  bannerUrl?: string;
+  status?: 'scheduled' | 'live_now' | 'completed';
+  remindersCount?: number;
+  createdAt: number;
+}
+
+
