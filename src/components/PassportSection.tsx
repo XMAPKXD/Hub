@@ -162,7 +162,7 @@ export function getMinigameIcon(gameName: string): string {
   return match ? match.icon : '🎮';
 }
 
-const PRESET_AVATARS = [
+export const PRESET_AVATARS = [
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Armor&backgroundColor=b6e3f4',
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Star&backgroundColor=ffd5dc',
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Gamer&backgroundColor=c0aede',
@@ -170,6 +170,130 @@ const PRESET_AVATARS = [
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Flame&backgroundColor=ffdfbf',
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Neon&backgroundColor=c1f2d5'
 ];
+
+/**
+ * Compresses an uploaded image file using HTML5 canvas to prevent huge base64 strings
+ * that exceed localStorage quota or Firestore document size limits.
+ */
+export async function compressPassportImage(file: File, maxWidth = 256, maxHeight = 256, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = (e) => reject(e);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => {
+        resolve(e.target?.result as string);
+      };
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressed);
+        } catch (err) {
+          resolve(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Compact URL payload encoder for immediate zero-network card sharing
+ */
+export function encodePassportPayload(p: PKXDPassport): string {
+  try {
+    const minimal = {
+      n: p.nickname || 'Explorador',
+      t: p.playerTag || 'Explorador',
+      a: p.avatarUrl || PRESET_AVATARS[0],
+      ti: p.title || 'Explorador da Ilha',
+      b: p.bio || 'Explorador da Ilha PK XD!',
+      g: p.favoriteMinigame || 'Crazy Run',
+      h: p.houseTheme || 'Mansão Gamer',
+      c: p.cardTheme || 'neon-purple',
+      l: p.level || 1,
+      x: p.xp || 0,
+      u: p.userId || 'user'
+    };
+    const jsonStr = JSON.stringify(minimal);
+    return encodeURIComponent(btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)))));
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
+ * Decodes a compact URL payload
+ */
+export function decodePassportPayload(encoded: string): PKXDPassport | null {
+  try {
+    const raw = decodeURIComponent(encoded);
+    const jsonStr = decodeURIComponent(Array.prototype.map.call(atob(raw), (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    const data = JSON.parse(jsonStr);
+    if (!data || (!data.n && !data.t)) return null;
+
+    return {
+      id: 'shared_' + (data.u || Date.now()),
+      userId: data.u || 'shared_user',
+      playerTag: data.t || 'JOGADOR',
+      nickname: data.n || 'Explorador',
+      avatarUrl: data.a || PRESET_AVATARS[0],
+      title: data.ti || 'Explorador da Ilha',
+      bio: data.b || 'Explorador da Ilha PK XD!',
+      favoriteMinigame: data.g || 'Crazy Run',
+      houseTheme: data.h || 'Mansão Gamer',
+      cardTheme: data.c || 'neon-purple',
+      level: Number(data.l) || 1,
+      xp: Number(data.x) || 0,
+      joinedAt: Date.now() - 30 * 24 * 3600 * 1000,
+      timeInCommunity: 'Membro da Central',
+      isPublic: true,
+      badges: DEFAULT_BADGES,
+      stamps: DEFAULT_STAMPS,
+      friends: [],
+      eventHistory: [],
+      updatedAt: Date.now()
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Builds the full self-contained share URL
+ */
+export function getPassportShareUrl(p: PKXDPassport): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pkxdcentral.site';
+  const tagParam = encodeURIComponent(p.playerTag);
+  const cardPayload = encodePassportPayload(p);
+  return `${origin}/?passaporte=${tagParam}&card=${cardPayload}`;
+}
 
 export default function PassportSection({
   currentUser,
@@ -338,8 +462,62 @@ export default function PassportSection({
   const [editHouse, setEditHouse] = useState(passport.houseTheme);
   const [editTheme, setEditTheme] = useState(passport.cardTheme);
   const [editAvatar, setEditAvatar] = useState(passport.avatarUrl);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
-  // Sync profile photo and account name whenever currentUser changes
+  // Shared passport viewing state
+  const [viewingSharedPassport, setViewingSharedPassport] = useState<PKXDPassport | null>(null);
+
+  // Parse URL on mount / search params change to load shared passport
+  useEffect(() => {
+    const handleCheckSharedUrl = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const sharedTag = params.get('passaporte') || params.get('tag') || params.get('p');
+        const cardPayload = params.get('card') || params.get('data');
+
+        if (!sharedTag && !cardPayload) return;
+
+        // 1. If payload was encoded directly in URL, decode immediately with zero latency!
+        let initialDecoded: PKXDPassport | null = null;
+        if (cardPayload) {
+          initialDecoded = decodePassportPayload(cardPayload);
+        }
+
+        const rawTag = sharedTag || initialDecoded?.playerTag;
+        if (rawTag) {
+          const currentMyTag = passport.playerTag?.toLowerCase().trim();
+          const targetTag = rawTag.toLowerCase().trim();
+
+          // If the link is for a friend or card payload exists, activate shared view
+          if (initialDecoded || (targetTag && targetTag !== currentMyTag)) {
+            if (initialDecoded) {
+              setViewingSharedPassport(initialDecoded);
+            }
+
+            // 2. Also query Firestore for the latest public document to get any live sync
+            if (db) {
+              const cleanKey = encodeURIComponent(targetTag.replace(/[.#$/[\]]/g, '_'));
+              const publicDocRef = doc(db, 'pkxd_public_passports', cleanKey);
+              const snap = await getDoc(publicDocRef);
+              if (snap.exists()) {
+                const remoteData = snap.data() as PKXDPassport;
+                setViewingSharedPassport(prev => ({
+                  ...(prev || initialDecoded || remoteData),
+                  ...remoteData
+                }));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao processar passaporte compartilhado:', err);
+      }
+    };
+
+    handleCheckSharedUrl();
+  }, [passport.playerTag]);
+
+  // Sync profile photo and account name whenever currentUser changes (only if not already customized)
   useEffect(() => {
     if (currentUser) {
       const accountName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : '');
@@ -347,10 +525,11 @@ export default function PassportSection({
       setPassport(prev => {
         const isGenericTag = !prev.playerTag || prev.playerTag === 'JOGADOR' || prev.playerTag === 'JOGADOR#000' || prev.playerTag === 'GUEST' || prev.userId === 'guest_user';
         const isGenericNick = !prev.nickname || prev.nickname === 'Explorador' || prev.nickname === 'Fã Secreto' || prev.nickname === 'JOGADOR' || prev.userId === 'guest_user';
+        const isGenericAvatar = !prev.avatarUrl || prev.avatarUrl.includes('dicebear.com/7.x/bottts/svg?seed=PKXD_Armor');
 
         const updatedTag = (isGenericTag && accountName) ? accountName : prev.playerTag;
         const updatedNick = (isGenericNick && accountName) ? accountName : prev.nickname;
-        const updatedAvatar = currentUser.photoURL || prev.avatarUrl;
+        const updatedAvatar = (isGenericAvatar && currentUser.photoURL) ? currentUser.photoURL : prev.avatarUrl;
 
         const updated = {
           ...prev,
@@ -359,9 +538,11 @@ export default function PassportSection({
           nickname: updatedNick,
           avatarUrl: updatedAvatar
         };
-        localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
-        localStorage.setItem('pkxd_player_tag', updated.playerTag);
-        localStorage.setItem('pkxd_nickname', updated.nickname);
+        try {
+          localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+          localStorage.setItem('pkxd_player_tag', updated.playerTag);
+          localStorage.setItem('pkxd_nickname', updated.nickname);
+        } catch (e) {}
         return updated;
       });
 
@@ -369,11 +550,8 @@ export default function PassportSection({
         setEditTag(prevTag => (!prevTag || prevTag === 'JOGADOR' || prevTag === 'JOGADOR#000' || prevTag === 'GUEST') ? accountName : prevTag);
         setEditNick(prevNick => (!prevNick || prevNick === 'Explorador' || prevNick === 'Fã Secreto' || prevNick === 'JOGADOR') ? accountName : prevNick);
       }
-      if (currentUser.photoURL) {
-        setEditAvatar(currentUser.photoURL);
-      }
     }
-  }, [currentUser?.uid, currentUser?.displayName, currentUser?.email, currentUser?.photoURL]);
+  }, [currentUser?.uid, currentUser?.displayName, currentUser?.email]);
 
   // Sync Level & XP on props change
   useEffect(() => {
@@ -391,7 +569,9 @@ export default function PassportSection({
         xp: fanXP,
         badges: updatedBadges
       };
-      localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+      try {
+        localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+      } catch (e) {}
       return updated;
     });
   }, [userLevel, fanXP]);
@@ -417,13 +597,15 @@ export default function PassportSection({
               ...data,
               playerTag: finalTag,
               nickname: finalNick,
-              avatarUrl: currentUser?.photoURL || data.avatarUrl || prev.avatarUrl,
+              avatarUrl: data.avatarUrl || currentUser?.photoURL || prev.avatarUrl,
               level: userLevel, 
               xp: fanXP 
             };
-            localStorage.setItem('pkxd_passport_data', JSON.stringify(merged));
-            localStorage.setItem('pkxd_player_tag', merged.playerTag);
-            localStorage.setItem('pkxd_nickname', merged.nickname);
+            try {
+              localStorage.setItem('pkxd_passport_data', JSON.stringify(merged));
+              localStorage.setItem('pkxd_player_tag', merged.playerTag);
+              localStorage.setItem('pkxd_nickname', merged.nickname);
+            } catch (e) {}
             return merged;
           });
         }
@@ -434,9 +616,9 @@ export default function PassportSection({
     loadRemotePassport();
   }, [currentUser?.uid, currentUser?.displayName, currentUser?.email]);
 
-  // Generate QR Code
+  // Generate QR Code with full self-contained share URL
   useEffect(() => {
-    const passportUrl = `${window.location.origin}/?passaporte=${encodeURIComponent(passport.playerTag)}`;
+    const passportUrl = getPassportShareUrl(passport);
     QRCode.toDataURL(passportUrl, {
       width: 280,
       margin: 1.5,
@@ -447,25 +629,41 @@ export default function PassportSection({
     })
       .then(url => setQrCodeDataUrl(url))
       .catch(err => console.error('Erro gerando QR Code:', err));
-  }, [passport.playerTag]);
+  }, [passport.playerTag, passport.nickname, passport.cardTheme, passport.level, passport.favoriteMinigame, passport.avatarUrl, passport.bio]);
 
-  // Save passport helper
+  // Save passport helper (LocalStorage + Firestore public index + Firestore user)
   const savePassport = async (newPassport: PKXDPassport) => {
     setPassport(newPassport);
-    localStorage.setItem('pkxd_passport_data', JSON.stringify(newPassport));
-    localStorage.setItem('pkxd_player_tag', newPassport.playerTag);
-    localStorage.setItem('pkxd_nickname', newPassport.nickname);
+    try {
+      localStorage.setItem('pkxd_passport_data', JSON.stringify(newPassport));
+      localStorage.setItem('pkxd_player_tag', newPassport.playerTag);
+      localStorage.setItem('pkxd_nickname', newPassport.nickname);
+    } catch (err) {
+      console.warn('Erro ao salvar localmente:', err);
+    }
 
-    if (currentUser?.uid && db) {
+    if (db) {
       try {
-        await setDoc(doc(db, 'pkxd_passports', currentUser.uid), newPassport, { merge: true });
+        const cleanKey = encodeURIComponent((newPassport.playerTag || 'player').trim().toLowerCase().replace(/[.#$/[\]]/g, '_'));
+        
+        // Save to public passports collection so anyone opening the link can view it
+        await setDoc(doc(db, 'pkxd_public_passports', cleanKey), {
+          ...newPassport,
+          cleanKey,
+          lastSavedAt: Date.now()
+        }, { merge: true });
+
+        // If user is authenticated, also sync to user_passports / pkxd_passports
+        if (currentUser?.uid && currentUser.uid !== 'guest_user') {
+          await setDoc(doc(db, 'pkxd_passports', currentUser.uid), newPassport, { merge: true });
+        }
       } catch (err) {
         console.warn('Erro ao salvar passaporte no Firestore:', err);
       }
     }
   };
 
-  // Handle Edit Submit (no mandatory '#')
+  // Handle Edit Submit
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editNick.trim() || !editTag.trim()) return;
@@ -486,6 +684,8 @@ export default function PassportSection({
     };
 
     savePassport(updated);
+    // Clear shared viewer if user edited their own card
+    setViewingSharedPassport(null);
     setIsEditModalOpen(false);
 
     confetti({
@@ -498,24 +698,72 @@ export default function PassportSection({
     if (onAddXP) onAddXP(10, 'Atualizou perfil do Passaporte');
   };
 
-  // Avatar upload
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Avatar upload with auto-compression (prevents huge base64 strings and memory bugs)
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('A imagem deve ter no máximo 5MB.');
+    if (file.size > 12 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 12MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      if (uploadEvent.target?.result) {
-        setEditAvatar(uploadEvent.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+
+    setIsUploadingPhoto(true);
+    try {
+      const compressed = await compressPassportImage(file, 256, 256, 0.85);
+      setEditAvatar(compressed);
+    } catch (err) {
+      console.error('Erro comprimindo imagem:', err);
+      alert('Não foi possível processar esta foto. Tente outra imagem.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
-  // Handle Add Friend (no mandatory '#')
+  // Handle Add Friend from shared link
+  const handleAddFriendFromShared = (shared: PKXDPassport) => {
+    if (passport.friends.some(f => f.playerTag.toLowerCase() === shared.playerTag.toLowerCase())) {
+      alert('Este amigo já está na sua lista do Passaporte!');
+      return;
+    }
+
+    const newFriend: PassportFriend = {
+      id: 'friend_' + Date.now(),
+      playerTag: shared.playerTag,
+      nickname: shared.nickname || shared.playerTag,
+      avatarUrl: shared.avatarUrl || PRESET_AVATARS[0],
+      level: shared.level || 1,
+      favoriteMinigame: shared.favoriteMinigame || 'Crazy Run',
+      addedAt: Date.now()
+    };
+
+    const updatedFriends = [...passport.friends, newFriend];
+    const updatedBadges = passport.badges.map(b => {
+      if (b.id === 'badge_friendly' && !b.unlocked) {
+        return { ...b, unlocked: true, unlockedAt: Date.now() };
+      }
+      return b;
+    });
+
+    const updated: PKXDPassport = {
+      ...passport,
+      friends: updatedFriends,
+      badges: updatedBadges,
+      updatedAt: Date.now()
+    };
+
+    savePassport(updated);
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.6 }
+    });
+
+    if (onAddXP) onAddXP(20, `Adicionou ${shared.nickname} aos amigos!`);
+    if (triggerAudio) triggerAudio('levelUp');
+    alert(`🎉 ${shared.nickname} foi adicionado à sua lista de amigos do Passaporte! (+20 XP)`);
+  };
+
+  // Handle Add Friend manual form
   const handleAddFriend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFriendTag.trim()) {
@@ -641,9 +889,9 @@ export default function PassportSection({
     }
   };
 
-  // Copy Profile Link
+  // Copy Profile Link with full self-contained share URL
   const handleCopyLink = () => {
-    const passportUrl = `${window.location.origin}/?passaporte=${encodeURIComponent(passport.playerTag)}`;
+    const passportUrl = getPassportShareUrl(passport);
     navigator.clipboard.writeText(passportUrl).then(() => {
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
@@ -653,7 +901,8 @@ export default function PassportSection({
 
   // Copy Player Tag
   const handleCopyTag = () => {
-    navigator.clipboard.writeText(passport.playerTag).then(() => {
+    const targetTag = viewingSharedPassport ? viewingSharedPassport.playerTag : passport.playerTag;
+    navigator.clipboard.writeText(targetTag).then(() => {
       setCopiedTag(true);
       setTimeout(() => setCopiedTag(false), 2500);
       if (triggerAudio) triggerAudio('tap');
@@ -827,202 +1076,264 @@ export default function PassportSection({
       {/* ========================================================= */}
       {/* TAB 1: VISUAL PASSPORT CARD (HOLOGRAPHIC OFFICIAL CARD) */}
       {/* ========================================================= */}
-      {activeTab === 'card' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in">
-          {/* Main Holographic Card */}
-          <div className="lg:col-span-7">
-            <div className={`bg-gradient-to-br ${getThemeGradients(passport.cardTheme)} border-2 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden transition-all duration-300`}>
-              {/* Holographic Watermark Glow */}
-              <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full filter blur-xl pointer-events-none" />
-              <div className="absolute top-1/2 left-0 w-36 h-36 bg-purple-500/20 rounded-full filter blur-2xl pointer-events-none" />
-              <div className="absolute bottom-2 right-4 font-mono text-[9px] text-white/30 uppercase tracking-widest select-none">
-                PKXD CITIZENSHIP CARD • ID #{passport.playerTag.replace('#', '')}
-              </div>
+      {activeTab === 'card' && (() => {
+        const displayPassport = viewingSharedPassport || passport;
+        const isViewingOther = !!viewingSharedPassport;
 
-              {/* Card Header */}
-              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
-                    <ShieldCheck className="w-5 h-5 text-yellow-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-sans font-black text-sm tracking-wider uppercase">
-                      REPÚBLICA DE PK XD
-                    </h3>
-                    <p className="font-mono text-[9px] text-white/70 uppercase tracking-widest">
-                      PASSAPORTE OFICIAL DA COMUNIDADE
-                    </p>
-                  </div>
-                </div>
-
-                <div className="px-3 py-1 bg-black/40 backdrop-blur-md border border-white/20 rounded-full font-mono font-bold text-xs text-yellow-300 flex items-center gap-1.5 shadow-sm">
-                  <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                  <span>NÍVEL {passport.level}</span>
-                </div>
-              </div>
-
-              {/* Card Main Body */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-                {/* Avatar with Ring */}
-                <div className="relative group flex-shrink-0">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl bg-black/60 p-1">
+        return (
+          <div className="space-y-5 animate-fade-in">
+            {/* Banner when viewing a friend's shared passport */}
+            {isViewingOther && (
+              <div className="bg-gradient-to-r from-purple-900/90 via-pink-900/90 to-indigo-900/90 border-2 border-pink-500/60 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-yellow-300 shadow-md bg-black/60 flex-shrink-0">
                     <img 
-                      src={passport.avatarUrl} 
-                      alt={passport.nickname} 
-                      className="w-full h-full object-cover rounded-xl"
+                      src={displayPassport.avatarUrl || PRESET_AVATARS[0]} 
+                      alt={displayPassport.nickname} 
+                      className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as any).src = PRESET_AVATARS[0];
-                      }}
+                      onError={(e) => { (e.target as any).src = PRESET_AVATARS[0]; }}
                     />
                   </div>
-                  <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-black font-black text-[10px] px-2 py-0.5 rounded-md shadow uppercase">
-                    LVL {passport.level}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-mono uppercase bg-yellow-400 text-black font-black px-2 py-0.5 rounded-full shadow-sm">
+                        Passaporte Compartilhado
+                      </span>
+                      <span className="text-xs text-pink-300 font-bold">Nível {displayPassport.level}</span>
+                    </div>
+                    <h3 className="font-sans font-black text-base sm:text-lg text-white truncate">
+                      {displayPassport.nickname} <span className="text-xs font-mono text-cyan-300 font-normal">({displayPassport.playerTag})</span>
+                    </h3>
                   </div>
                 </div>
 
-                {/* Info and Tags */}
-                <div className="flex-1 text-center sm:text-left space-y-2">
-                  <div className="space-y-0.5">
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                      <h4 className="font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-white drop-shadow-sm">
-                        {passport.nickname}
-                      </h4>
-                      <button
-                        onClick={handleCopyTag}
-                        className="px-2 py-0.5 bg-black/40 hover:bg-black/60 border border-white/20 rounded-md font-mono text-xs font-bold text-cyan-300 flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                        title="Clique para copiar a Tag"
-                      >
-                        <span>{passport.playerTag}</span>
-                        {copiedTag ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      </button>
-                    </div>
-                    
-                    <p className="font-sans font-extrabold text-xs text-yellow-300 uppercase tracking-wide flex items-center justify-center sm:justify-start gap-1">
-                      <Sparkles className="w-3 h-3 text-yellow-300" />
-                      <span>{passport.title}</span>
-                    </p>
-                  </div>
-
-                  <p className="font-sans text-xs text-white/85 leading-relaxed italic bg-black/20 p-2.5 rounded-xl border border-white/10">
-                    "{passport.bio}"
-                  </p>
-
-                  {/* Level Progress Bar */}
-                  <div className="space-y-1 pt-1">
-                    <div className="flex justify-between text-[10px] font-mono text-white/80">
-                      <span>Progresso Nível {passport.level}</span>
-                      <span>{fanXP} XP Total ({currentLevelProgress}/100 para Lv.{passport.level + 1})</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/20">
-                      <div 
-                        className="h-full bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300 rounded-full transition-all duration-500"
-                        style={{ width: `${currentLevelProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Meta Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-6 pt-4 border-t border-white/15 text-xs font-sans">
-                <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
-                  <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">🎮 Minigame Favorito</span>
-                  <strong className="text-white text-xs truncate flex items-center gap-1">
-                    <span>{getMinigameIcon(passport.favoriteMinigame)}</span>
-                    <span className="truncate">{passport.favoriteMinigame}</span>
-                  </strong>
-                </div>
-
-                <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
-                  <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">🏠 Estilo de Casa</span>
-                  <strong className="text-white text-xs truncate block">{passport.houseTheme}</strong>
-                </div>
-
-                <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">⏱️ Na Comunidade</span>
-                  <strong className="text-white text-xs truncate block">{passport.timeInCommunity}</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Side Info: QR Code + Quick Stats & Badges Highlight */}
-          <div className="lg:col-span-5 space-y-5">
-            {/* QR Code Card */}
-            <div className="bg-zinc-900/90 border border-purple-500/30 rounded-3xl p-5 sm:p-6 text-center space-y-4 shadow-xl relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2 text-purple-300 font-black text-xs uppercase tracking-wider">
-                  <QrCode className="w-4 h-4" />
-                  <span>QR Code do Passaporte</span>
-                </div>
-                <span className="text-[9px] font-mono text-gray-400">Escaneie para ver perfil</span>
-              </div>
-
-              {qrCodeDataUrl ? (
-                <div className="w-44 h-44 mx-auto bg-white p-2.5 rounded-2xl shadow-xl border-2 border-purple-500/30 hover:scale-105 transition-transform duration-300 flex items-center justify-center">
-                  <img src={qrCodeDataUrl} alt="Passport QR Code" className="w-full h-full object-contain" />
-                </div>
-              ) : (
-                <div className="w-44 h-44 mx-auto bg-neutral-800 rounded-2xl flex items-center justify-center text-xs text-gray-400 animate-pulse">
-                  Gerando QR Code...
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCopyLink}
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-md"
-                >
-                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
-                </button>
-
-                <button
-                  onClick={() => setIsShareModalOpen(true)}
-                  className="py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-purple-300 border border-purple-500/30 font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
-                  title="Compartilhar"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Badges Highlights */}
-            <div className="bg-zinc-900/70 border border-white/10 rounded-3xl p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-sans font-black text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Trophy className="w-4 h-4 text-yellow-400" />
-                  <span>Destaques de Medalhas</span>
-                </h4>
-                <button
-                  onClick={() => setActiveTab('badges')}
-                  className="text-[10px] font-mono text-pink-400 hover:text-pink-300 hover:underline cursor-pointer uppercase"
-                >
-                  Ver Todas →
-                </button>
-              </div>
-
-              <div className="grid grid-cols-4 gap-2">
-                {passport.badges.slice(0, 4).map((badge) => (
-                  <div
-                    key={badge.id}
-                    onClick={() => setSelectedBadge(badge)}
-                    className={`p-2.5 rounded-2xl border flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:scale-105 ${
-                      badge.unlocked
-                        ? 'bg-purple-950/40 border-purple-500/40 shadow-sm'
-                        : 'bg-black/40 border-white/5 opacity-40 grayscale'
-                    }`}
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                  <button
+                    onClick={() => handleAddFriendFromShared(displayPassport)}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:brightness-110 active:scale-95 text-white font-sans font-black text-xs uppercase rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <span className="text-2xl mb-1">{badge.icon}</span>
-                    <span className="text-[9px] font-bold text-white truncate max-w-full">{badge.title}</span>
+                    <Users className="w-4 h-4" />
+                    <span>Adicionar Amigo (+20 XP)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setViewingSharedPassport(null);
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('passaporte');
+                      url.searchParams.delete('card');
+                      url.searchParams.delete('data');
+                      url.searchParams.delete('tag');
+                      url.searchParams.delete('p');
+                      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+                    }}
+                    className="flex-1 sm:flex-none px-3.5 py-2.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-200 font-sans font-bold text-xs uppercase rounded-xl transition-all border border-white/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <BookmarkCheck className="w-4 h-4 text-cyan-300" />
+                    <span>Ver Meu Passaporte</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Main Holographic Card */}
+              <div className="lg:col-span-7">
+                <div className={`bg-gradient-to-br ${getThemeGradients(displayPassport.cardTheme)} border-2 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden transition-all duration-300`}>
+                  {/* Holographic Watermark Glow */}
+                  <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full filter blur-xl pointer-events-none" />
+                  <div className="absolute top-1/2 left-0 w-36 h-36 bg-purple-500/20 rounded-full filter blur-2xl pointer-events-none" />
+                  <div className="absolute bottom-2 right-4 font-mono text-[9px] text-white/30 uppercase tracking-widest select-none">
+                    PKXD CITIZENSHIP CARD • ID #{displayPassport.playerTag.replace('#', '')}
                   </div>
-                ))}
+
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
+                        <ShieldCheck className="w-5 h-5 text-yellow-300" />
+                      </div>
+                      <div>
+                        <h3 className="font-sans font-black text-sm tracking-wider uppercase">
+                          REPÚBLICA DE PK XD
+                        </h3>
+                        <p className="font-mono text-[9px] text-white/70 uppercase tracking-widest">
+                          PASSAPORTE OFICIAL DA COMUNIDADE
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="px-3 py-1 bg-black/40 backdrop-blur-md border border-white/20 rounded-full font-mono font-bold text-xs text-yellow-300 flex items-center gap-1.5 shadow-sm">
+                      <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                      <span>NÍVEL {displayPassport.level}</span>
+                    </div>
+                  </div>
+
+                  {/* Card Main Body */}
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                    {/* Avatar with Ring */}
+                    <div className="relative group flex-shrink-0">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl bg-black/60 p-1">
+                        <img 
+                          src={displayPassport.avatarUrl || PRESET_AVATARS[0]} 
+                          alt={displayPassport.nickname} 
+                          className="w-full h-full object-cover rounded-xl"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as any).src = PRESET_AVATARS[0];
+                          }}
+                        />
+                      </div>
+                      <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-black font-black text-[10px] px-2 py-0.5 rounded-md shadow uppercase">
+                        LVL {displayPassport.level}
+                      </div>
+                    </div>
+
+                    {/* Info and Tags */}
+                    <div className="flex-1 text-center sm:text-left space-y-2">
+                      <div className="space-y-0.5">
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                          <h4 className="font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-white drop-shadow-sm">
+                            {displayPassport.nickname}
+                          </h4>
+                          <button
+                            onClick={handleCopyTag}
+                            className="px-2 py-0.5 bg-black/40 hover:bg-black/60 border border-white/20 rounded-md font-mono text-xs font-bold text-cyan-300 flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                            title="Clique para copiar a Tag"
+                          >
+                            <span>{displayPassport.playerTag}</span>
+                            {copiedTag ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                        
+                        <p className="font-sans font-extrabold text-xs text-yellow-300 uppercase tracking-wide flex items-center justify-center sm:justify-start gap-1">
+                          <Sparkles className="w-3 h-3 text-yellow-300" />
+                          <span>{displayPassport.title}</span>
+                        </p>
+                      </div>
+
+                      <p className="font-sans text-xs text-white/85 leading-relaxed italic bg-black/20 p-2.5 rounded-xl border border-white/10">
+                        "{displayPassport.bio}"
+                      </p>
+
+                      {/* Level Progress Bar */}
+                      <div className="space-y-1 pt-1">
+                        <div className="flex justify-between text-[10px] font-mono text-white/80">
+                          <span>Progresso Nível {displayPassport.level}</span>
+                          <span>{displayPassport.xp || fanXP} XP Total</span>
+                        </div>
+                        <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/20">
+                          <div 
+                            className="h-full bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300 rounded-full transition-all duration-500"
+                            style={{ width: `${(displayPassport.xp || fanXP) % 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Meta Stats Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-6 pt-4 border-t border-white/15 text-xs font-sans">
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
+                      <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">🎮 Minigame Favorito</span>
+                      <strong className="text-white text-xs truncate flex items-center gap-1">
+                        <span>{getMinigameIcon(displayPassport.favoriteMinigame)}</span>
+                        <span className="truncate">{displayPassport.favoriteMinigame}</span>
+                      </strong>
+                    </div>
+
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
+                      <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">🏠 Estilo de Casa</span>
+                      <strong className="text-white text-xs truncate block">{displayPassport.houseTheme}</strong>
+                    </div>
+
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5 col-span-2 sm:col-span-1">
+                      <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">⏱️ Na Comunidade</span>
+                      <strong className="text-white text-xs truncate block">{displayPassport.timeInCommunity}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Side Info: QR Code + Quick Stats & Badges Highlight */}
+              <div className="lg:col-span-5 space-y-5">
+                {/* QR Code Card */}
+                <div className="bg-zinc-900/90 border border-purple-500/30 rounded-3xl p-5 sm:p-6 text-center space-y-4 shadow-xl relative overflow-hidden">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2 text-purple-300 font-black text-xs uppercase tracking-wider">
+                      <QrCode className="w-4 h-4" />
+                      <span>QR Code do Passaporte</span>
+                    </div>
+                    <span className="text-[9px] font-mono text-gray-400">Escaneie para ver perfil</span>
+                  </div>
+
+                  {qrCodeDataUrl ? (
+                    <div className="w-44 h-44 mx-auto bg-white p-2.5 rounded-2xl shadow-xl border-2 border-purple-500/30 hover:scale-105 transition-transform duration-300 flex items-center justify-center">
+                      <img src={qrCodeDataUrl} alt="Passport QR Code" className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-44 h-44 mx-auto bg-neutral-800 rounded-2xl flex items-center justify-center text-xs text-gray-400 animate-pulse">
+                      Gerando QR Code...
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCopyLink}
+                      className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-md"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setIsShareModalOpen(true)}
+                      className="py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-purple-300 border border-purple-500/30 font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                      title="Compartilhar"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Badges Highlights */}
+                <div className="bg-zinc-900/70 border border-white/10 rounded-3xl p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-sans font-black text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 text-yellow-400" />
+                      <span>Destaques de Medalhas</span>
+                    </h4>
+                    <button
+                      onClick={() => setActiveTab('badges')}
+                      className="text-[10px] font-mono text-pink-400 hover:text-pink-300 hover:underline cursor-pointer uppercase"
+                    >
+                      Ver Todas →
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    {displayPassport.badges.slice(0, 4).map((badge) => (
+                      <div
+                        key={badge.id}
+                        onClick={() => setSelectedBadge(badge)}
+                        className={`p-2.5 rounded-2xl border flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:scale-105 ${
+                          badge.unlocked
+                            ? 'bg-purple-950/40 border-purple-500/40 shadow-sm'
+                            : 'bg-black/40 border-white/5 opacity-40 grayscale'
+                        }`}
+                      >
+                        <span className="text-2xl mb-1">{badge.icon}</span>
+                        <span className="text-[9px] font-bold text-white truncate max-w-full">{badge.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* TAB 2: MEDALHAS & CONQUISTAS (BADGES) */}
