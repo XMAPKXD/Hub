@@ -2246,8 +2246,8 @@ export default function App() {
       levelsGained++;
     }
 
+    const finalLevel = fanLevel + levelsGained;
     if (levelsGained > 0) {
-      const finalLevel = fanLevel + levelsGained;
       setFanLevel(finalLevel);
       localStorage.setItem('pkxd_fan_level', finalLevel.toString());
       triggerAudio('levelUp');
@@ -2258,6 +2258,19 @@ export default function App() {
     }
     setFanXP(nextXp);
     localStorage.setItem('pkxd_fan_xp', nextXp.toString());
+
+    // Also synchronize pkxd_passport_data in local storage
+    try {
+      const pRaw = localStorage.getItem('pkxd_passport_data');
+      if (pRaw) {
+        const p = JSON.parse(pRaw);
+        p.level = finalLevel;
+        p.xp = nextXp;
+        p.totalXp = ((finalLevel - 1) * 100) + nextXp;
+        p.updatedAt = Date.now();
+        localStorage.setItem('pkxd_passport_data', JSON.stringify(p));
+      }
+    } catch (e) {}
   };
 
   const handleRatePastSpoiler = async (id: string, rating: number) => {
@@ -3589,6 +3602,7 @@ export default function App() {
                   currentUser={user}
                   isAdmin={isAdmin}
                   fanXP={fanXP}
+                  fanLevel={fanLevel}
                   onAddXP={handleAddFanXP}
                   triggerAudio={triggerAudio}
                 />

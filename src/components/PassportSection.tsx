@@ -40,6 +40,7 @@ interface PassportSectionProps {
   currentUser?: any;
   isAdmin: boolean;
   fanXP: number;
+  fanLevel?: number;
   onAddXP?: (amount: number, reason: string) => void;
   triggerAudio?: (type: 'tap' | 'levelUp' | 'spin' | 'success') => void;
   events?: CommunityEvent[];
@@ -299,13 +300,19 @@ export default function PassportSection({
   currentUser,
   isAdmin,
   fanXP,
+  fanLevel = 1,
   onAddXP,
   triggerAudio,
   events = []
 }: PassportSectionProps) {
-  // Current user's calculated level
-  const userLevel = Math.max(1, Math.floor(fanXP / 100) + 1);
-  const currentLevelProgress = fanXP % 100;
+  // Shared Passport state from URL parameter if any
+  const [viewingSharedPassport, setViewingSharedPassport] = useState<PKXDPassport | null>(null);
+
+  // User's effective level and XP synchronized directly with account
+  const effectiveLevel = viewingSharedPassport ? Number(viewingSharedPassport.level || 1) : Math.max(1, fanLevel || 1);
+  const effectiveXP = viewingSharedPassport ? Number(viewingSharedPassport.xp || 0) : Math.max(0, fanXP || 0);
+  const totalLifetimeXP = viewingSharedPassport ? (viewingSharedPassport.totalXp || ((effectiveLevel - 1) * 100 + effectiveXP)) : (((effectiveLevel - 1) * 100) + effectiveXP);
+  const currentLevelProgress = Math.min(100, Math.max(0, effectiveXP % 100));
 
   // Active tab inside Passport
   const [activeTab, setActiveTab] = useState<'card' | 'badges' | 'stamps' | 'friends' | 'events'>('card');
@@ -391,8 +398,8 @@ export default function PassportSection({
           playerTag: effectiveTag,
           nickname: effectiveNick,
           avatarUrl: effectiveAvatar,
-          level: userLevel,
-          xp: fanXP,
+          level: effectiveLevel,
+          xp: effectiveXP,
           badges: effectiveBadges,
           stamps: effectiveStamps,
           friends: effectiveFriends,
@@ -420,8 +427,8 @@ export default function PassportSection({
       avatarUrl: currentUser?.photoURL || PRESET_AVATARS[0],
       bio: 'Apaixonado por PK XD! Adoro disputar no Crazy Run, personalizar minha casa e curtir eventos com a galera!',
       title: isAdmin ? 'Lorde da Moderação' : 'Explorador da Ilha',
-      level: userLevel,
-      xp: fanXP,
+      level: effectiveLevel,
+      xp: effectiveXP,
       joinedAt: Date.now() - 45 * 24 * 3600 * 1000,
       timeInCommunity: 'Membro Ativo da Central',
       favoriteMinigame: 'Crazy Run',
@@ -451,9 +458,6 @@ export default function PassportSection({
   const [editTheme, setEditTheme] = useState(passport.cardTheme);
   const [editAvatar, setEditAvatar] = useState(passport.avatarUrl);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-
-  // Shared passport viewing state
-  const [viewingSharedPassport, setViewingSharedPassport] = useState<PKXDPassport | null>(null);
 
   // Parse URL on mount / search params change to load shared passport
   useEffect(() => {
@@ -541,28 +545,31 @@ export default function PassportSection({
     }
   }, [currentUser?.uid, currentUser?.displayName, currentUser?.email]);
 
-  // Sync Level & XP on props change
+  // Sync Level & XP on props change (ensures strict synchronization with account)
   useEffect(() => {
-    setPassport(prev => {
-      const updatedBadges = prev.badges.map(b => {
-        if (b.id === 'badge_legend' && userLevel >= 10 && !b.unlocked) {
-          return { ...b, unlocked: true, unlockedAt: Date.now() };
-        }
-        return b;
-      });
+    if (!viewingSharedPassport) {
+      setPassport(prev => {
+        const updatedBadges = prev.badges.map(b => {
+          if (b.id === 'badge_legend' && effectiveLevel >= 10 && !b.unlocked) {
+            return { ...b, unlocked: true, unlockedAt: Date.now() };
+          }
+          return b;
+        });
 
-      const updated = {
-        ...prev,
-        level: userLevel,
-        xp: fanXP,
-        badges: updatedBadges
-      };
-      try {
-        localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
-      } catch (e) {}
-      return updated;
-    });
-  }, [userLevel, fanXP]);
+        const updated: PKXDPassport = {
+          ...prev,
+          level: effectiveLevel,
+          xp: effectiveXP,
+          badges: updatedBadges,
+          updatedAt: Date.now()
+        };
+        try {
+          localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    }
+  }, [fanLevel, fanXP, effectiveLevel, effectiveXP, viewingSharedPassport]);
 
   // Load from Firestore on user mount
   useEffect(() => {
@@ -599,8 +606,8 @@ export default function PassportSection({
               avatarUrl: data.avatarUrl || currentUser?.photoURL || prev.avatarUrl,
               friends: cleanedFriends,
               eventHistory: cleanedHistory,
-              level: userLevel, 
-              xp: fanXP 
+              level: effectiveLevel, 
+              xp: effectiveXP 
             };
             try {
               localStorage.setItem('pkxd_passport_data', JSON.stringify(merged));
@@ -1108,8 +1115,15 @@ export default function PassportSection({
       {/* TAB 1: VISUAL PASSPORT CARD (HOLOGRAPHIC OFFICIAL CARD) */}
       {/* ========================================================= */}
       {activeTab === 'card' && (() => {
-        const displayPassport = viewingSharedPassport || passport;
+        const displayPassport = viewingSharedPassport || {
+          ...passport,
+          level: effectiveLevel,
+          xp: effectiveXP
+        };
         const isViewingOther = !!viewingSharedPassport;
+        const cardLevel = viewingSharedPassport ? Number(viewingSharedPassport.level || 1) : effectiveLevel;
+        const cardXP = viewingSharedPassport ? Number(viewingSharedPassport.xp || 0) : effectiveXP;
+        const cardTotalXP = viewingSharedPassport ? (viewingSharedPassport.totalXp || ((cardLevel - 1) * 100 + cardXP)) : totalLifetimeXP;
 
         return (
           <div className="space-y-5 animate-fade-in">
@@ -1131,7 +1145,7 @@ export default function PassportSection({
                       <span className="text-[9px] font-mono uppercase bg-yellow-400 text-black font-black px-2 py-0.5 rounded-full shadow-sm">
                         Passaporte Compartilhado
                       </span>
-                      <span className="text-xs text-pink-300 font-bold">Nível {displayPassport.level}</span>
+                      <span className="text-xs text-pink-300 font-bold">Nível {cardLevel}</span>
                     </div>
                     <h3 className="font-sans font-black text-base sm:text-lg text-white truncate">
                       {displayPassport.nickname} <span className="text-xs font-mono text-cyan-300 font-normal">({displayPassport.playerTag})</span>
@@ -1196,8 +1210,8 @@ export default function PassportSection({
                     </div>
 
                     <div className="px-3 py-1 bg-black/40 backdrop-blur-md border border-white/20 rounded-full font-mono font-bold text-xs text-yellow-300 flex items-center gap-1.5 shadow-sm">
-                      <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                      <span>NÍVEL {displayPassport.level}</span>
+                      <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 animate-pulse" />
+                      <span>NÍVEL {cardLevel}</span>
                     </div>
                   </div>
 
@@ -1217,7 +1231,7 @@ export default function PassportSection({
                         />
                       </div>
                       <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-black font-black text-[10px] px-2 py-0.5 rounded-md shadow uppercase">
-                        LVL {displayPassport.level}
+                        LVL {cardLevel}
                       </div>
                     </div>
 
@@ -1248,16 +1262,22 @@ export default function PassportSection({
                         "{displayPassport.bio}"
                       </p>
 
-                      {/* Level Progress Bar */}
-                      <div className="space-y-1 pt-1">
-                        <div className="flex justify-between text-[10px] font-mono text-white/80">
-                          <span>Progresso Nível {displayPassport.level}</span>
-                          <span>{displayPassport.xp || fanXP} XP Total</span>
+                      {/* Level Progress Bar - strictly linked to account Level & XP */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex justify-between items-center text-[10px] font-mono text-white/90">
+                          <span className="flex items-center gap-1 font-bold text-yellow-300">
+                            <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 animate-pulse" />
+                            <span>Progresso Nível {cardLevel}</span>
+                          </span>
+                          <span className="font-bold text-cyan-300 font-mono">
+                            <span className="text-yellow-300">{cardXP % 100}/100 XP</span>
+                            <span className="text-white/60 ml-1.5 font-normal">({cardTotalXP} XP Total)</span>
+                          </span>
                         </div>
-                        <div className="w-full h-2.5 bg-black/40 rounded-full overflow-hidden p-0.5 border border-white/20">
+                        <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
                           <div 
-                            className="h-full bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300 rounded-full transition-all duration-500"
-                            style={{ width: `${(displayPassport.xp || fanXP) % 100}%` }}
+                            className="h-full bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300 rounded-full transition-all duration-500 shadow-sm"
+                            style={{ width: `${Math.min(100, Math.max(0, cardXP % 100))}%` }}
                           />
                         </div>
                       </div>
