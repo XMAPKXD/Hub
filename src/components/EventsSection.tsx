@@ -146,6 +146,11 @@ export default function EventsSection({
   // Organizer Panel Search & Toast states
   const [participantSearch, setParticipantSearch] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [copiedSingleTagId, setCopiedSingleTagId] = useState<string | null>(null);
+  const [copiedBatchFormat, setCopiedBatchFormat] = useState<string | null>(null);
+  const [copyFormatTab, setCopyFormatTab] = useState<'lines' | 'comma' | 'numbered'>('lines');
+  const [quickAddTagInput, setQuickAddTagInput] = useState('');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -531,13 +536,82 @@ export default function EventsSection({
     }
   };
 
+  // Helper to copy a single player's tag
+  const handleCopySingleTag = (tag: string, partId: string) => {
+    if (triggerAudio) triggerAudio('tap');
+    navigator.clipboard.writeText(tag);
+    setCopiedSingleTagId(partId);
+    setTimeout(() => setCopiedSingleTagId(null), 2500);
+    showToast(`✓ Tag "${tag}" copiada! Cole no jogo para convidar.`);
+  };
+
+  // Helper to copy list with custom formats (lines, comma-separated, or numbered)
+  const handleCopyTagsFormatted = (event: CommunityEvent, list: EventParticipant[], format: 'lines' | 'comma' | 'numbered') => {
+    if (triggerAudio) triggerAudio('tap');
+    if (list.length === 0) {
+      showToast('Nenhum participante confirmado para copiar.');
+      return;
+    }
+
+    let formattedText = '';
+    if (format === 'lines') {
+      formattedText = list.map(p => p.playerIdentifier).join('\n');
+    } else if (format === 'comma') {
+      formattedText = list.map(p => p.playerIdentifier).join(', ');
+    } else if (format === 'numbered') {
+      formattedText = `[Lista de Membros - ${event.name}]\n` + list.map((p, i) => `${i + 1}. ${p.playerIdentifier}`).join('\n');
+    }
+
+    navigator.clipboard.writeText(formattedText);
+    setCopiedBatchFormat(format);
+    setTimeout(() => setCopiedBatchFormat(null), 2500);
+    showToast(`✓ ${list.length} tag(s) copiadas (${format === 'comma' ? 'com vírgula' : format === 'numbered' ? 'numeradas' : '1 por linha'})!`);
+  };
+
   // Helper to copy list formatted as plain line-by-line list
   const handleCopyList = (event: CommunityEvent, list: EventParticipant[]) => {
-    if (triggerAudio) triggerAudio('tap');
+    handleCopyTagsFormatted(event, list, 'lines');
+  };
 
-    const formattedText = list.map(p => p.playerIdentifier).join('\n');
-    navigator.clipboard.writeText(formattedText);
-    showToast(`✓ ${list.length} identificadores copiados para a área de transferência!`);
+  // Helper for Organizer to manually add a participant tag
+  const handleQuickAddParticipant = async (eventId: string) => {
+    if (!quickAddTagInput.trim()) return;
+    const rawTag = quickAddTagInput.trim().toUpperCase();
+    if (!rawTag.includes('#')) {
+      alert('Por favor insira a tag no formato NOME#000');
+      return;
+    }
+
+    // Check duplicate
+    const eventParts = participants.filter(p => p.eventId === eventId);
+    if (eventParts.some(p => p.playerIdentifier.toUpperCase() === rawTag)) {
+      alert('Este jogador já está na lista deste evento!');
+      return;
+    }
+
+    const newPart: EventParticipant = {
+      id: 'part_' + Date.now(),
+      eventId,
+      playerIdentifier: rawTag,
+      registeredAt: Date.now()
+    };
+
+    setParticipants(prev => {
+      const updated = [...prev, newPart];
+      try {
+        localStorage.setItem('pkxd_event_participants', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    if (db) {
+      setDoc(doc(db, 'event_participants', newPart.id), newPart).catch(() => {});
+    }
+
+    setQuickAddTagInput('');
+    setShowQuickAdd(false);
+    if (triggerAudio) triggerAudio('success');
+    showToast(`✓ Jogador "${rawTag}" adicionado à lista do evento!`);
   };
 
   // Helper to export list as TXT
@@ -883,8 +957,8 @@ export default function EventsSection({
                     </div>
                   </div>
 
-                  {/* Participants progress */}
-                  <div className="space-y-1.5 pt-2 border-t border-white/5">
+                  {/* Participants progress & Quick Copy for Organizer */}
+                  <div className="space-y-2 pt-2 border-t border-white/5">
                     <div className="flex items-center justify-between text-xs font-bold">
                       <span className="text-neutral-400 flex items-center gap-1">
                         <Users className="w-3.5 h-3.5 text-pink-400" />
@@ -905,10 +979,35 @@ export default function EventsSection({
                         />
                       </div>
                     )}
+
+                    {eventParts.length > 0 && (
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <button
+                          onClick={() => handleCopyTagsFormatted(event, eventParts, 'lines')}
+                          className="flex-1 py-1.5 px-2.5 bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 rounded-xl text-[11px] font-bold uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+                          title="Copiar todas as tags dos participantes para colar no PK XD"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-yellow-300" />
+                          <span>Copiar {eventParts.length} Tags 📋</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (triggerAudio) triggerAudio('tap');
+                            setShowDetailsModal(event);
+                          }}
+                          className="py-1.5 px-2.5 bg-purple-950/60 hover:bg-purple-900 border border-purple-500/30 text-purple-200 rounded-xl text-[11px] font-bold uppercase flex items-center justify-center gap-1 transition-all cursor-pointer"
+                          title="Ver lista detalhada de membros"
+                        >
+                          <Users className="w-3.5 h-3.5 text-pink-400" />
+                          <span>Ver Lista</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Card Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     <button
                       onClick={() => handleShareEvent(event)}
                       className="py-2.5 px-3 bg-purple-950/60 hover:bg-purple-900 border border-purple-500/30 text-purple-200 font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
@@ -1309,31 +1408,135 @@ export default function EventsSection({
                 )}
               </div>
 
-              {/* PARTICIPANTS SECTION */}
+              {/* PARTICIPANTS SECTION / ORGANIZER COPY & PASTE PANEL */}
               {(() => {
                 const eventParts = participants.filter(p => p.eventId === showDetailsModal.id);
                 const filteredList = eventParts.filter(p => 
                   p.playerIdentifier.toLowerCase().includes(participantSearch.toLowerCase())
                 );
 
+                // Prepared text formats for easy copy-paste
+                const linesText = eventParts.map(p => p.playerIdentifier).join('\n');
+                const commaText = eventParts.map(p => p.playerIdentifier).join(', ');
+                const numberedText = `[Lista de Membros - ${showDetailsModal.name}]\n` + eventParts.map((p, i) => `${i + 1}. ${p.playerIdentifier}`).join('\n');
+
+                const activeFormattedText = copyFormatTab === 'lines' ? linesText : copyFormatTab === 'comma' ? commaText : numberedText;
+
                 return (
                   <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div>
+                    {/* Organizer / Host Highlight Box */}
+                    <div className="bg-gradient-to-r from-yellow-500/10 via-purple-900/30 to-pink-500/10 border-2 border-yellow-400/30 p-4 rounded-2xl space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-yellow-400/20 border border-yellow-400/40 flex items-center justify-center text-yellow-300 font-black flex-shrink-0">
+                            👑
+                          </div>
+                          <div>
+                            <h4 className="font-sans font-black text-sm uppercase text-white tracking-wide flex items-center gap-2">
+                              Painel de Membros & Tags (PK XD)
+                            </h4>
+                            <p className="text-[11px] text-yellow-200/80">
+                              Copie as tags dos participantes para colar na busca de amigos do PK XD e convidá-los para sua festa!
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="px-3 py-1 bg-yellow-400/20 text-yellow-300 font-mono text-xs font-bold rounded-xl border border-yellow-400/30 self-start sm:self-auto">
+                          {eventParts.length} {eventParts.length === 1 ? 'membro' : 'membros'}
+                        </span>
+                      </div>
+
+                      {/* Quick Copy Format Controls */}
+                      {eventParts.length > 0 && (
+                        <div className="space-y-2 pt-1 border-t border-white/10">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            {/* Format selector tabs */}
+                            <div className="flex items-center gap-1 bg-black/60 p-1 rounded-xl border border-white/10 text-[10px] font-bold">
+                              <button
+                                onClick={() => setCopyFormatTab('lines')}
+                                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                                  copyFormatTab === 'lines' ? 'bg-yellow-400 text-purple-950 font-black' : 'text-neutral-400 hover:text-white'
+                                }`}
+                              >
+                                1 por Linha
+                              </button>
+                              <button
+                                onClick={() => setCopyFormatTab('comma')}
+                                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                                  copyFormatTab === 'comma' ? 'bg-yellow-400 text-purple-950 font-black' : 'text-neutral-400 hover:text-white'
+                                }`}
+                              >
+                                Separado por Vírgulas
+                              </button>
+                              <button
+                                onClick={() => setCopyFormatTab('numbered')}
+                                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                                  copyFormatTab === 'numbered' ? 'bg-yellow-400 text-purple-950 font-black' : 'text-neutral-400 hover:text-white'
+                                }`}
+                              >
+                                Numerado
+                              </button>
+                            </div>
+
+                            {/* Main Copy Button */}
+                            <button
+                              onClick={() => handleCopyTagsFormatted(showDetailsModal, eventParts, copyFormatTab)}
+                              className={`px-4 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-lg ${
+                                copiedBatchFormat === copyFormatTab
+                                  ? 'bg-emerald-500 text-white shadow-emerald-500/30'
+                                  : 'bg-gradient-to-r from-yellow-400 to-amber-500 text-purple-950 hover:brightness-110'
+                              }`}
+                            >
+                              {copiedBatchFormat === copyFormatTab ? (
+                                <>
+                                  <Check className="w-4 h-4 text-white" />
+                                  <span>Copiado com Sucesso! ✓</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-4 h-4" />
+                                  <span>Copiar Todas as Tags 📋</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Live Copyable Box / Textarea */}
+                          <div className="relative">
+                            <textarea
+                              readOnly
+                              value={activeFormattedText}
+                              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                              rows={Math.min(5, Math.max(2, eventParts.length))}
+                              className="w-full p-3 bg-black/80 border border-yellow-400/30 rounded-xl text-xs font-mono text-yellow-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-yellow-400 cursor-text resize-none scrollbar-thin selection:bg-yellow-400 selection:text-purple-950"
+                              placeholder="Nenhuma tag de jogador cadastrada ainda."
+                            />
+                            <span className="absolute right-3 bottom-2 text-[9px] font-mono text-neutral-500 pointer-events-none">
+                              Clique no texto para selecionar tudo
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Bar: Export Buttons & Manual Add */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-2">
                         <h4 className="font-sans font-black text-sm uppercase text-white flex items-center gap-2">
                           <Users className="w-4 h-4 text-pink-400" />
-                          Lista de Participantes Confirmados ({eventParts.length})
+                          Membros Inscritos ({eventParts.length})
                         </h4>
                       </div>
 
                       {/* Export Toolbar */}
                       <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
                         <button
-                          onClick={() => handleCopyList(showDetailsModal, eventParts)}
-                          className="px-2.5 py-1.5 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase flex items-center gap-1 cursor-pointer transition-all"
-                          title="Copiar lista de jogadores"
+                          onClick={() => setShowQuickAdd(!showQuickAdd)}
+                          className="px-2.5 py-1.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                          title="Adicionar jogador manualmente"
                         >
-                          <Copy className="w-3 h-3 text-yellow-300" /> Copiar Lista
+                          <Plus className="w-3 h-3" />
+                          <span>{showQuickAdd ? 'Fechar' : 'Add Jogador'}</span>
                         </button>
 
                         <button
@@ -1362,6 +1565,30 @@ export default function EventsSection({
                       </div>
                     </div>
 
+                    {/* Manual Add Participant Box */}
+                    {showQuickAdd && (
+                      <div className="p-3.5 bg-purple-950/40 border border-pink-500/30 rounded-2xl space-y-2 animate-fade-in">
+                        <span className="text-[11px] font-bold text-pink-300 uppercase block">
+                          Adicionar Jogador Diretamente na Lista:
+                        </span>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Tag no PK XD (ex: AMIGO#123)..."
+                            value={quickAddTagInput}
+                            onChange={(e) => setQuickAddTagInput(e.target.value.toUpperCase())}
+                            className="flex-1 px-3 py-2 bg-black/70 border border-white/10 rounded-xl text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-pink-500"
+                          />
+                          <button
+                            onClick={() => handleQuickAddParticipant(showDetailsModal.id)}
+                            className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-sans text-xs font-black uppercase rounded-xl transition-all cursor-pointer active:scale-95 flex items-center gap-1 flex-shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Adicionar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Search Field */}
                     <div className="relative">
                       <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1374,28 +1601,72 @@ export default function EventsSection({
                       />
                     </div>
 
-                    {/* Formatted Public List Display */}
-                    <div className="p-4 bg-black/80 rounded-2xl border border-white/10 font-mono text-xs text-pink-300 space-y-1.5 max-h-60 overflow-y-auto scrollbar-thin">
+                    {/* Interactive List of Members with Individual Copy Buttons */}
+                    <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin pr-1">
                       {filteredList.length === 0 ? (
-                        <p className="text-neutral-500 text-center py-4 font-sans">
-                          {eventParts.length === 0 ? 'Nenhum participante confirmado ainda.' : 'Nenhum jogador encontrado com essa pesquisa.'}
-                        </p>
+                        <div className="p-8 text-center bg-black/40 rounded-2xl border border-dashed border-white/10">
+                          <p className="text-neutral-400 text-xs font-sans">
+                            {eventParts.length === 0 ? 'Nenhum participante confirmado ainda. Compartilhe o link do evento para os membros se inscreverem!' : 'Nenhum jogador encontrado com essa pesquisa.'}
+                          </p>
+                        </div>
                       ) : (
-                        filteredList.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between hover:bg-white/5 px-2 py-1 rounded transition-colors group">
-                            <span className="font-bold tracking-wider">{p.playerIdentifier}</span>
-                            
-                            {(isAdmin || (currentUser && showDetailsModal.createdById === currentUser.uid)) && (
-                              <button
-                                onClick={() => handleRemoveParticipant(p.id, p.playerIdentifier)}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-400 transition-all cursor-pointer"
-                                title="Remover jogador"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        ))
+                        filteredList.map((p, idx) => {
+                          const isCopied = copiedSingleTagId === p.id;
+                          return (
+                            <div
+                              key={p.id}
+                              className="flex items-center justify-between bg-black/60 hover:bg-purple-950/40 border border-white/10 hover:border-purple-500/30 p-2.5 rounded-xl transition-all group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center font-mono text-[10px] text-neutral-400 font-bold">
+                                  #{idx + 1}
+                                </span>
+                                <div>
+                                  <span className="font-mono text-xs font-bold text-white tracking-wider block">
+                                    {p.playerIdentifier}
+                                  </span>
+                                  <span className="text-[9px] text-neutral-500 font-mono">
+                                    Inscrito em {new Date(p.registeredAt).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => handleCopySingleTag(p.playerIdentifier, p.id)}
+                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
+                                    isCopied
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                      : 'bg-white/5 hover:bg-yellow-400/20 text-neutral-300 hover:text-yellow-300 border border-white/10 hover:border-yellow-400/30'
+                                  }`}
+                                  title="Copiar apenas esta tag"
+                                >
+                                  {isCopied ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                      <span>Copiado!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3 text-yellow-300" />
+                                      <span>Copiar Tag</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {(isAdmin || (currentUser && showDetailsModal.createdById === currentUser.uid)) && (
+                                  <button
+                                    onClick={() => handleRemoveParticipant(p.id, p.playerIdentifier)}
+                                    className="p-1.5 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
+                                    title="Remover jogador da lista"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
