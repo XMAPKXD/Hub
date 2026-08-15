@@ -60,8 +60,10 @@ import {
   CheckCircle2,
   FileText,
   Radio,
-  Check
+  Check,
+  X
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { playTapSound, playLevelUpSound, playSuccessSound } from './utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -201,7 +203,39 @@ export default function App() {
   const [modalEmail, setModalEmail] = useState('');
   const [modalPassword, setModalPassword] = useState('');
   const [modalNickname, setModalNickname] = useState('');
+  const [modalPkxdName, setModalPkxdName] = useState('');
+  const [modalPkxdNumber, setModalPkxdNumber] = useState('');
   const [modalAuthError, setModalAuthError] = useState<string | null>(null);
+
+  // PK XD Tag setup modal & banner notification states for existing users
+  const [showTagSetupModal, setShowTagSetupModal] = useState(false);
+  const [tagSetupName, setTagSetupName] = useState('');
+  const [tagSetupNumber, setTagSetupNumber] = useState('');
+  const [tagSetupError, setTagSetupError] = useState('');
+  const [tagBannerDismissed, setTagBannerDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('pkxd_tag_banner_dismissed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const [currentPlayerTag, setCurrentPlayerTag] = useState(() => {
+    try {
+      return localStorage.getItem('pkxd_player_tag') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+
+  const isTagConfigured = (tag?: string | null): boolean => {
+    if (!tag) return false;
+    const clean = tag.trim().toUpperCase();
+    if (!clean || clean === 'JOGADOR' || clean === 'JOGADOR#000' || clean === 'GUEST' || clean === 'EXPLORADOR' || clean === 'FÃ SECRETO' || clean === 'CONVIDADO') return false;
+    if (!clean.includes('#')) return false;
+    const parts = clean.split('#');
+    return parts[0].length >= 2 && parts[1].length >= 1;
+  };
 
   // Pending 6-digit email verification code state
   const [pendingEmailVerification, setPendingEmailVerification] = useState<{
@@ -1284,9 +1318,22 @@ export default function App() {
     setGoogleAuthError(null);
     try {
       const result = await createUserWithEmailAndPassword(auth, pendingEmailVerification.email, pendingEmailVerification.pass);
+      const fullTag = pendingEmailVerification.nickname;
+      const parts = fullTag.split('#');
+      const nickOnly = parts[0] || 'Explorador';
+      const numberOnly = parts[1] || '000';
+
+      try {
+        localStorage.setItem('pkxd_player_tag', fullTag);
+        localStorage.setItem('pkxd_nickname', nickOnly);
+        localStorage.setItem('pkxd_player_number', numberOnly);
+        localStorage.setItem('pkxd_username_nickname', fullTag);
+        setCurrentPlayerTag(fullTag);
+      } catch (e) {}
+
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
-          displayName: pendingEmailVerification.nickname || 'Fã Secreto'
+          displayName: fullTag
         });
         try {
           await sendEmailVerification(auth.currentUser);
@@ -1297,7 +1344,7 @@ export default function App() {
       setPendingEmailVerification(null);
       setVerificationCodeInput('');
       triggerAudio('levelUp');
-      setNotifMessage(`🎉 E-mail verificado! Conta criada com sucesso como ${pendingEmailVerification.nickname}! 🚀`);
+      setNotifMessage(`🎉 E-mail verificado! Conta criada com sucesso com sua Tag PK XD ${fullTag}! 🚀`);
       setTimeout(() => setNotifMessage(null), 5000);
     } catch (error: any) {
       console.error("Email register failed:", error);
@@ -1317,6 +1364,71 @@ export default function App() {
     } finally {
       setIsAuthenticating(false);
     }
+  };
+
+  const handleSavePkxdTag = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanName = tagSetupName.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+    const cleanNumber = tagSetupNumber.trim().replace(/[^0-9]/g, '');
+
+    if (!cleanName || cleanName.length < 2) {
+      setTagSetupError('Por favor, informe seu Nome no PK XD (mínimo 2 letras).');
+      return;
+    }
+    if (!cleanNumber || cleanNumber.length < 1) {
+      setTagSetupError('Por favor, informe o número / tag # do seu PK XD (ex: 245 ou 000).');
+      return;
+    }
+
+    const fullTag = `${cleanName}#${cleanNumber}`;
+    try {
+      localStorage.setItem('pkxd_player_tag', fullTag);
+      localStorage.setItem('pkxd_nickname', cleanName);
+      localStorage.setItem('pkxd_player_number', cleanNumber);
+      localStorage.setItem('pkxd_username_nickname', fullTag);
+      setCurrentPlayerTag(fullTag);
+
+      // Update local passport data
+      const pRaw = localStorage.getItem('pkxd_passport_data');
+      if (pRaw) {
+        try {
+          const p = JSON.parse(pRaw);
+          p.playerTag = fullTag;
+          p.nickname = cleanName;
+          p.updatedAt = Date.now();
+          localStorage.setItem('pkxd_passport_data', JSON.stringify(p));
+        } catch (err) {}
+      }
+
+      // Sync to firestore if user is logged in
+      if (db && user?.uid && user.uid !== 'guest_user') {
+        const cleanKey = encodeURIComponent(fullTag.trim().toLowerCase().replace(/[.#$/[\]]/g, '_'));
+        setDoc(doc(db, 'pkxd_passports', user.uid), {
+          playerTag: fullTag,
+          nickname: cleanName,
+          updatedAt: Date.now()
+        }, { merge: true }).catch(() => {});
+        setDoc(doc(db, 'pkxd_public_passports', cleanKey), {
+          playerTag: fullTag,
+          nickname: cleanName,
+          lastSavedAt: Date.now()
+        }, { merge: true }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Erro ao salvar tag:', err);
+    }
+
+    handleAddFanXP(25, 'Cadastrou Nome e # do PK XD');
+    setShowTagSetupModal(false);
+    setTagBannerDismissed(true);
+    try {
+      sessionStorage.setItem('pkxd_tag_banner_dismissed', 'true');
+    } catch (e) {}
+
+    triggerAudio('levelUp');
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    setNotifMessage(`🎉 Tag do PK XD vinculada com sucesso: ${fullTag}! (+25 XP) Suas festas agora terão preenchimento automático! 🚀`);
+    setTimeout(() => setNotifMessage(null), 7000);
   };
 
   const handleEmailRegister = async (email: string, pass: string, nickname: string) => {
@@ -2340,32 +2452,68 @@ export default function App() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     setModalAuthError(null);
-                    if (!modalNickname.trim()) {
-                      setModalAuthError('⚠️ Por favor, escolha um apelido fofo!');
+                    const cleanName = modalPkxdName.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+                    const cleanNumber = modalPkxdNumber.trim().replace(/[^0-9]/g, '');
+
+                    if (!cleanName || cleanName.length < 2) {
+                      setModalAuthError('⚠️ Por favor, digite seu Nome no PK XD (mínimo 2 letras)!');
+                      return;
+                    }
+                    if (!cleanNumber || cleanNumber.length < 1) {
+                      setModalAuthError('⚠️ Por favor, digite o Número / Tag # do seu PK XD (ex: 245 ou 000)!');
                       return;
                     }
                     if (modalPassword.length < 6) {
                       setModalAuthError('⚠️ A senha precisa ter pelo menos 6 caracteres!');
                       return;
                     }
-                    handleEmailRegister(modalEmail, modalPassword, modalNickname);
+                    const combinedTag = `${cleanName}#${cleanNumber}`;
+                    handleEmailRegister(modalEmail, modalPassword, combinedTag);
                   }}
                   className="space-y-4 text-left"
                 >
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
-                        Apelido no Ranking (Nickname)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={15}
-                        placeholder="Ex: Gamer_PK"
-                        value={modalNickname}
-                        onChange={(e) => setModalNickname(e.target.value)}
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
+                          Nome no PK XD (Nick) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={16}
+                          placeholder="Ex: LUNA ou GABRIEL"
+                          value={modalPkxdName}
+                          onChange={(e) => setModalPkxdName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
+                          className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white uppercase placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all font-mono font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
+                          Número / Tag # do PK XD *
+                        </label>
+                        <div className="relative flex items-center">
+                          <span className="absolute left-3 font-mono font-black text-xs text-pink-400">#</span>
+                          <input
+                            type="text"
+                            required
+                            maxLength={6}
+                            placeholder="Ex: 245 ou 000"
+                            value={modalPkxdNumber}
+                            onChange={(e) => setModalPkxdNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl pl-7 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all font-mono font-bold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live preview badge */}
+                    <div className="p-2.5 bg-purple-950/40 border border-purple-500/30 rounded-xl flex items-center justify-between text-[11px]">
+                      <span className="text-zinc-400 font-medium">🎮 Sua Tag Completa PK XD:</span>
+                      <span className="font-mono font-black text-yellow-300 bg-black/60 px-2 py-0.5 rounded-lg border border-yellow-400/30">
+                        {modalPkxdName.trim() || 'SEUNICK'}#{modalPkxdNumber.trim() || '000'}
+                      </span>
                     </div>
 
                     <div>
@@ -2718,6 +2866,54 @@ export default function App() {
 
         </div>
       </nav>
+
+      {/* Banner de Notificação para Usuários que ainda não cadastraram Nome e # do PK XD */}
+      {!isTagConfigured(currentPlayerTag) && !tagBannerDismissed && (
+        <div className="bg-gradient-to-r from-amber-500/20 via-pink-600/25 to-purple-700/25 border-b border-pink-500/30 px-3 sm:px-6 py-2.5 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 text-left z-20 sticky top-[53px] sm:top-[61px] shadow-lg animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-pink-500/20 border border-pink-400/40 rounded-xl text-pink-300 flex-shrink-0 animate-bounce">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
+                <span>🎮 Complete sua Identidade PK XD!</span>
+                <span className="text-[10px] bg-gradient-to-r from-yellow-400 to-amber-500 text-purple-950 font-mono px-2 py-0.5 rounded-full font-black shadow-sm">
+                  +25 XP GRÁTIS
+                </span>
+              </p>
+              <p className="text-[11px] text-zinc-300">
+                Cadastre seu <strong>Nome e # do PK XD</strong> (ex: <span className="text-yellow-300 font-mono font-bold">LUNA#245</span>) para ter <strong>preenchimento automático</strong> em todas as festas e eventos!
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => {
+                triggerAudio('tap');
+                setTagSetupName(modalPkxdName || '');
+                setTagSetupNumber(modalPkxdNumber || '');
+                setTagSetupError('');
+                setShowTagSetupModal(true);
+              }}
+              className="px-4 py-1.5 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all active:scale-95 border border-white/20"
+            >
+              Cadastrar Tag ⚡
+            </button>
+            <button
+              onClick={() => {
+                setTagBannerDismissed(true);
+                try {
+                  sessionStorage.setItem('pkxd_tag_banner_dismissed', 'true');
+                } catch (e) {}
+              }}
+              className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+              title="Lembrar mais tarde"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Hero Header Area */}
       {!isApplicationsRoute && !isAdminRoute && activeTab !== 'artes' && (
@@ -4017,6 +4213,104 @@ export default function App() {
                 Fechar Central de Alertas ✕
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK PK XD TAG SETUP MODAL FOR EXISTING USERS */}
+      {showTagSetupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-zinc-900 border-2 border-pink-500/50 rounded-3xl p-6 w-full max-w-md relative shadow-2xl text-left space-y-4 overflow-hidden">
+            <button
+              onClick={() => setShowTagSetupModal(false)}
+              className="absolute top-4 right-4 p-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2.5 text-pink-400">
+              <div className="p-2 bg-pink-500/20 border border-pink-500/40 rounded-xl">
+                <Sparkles className="w-5 h-5 text-pink-400" />
+              </div>
+              <div>
+                <h3 className="font-sans font-black text-base text-white uppercase tracking-wider">
+                  Vincular Nome e # do PK XD 🎮
+                </h3>
+                <span className="text-[10px] text-yellow-300 font-bold">
+                  🎁 Ganhe +25 XP e ative o preenchimento automático em festas!
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              Informe seu Nick e o código numérico com hashtag (#) exatamente como aparece dentro do jogo PK XD.
+            </p>
+
+            <form onSubmit={handleSavePkxdTag} className="space-y-4">
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1">
+                      Nome no PK XD (Nick) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={16}
+                      placeholder="Ex: LUNA ou GABRIEL"
+                      value={tagSetupName}
+                      onChange={(e) => {
+                        setTagSetupName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''));
+                        setTagSetupError('');
+                      }}
+                      className="w-full bg-black/60 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white uppercase placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all font-mono font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1">
+                      Número / Tag # *
+                    </label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3 font-mono font-black text-xs text-pink-400">#</span>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        placeholder="Ex: 245 ou 000"
+                        value={tagSetupNumber}
+                        onChange={(e) => {
+                          setTagSetupNumber(e.target.value.replace(/[^0-9]/g, ''));
+                          setTagSetupError('');
+                        }}
+                        className="w-full bg-black/60 border border-white/15 rounded-xl pl-7 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all font-mono font-bold"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live tag preview */}
+                <div className="p-3 bg-purple-950/40 border border-purple-500/30 rounded-xl flex items-center justify-between text-xs">
+                  <span className="text-zinc-400 font-medium">Sua Tag Completa:</span>
+                  <span className="font-mono font-black text-yellow-300 bg-black/60 px-2.5 py-1 rounded-lg border border-yellow-400/30">
+                    {tagSetupName.trim() || 'SEUNICK'}#{tagSetupNumber.trim() || '000'}
+                  </span>
+                </div>
+              </div>
+
+              {tagSetupError && (
+                <div className="p-2.5 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-300 font-bold">
+                  ⚠️ {tagSetupError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg active:scale-95"
+              >
+                Salvar Minha Tag e Ganhar +25 XP 🚀
+              </button>
+            </form>
           </div>
         </div>
       )}

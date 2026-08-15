@@ -125,6 +125,7 @@ export default function EventsSection({
 
   // Presence Confirmation state
   const [playerTagInput, setPlayerTagInput] = useState('');
+  const [hasAutoFilledTag, setHasAutoFilledTag] = useState(false);
   const [presenceError, setPresenceError] = useState('');
   const [presenceSuccess, setPresenceSuccess] = useState(false);
 
@@ -367,9 +368,16 @@ export default function EventsSection({
   // Open Presence Modal helper with auto-filled tag
   const handleOpenPresenceModal = (event: CommunityEvent) => {
     if (triggerAudio) triggerAudio('tap');
-    const savedTag = localStorage.getItem('pkxd_player_tag') || localStorage.getItem('pkxd_nickname') || currentUser?.displayName || '';
-    if (savedTag && savedTag !== 'JOGADOR' && savedTag !== 'JOGADOR#000') {
-      setPlayerTagInput(savedTag);
+    const rawTag = localStorage.getItem('pkxd_player_tag') || '';
+    const clean = rawTag.trim().toUpperCase();
+    const isConfiguredTag = clean && clean.includes('#') && !clean.includes('JOGADOR#000') && !clean.includes('GUEST') && clean.split('#')[0].length >= 2 && clean.split('#')[1].length >= 1;
+
+    if (isConfiguredTag) {
+      setPlayerTagInput(clean);
+      setHasAutoFilledTag(true);
+    } else {
+      setPlayerTagInput('');
+      setHasAutoFilledTag(false);
     }
     setPresenceError('');
     setPresenceSuccess(false);
@@ -1334,6 +1342,28 @@ export default function EventsSection({
               </div>
             ) : (
               <form onSubmit={handleConfirmPresence} className="space-y-4">
+                {hasAutoFilledTag ? (
+                  <div className="p-2.5 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl flex items-center gap-2.5 text-left">
+                    <span className="text-lg">✨</span>
+                    <div>
+                      <p className="text-xs font-black text-emerald-300">Preenchimento Automático Ativo!</p>
+                      <p className="text-[10px] text-emerald-200/80 leading-tight">
+                        Tag PK XD vinculada ao seu perfil detectada: <strong className="font-mono text-white">{playerTagInput}</strong>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-start gap-2 text-left">
+                    <span className="text-base mt-0.5">ℹ️</span>
+                    <div>
+                      <p className="text-xs font-black text-amber-300">Sem Tag PK XD Vinculada</p>
+                      <p className="text-[10px] text-amber-200/80 leading-tight">
+                        Você ainda não cadastrou seu Nome e # no perfil. Digite manualmente abaixo ou configure no seu Passaporte para preenchimento automático nas próximas festas!
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-extrabold uppercase text-neutral-400">
                     Informe seu Identificador do PK XD *
@@ -1344,10 +1374,10 @@ export default function EventsSection({
                     placeholder="Ex: KOOSH#000 ou LUNA#245"
                     value={playerTagInput}
                     onChange={(e) => setPlayerTagInput(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-black/60 border border-white/15 rounded-xl text-sm text-white font-mono font-bold focus:outline-none focus:ring-2 focus:ring-pink-500 uppercase"
+                    className="w-full px-3.5 py-2.5 bg-black/60 border border-white/15 rounded-xl text-sm text-white font-mono font-bold focus:outline-none focus:ring-2 focus:ring-pink-500 uppercase"
                   />
                   <p className="text-[10px] text-neutral-400 leading-tight">
-                    Digite seu nickname exatamente como aparece no PK XD com o código (ex: NICK#123).
+                    Digite seu Nickname exatamente como aparece no PK XD com o código (ex: NICK#123).
                   </p>
                 </div>
 

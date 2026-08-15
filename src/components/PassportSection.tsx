@@ -438,6 +438,12 @@ export default function PassportSection({
   // Form edit states
   const [editNick, setEditNick] = useState(passport.nickname);
   const [editTag, setEditTag] = useState(passport.playerTag);
+  const [editTagNumber, setEditTagNumber] = useState(() => {
+    if (passport.playerTag && passport.playerTag.includes('#')) {
+      return passport.playerTag.split('#')[1] || '';
+    }
+    return '';
+  });
   const [editBio, setEditBio] = useState(passport.bio);
   const [editTitle, setEditTitle] = useState(passport.title);
   const [editMinigame, setEditMinigame] = useState(passport.favoriteMinigame);
@@ -661,13 +667,13 @@ export default function PassportSection({
   // Handle Edit Submit
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editNick.trim() || !editTag.trim()) return;
-
-    const formattedTag = editTag.trim();
+    const cleanNick = editNick.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '') || 'JOGADOR';
+    const cleanNumber = editTagNumber.trim().replace(/[^0-9]/g, '') || '000';
+    const formattedTag = `${cleanNick}#${cleanNumber}`;
 
     const updated: PKXDPassport = {
       ...passport,
-      nickname: editNick.trim(),
+      nickname: cleanNick,
       playerTag: formattedTag,
       bio: editBio.trim() || 'Explorador da Ilha PK XD!',
       title: editTitle,
@@ -679,6 +685,13 @@ export default function PassportSection({
     };
 
     savePassport(updated);
+    try {
+      localStorage.setItem('pkxd_player_tag', formattedTag);
+      localStorage.setItem('pkxd_nickname', cleanNick);
+      localStorage.setItem('pkxd_player_number', cleanNumber);
+      localStorage.setItem('pkxd_username_nickname', formattedTag);
+    } catch (err) {}
+
     // Clear shared viewer if user edited their own card
     setViewingSharedPassport(null);
     setIsEditModalOpen(false);
@@ -690,7 +703,7 @@ export default function PassportSection({
     });
 
     if (triggerAudio) triggerAudio('success');
-    if (onAddXP) onAddXP(10, 'Atualizou perfil do Passaporte');
+    if (onAddXP) onAddXP(15, 'Atualizou identificação e perfil do Passaporte');
   };
 
   // Avatar upload with auto-compression (prevents huge base64 strings and memory bugs)
@@ -979,8 +992,12 @@ export default function PassportSection({
             <button
               onClick={() => {
                 if (triggerAudio) triggerAudio('tap');
-                setEditNick(passport.nickname);
-                setEditTag(passport.playerTag);
+                const parts = (passport.playerTag || '').split('#');
+                const currentNick = parts[0] || passport.nickname || '';
+                const currentNumber = parts[1] || '';
+                setEditNick(currentNick);
+                setEditTagNumber(currentNumber);
+                setEditTag(passport.playerTag || `${currentNick}#${currentNumber}`);
                 setEditBio(passport.bio);
                 setEditTitle(passport.title);
                 setEditMinigame(passport.favoriteMinigame);
@@ -1764,29 +1781,48 @@ export default function PassportSection({
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Nickname no PK XD *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Koosh"
-                    value={editNick}
-                    onChange={(e) => setEditNick(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-purple-500"
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-pink-400 flex items-center gap-1">
+                      <span>Nome no PK XD (Nick) *</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={16}
+                      placeholder="Ex: LUNA ou GABRIEL"
+                      value={editNick}
+                      onChange={(e) => setEditNick(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
+                      className="w-full px-3.5 py-2.5 bg-black/60 border border-white/15 rounded-xl text-xs text-white font-mono font-bold uppercase focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase text-pink-400 flex items-center gap-1">
+                      <span>Número / Tag # *</span>
+                    </label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3 font-mono font-black text-xs text-pink-400">#</span>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        placeholder="Ex: 245 ou 000"
+                        value={editTagNumber}
+                        onChange={(e) => setEditTagNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                        className="w-full pl-7 pr-3.5 py-2.5 bg-black/60 border border-white/15 rounded-xl text-xs text-white font-mono font-bold focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Identificador / Tag ou Nick *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: KOOSH ou SeuNick"
-                    value={editTag}
-                    onChange={(e) => setEditTag(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold uppercase focus:outline-none focus:border-purple-500"
-                  />
+                {/* Live tag preview in Edit Modal */}
+                <div className="p-3 bg-purple-950/40 border border-purple-500/30 rounded-xl flex items-center justify-between text-xs">
+                  <span className="text-zinc-400 font-medium">🎮 Sua Tag Completa no PK XD:</span>
+                  <span className="font-mono font-black text-yellow-300 bg-black/60 px-2.5 py-1 rounded-lg border border-yellow-400/30 shadow-inner">
+                    {editNick.trim() || 'SEUNICK'}#{editTagNumber.trim() || '000'}
+                  </span>
                 </div>
               </div>
 
