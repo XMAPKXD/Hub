@@ -133,6 +133,35 @@ const DEFAULT_BADGES: PassportBadge[] = [
 
 const DEFAULT_STAMPS: PassportStamp[] = [];
 
+export interface MinigameItem {
+  name: string;
+  icon: string;
+}
+
+export const PKXD_MINIGAMES: MinigameItem[] = [
+  { name: 'Crazy Run', icon: '⚡' },
+  { name: 'Pet Parade', icon: '🐶' },
+  { name: 'Falcon XD', icon: '🦅' },
+  { name: 'XD Turbo Race', icon: '🚗' },
+  { name: 'Coleta de Frutas', icon: '🍎' },
+  { name: 'Entrega de Pizzas', icon: '🍕' },
+  { name: 'Freezing Fun', icon: '❄️' },
+  { name: 'XD Champions', icon: '🏆' },
+  { name: 'Fashion Star', icon: '👗' },
+  { name: 'Monster Lab', icon: '👹' },
+  { name: 'Pet Run', icon: '🐾' },
+  { name: 'XD Race', icon: '🏎️' },
+  { name: 'Robot Arena', icon: '🤖' },
+  { name: 'Shooter', icon: '🔫' },
+  { name: 'XD Hide', icon: '🙈' },
+  { name: 'Miraculous Hunt', icon: '🐞' }
+];
+
+export function getMinigameIcon(gameName: string): string {
+  const match = PKXD_MINIGAMES.find(g => g.name.toLowerCase() === gameName?.toLowerCase());
+  return match ? match.icon : '🎮';
+}
+
 const PRESET_AVATARS = [
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Armor&backgroundColor=b6e3f4',
   'https://api.dicebear.com/7.x/bottts/svg?seed=PKXD_Star&backgroundColor=ffd5dc',
@@ -899,7 +928,10 @@ export default function PassportSection({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-6 pt-4 border-t border-white/15 text-xs font-sans">
                 <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
                   <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">🎮 Minigame Favorito</span>
-                  <strong className="text-white text-xs truncate block">{passport.favoriteMinigame}</strong>
+                  <strong className="text-white text-xs truncate flex items-center gap-1">
+                    <span>{getMinigameIcon(passport.favoriteMinigame)}</span>
+                    <span className="truncate">{passport.favoriteMinigame}</span>
+                  </strong>
                 </div>
 
                 <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
@@ -1280,8 +1312,9 @@ export default function PassportSection({
                       <p className="font-mono text-xs text-cyan-300 font-bold">
                         {friend.playerTag}
                       </p>
-                      <p className="text-[10px] text-gray-400 truncate">
-                        🎮 {friend.favoriteMinigame || 'Crazy Run'} • Nível {friend.level || 5}
+                      <p className="text-[10px] text-gray-400 truncate flex items-center gap-1">
+                        <span>{getMinigameIcon(friend.favoriteMinigame || 'Crazy Run')}</span>
+                        <span className="truncate">{friend.favoriteMinigame || 'Crazy Run'} • Nível {friend.level || 5}</span>
                       </p>
                     </div>
                   </div>
@@ -1438,13 +1471,11 @@ export default function PassportSection({
                     onChange={(e) => setEditMinigame(e.target.value)}
                     className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer focus:outline-none focus:border-purple-500"
                   >
-                    <option value="Crazy Run">⚡ Crazy Run</option>
-                    <option value="Corrida de Pets">🐾 Corrida de Pets</option>
-                    <option value="Desfile da Ilha">👗 Desfile da Ilha</option>
-                    <option value="Entrega de Pizza">🍕 Entrega de Pizza</option>
-                    <option value="Robô Gigante">🤖 Robô Gigante</option>
-                    <option value="Glider Voador">🪂 Glider Voador</option>
-                    <option value="Juice Bar">🍹 Juice Bar</option>
+                    {PKXD_MINIGAMES.map((game) => (
+                      <option key={game.name} value={game.name}>
+                        {game.icon} {game.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1613,11 +1644,11 @@ export default function PassportSection({
                   onChange={(e) => setNewFriendGame(e.target.value)}
                   className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer focus:outline-none focus:border-pink-500"
                 >
-                  <option value="Crazy Run">⚡ Crazy Run</option>
-                  <option value="Corrida de Pets">🐾 Corrida de Pets</option>
-                  <option value="Desfile da Ilha">👗 Desfile da Ilha</option>
-                  <option value="Robô Gigante">🤖 Robô Gigante</option>
-                  <option value="Entrega de Pizza">🍕 Entrega de Pizza</option>
+                  {PKXD_MINIGAMES.map((game) => (
+                    <option key={game.name} value={game.name}>
+                      {game.icon} {game.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
