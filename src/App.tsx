@@ -2938,11 +2938,6 @@ export default function App() {
               </span>
             </h2>
 
-            {/* Subtitle description */}
-            <p className="font-sans text-sm sm:text-base text-gray-300 leading-relaxed max-w-xl mx-auto">
-              Seja bem-vindo ao portal fan-hub do <strong>PKXD Central</strong>! Fique ligado nas datas, resgate as joias secretas, junte-se à nossa gigante comunidade do WhatsApp e veja as revelações de spoilers toda segunda-feira.
-            </p>
-
             {/* WhatsApp Direct CTA mini-badge */}
             <div className="pt-2 flex flex-wrap justify-center gap-3">
               <a 
