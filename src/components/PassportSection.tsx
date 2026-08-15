@@ -374,8 +374,15 @@ export default function PassportSection({
         // Clean out old mock event history
         const effectiveEventHistory = (parsed.eventHistory || []).filter((h: any) =>
           h.id !== 'ev_1' && h.id !== 'ev_2' &&
-          h.eventName !== 'Mega Torneio Crazy Run Central' &&
-          h.eventName !== 'Grande Desfile Fashion & Festa na Piscina'
+          h.id !== 'event_crazy_run_mega' && h.id !== 'event_festa_desfile' &&
+          !h.eventName?.includes('Mega Torneio') &&
+          !h.eventName?.includes('Grande Desfile')
+        );
+
+        // Clean out mock friends
+        const effectiveFriends = (parsed.friends || []).filter((f: any) => 
+          f.id !== 'friend_1' && f.id !== 'friend_2' &&
+          f.playerTag !== 'LunaStar' && f.playerTag !== 'GabePKXD'
         );
 
         return {
@@ -388,6 +395,7 @@ export default function PassportSection({
           xp: fanXP,
           badges: effectiveBadges,
           stamps: effectiveStamps,
+          friends: effectiveFriends,
           eventHistory: effectiveEventHistory
         };
       } catch (e) {}
@@ -421,26 +429,7 @@ export default function PassportSection({
       cardTheme: 'neon-purple',
       badges: DEFAULT_BADGES,
       stamps: DEFAULT_STAMPS,
-      friends: [
-        {
-          id: 'friend_1',
-          playerTag: 'LunaStar',
-          nickname: 'LunaStar',
-          avatarUrl: PRESET_AVATARS[1],
-          level: 7,
-          favoriteMinigame: 'Corrida de Pets',
-          addedAt: Date.now() - 12 * 24 * 3600 * 1000
-        },
-        {
-          id: 'friend_2',
-          playerTag: 'GabePKXD',
-          nickname: 'GabePKXD',
-          avatarUrl: PRESET_AVATARS[2],
-          level: 12,
-          favoriteMinigame: 'Crazy Run',
-          addedAt: Date.now() - 5 * 24 * 3600 * 1000
-        }
-      ],
+      friends: [],
       eventHistory: [],
       updatedAt: Date.now()
     };
@@ -584,6 +573,17 @@ export default function PassportSection({
           const finalTag = (isGenericTag && accountName) ? accountName : (data.playerTag || accountName || 'Explorador');
           const finalNick = (isGenericNick && accountName) ? accountName : (data.nickname || accountName || 'Explorador');
 
+          const cleanedHistory = (data.eventHistory || []).filter((h: any) =>
+            h.id !== 'ev_1' && h.id !== 'ev_2' &&
+            h.id !== 'event_crazy_run_mega' && h.id !== 'event_festa_desfile' &&
+            !h.eventName?.includes('Mega Torneio') &&
+            !h.eventName?.includes('Grande Desfile')
+          );
+          const cleanedFriends = (data.friends || []).filter((f: any) => 
+            f.id !== 'friend_1' && f.id !== 'friend_2' &&
+            f.playerTag !== 'LunaStar' && f.playerTag !== 'GabePKXD'
+          );
+
           setPassport(prev => {
             const merged = { 
               ...prev, 
@@ -591,6 +591,8 @@ export default function PassportSection({
               playerTag: finalTag,
               nickname: finalNick,
               avatarUrl: data.avatarUrl || currentUser?.photoURL || prev.avatarUrl,
+              friends: cleanedFriends,
+              eventHistory: cleanedHistory,
               level: userLevel, 
               xp: fanXP 
             };
@@ -814,16 +816,14 @@ export default function PassportSection({
 
   // Remove friend
   const handleRemoveFriend = (friendId: string) => {
-    if (confirm('Deseja remover este amigo da sua lista do passaporte?')) {
-      const updatedFriends = passport.friends.filter(f => f.id !== friendId);
-      const updated = {
-        ...passport,
-        friends: updatedFriends,
-        updatedAt: Date.now()
-      };
-      savePassport(updated);
-      if (triggerAudio) triggerAudio('tap');
-    }
+    const updatedFriends = (passport.friends || []).filter(f => f.id !== friendId);
+    const updated = {
+      ...passport,
+      friends: updatedFriends,
+      updatedAt: Date.now()
+    };
+    savePassport(updated);
+    if (triggerAudio) triggerAudio('tap');
   };
 
   // Handle Create Stamp (Admin)
@@ -869,44 +869,38 @@ export default function PassportSection({
   };
 
   // Handle Delete Stamp (Admin)
-  const handleDeleteStamp = (stampId: string, stampTitle: string) => {
-    if (confirm(`Deseja realmente excluir o selo "${stampTitle}"?`)) {
-      const updatedStamps = (passport.stamps || []).filter(s => s.id !== stampId);
-      const updated: PKXDPassport = {
-        ...passport,
-        stamps: updatedStamps,
-        updatedAt: Date.now()
-      };
-      savePassport(updated);
-      if (triggerAudio) triggerAudio('tap');
-    }
+  const handleDeleteStamp = (stampId: string, _stampTitle?: string) => {
+    const updatedStamps = (passport.stamps || []).filter(s => s.id !== stampId);
+    const updated: PKXDPassport = {
+      ...passport,
+      stamps: updatedStamps,
+      updatedAt: Date.now()
+    };
+    savePassport(updated);
+    if (triggerAudio) triggerAudio('tap');
   };
 
   // Handle Delete Event History Item
-  const handleDeleteEventHistory = (histId: string, histName: string) => {
-    if (confirm(`Deseja remover "${histName}" do seu histórico de eventos?`)) {
-      const updatedHistory = (passport.eventHistory || []).filter(h => h.id !== histId);
-      const updated: PKXDPassport = {
-        ...passport,
-        eventHistory: updatedHistory,
-        updatedAt: Date.now()
-      };
-      savePassport(updated);
-      if (triggerAudio) triggerAudio('tap');
-    }
+  const handleDeleteEventHistory = (histId: string, _histName?: string) => {
+    const updatedHistory = (passport.eventHistory || []).filter(h => h.id !== histId);
+    const updated: PKXDPassport = {
+      ...passport,
+      eventHistory: updatedHistory,
+      updatedAt: Date.now()
+    };
+    savePassport(updated);
+    if (triggerAudio) triggerAudio('tap');
   };
 
   // Handle Clear All Event History
   const handleClearEventHistory = () => {
-    if (confirm('Deseja limpar todo o seu histórico de participação em eventos?')) {
-      const updated: PKXDPassport = {
-        ...passport,
-        eventHistory: [],
-        updatedAt: Date.now()
-      };
-      savePassport(updated);
-      if (triggerAudio) triggerAudio('tap');
-    }
+    const updated: PKXDPassport = {
+      ...passport,
+      eventHistory: [],
+      updatedAt: Date.now()
+    };
+    savePassport(updated);
+    if (triggerAudio) triggerAudio('tap');
   };
 
   // Copy Profile Link with full self-contained share URL

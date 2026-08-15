@@ -51,40 +51,7 @@ const CATEGORIES = [
   "Outros"
 ];
 
-const DEFAULT_COMMUNITY_EVENTS: CommunityEvent[] = [
-  {
-    id: 'event_crazy_run_mega',
-    name: 'Mega Torneio Crazy Run Central 🏆',
-    description: 'Batalha de velocidade eletrizante no circuito do Crazy Run! Venha disputar o troféu da Central com outros jogadores da comunidade!',
-    category: 'Torneios',
-    date: '2026-08-20',
-    time: '18:00',
-    bannerUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
-    organizerName: 'PK XD Central',
-    rules: 'Proibido trapacear. Chegar com 5 minutos de antecedência no mapa.',
-    maxParticipants: 50,
-    status: 'Aprovado',
-    createdAt: Date.now() - 3 * 24 * 3600 * 1000,
-    approvedAt: Date.now() - 3 * 24 * 3600 * 1000,
-    createdById: 'admin_official'
-  },
-  {
-    id: 'event_festa_desfile',
-    name: 'Grande Desfile Fashion & Festa na Piscina 🎉',
-    description: 'Mostre seu melhor look e participe do desfile oficial da Ilha! Teremos fotos, música e muita diversão com a galera.',
-    category: 'Festas',
-    date: '2026-08-25',
-    time: '19:30',
-    bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
-    organizerName: 'LUNA STAR',
-    rules: 'Venha com seu avatar mais estiloso! Respeite a fila do tapete vermelho.',
-    maxParticipants: 40,
-    status: 'Aprovado',
-    createdAt: Date.now() - 2 * 24 * 3600 * 1000,
-    approvedAt: Date.now() - 2 * 24 * 3600 * 1000,
-    createdById: 'admin_official'
-  }
-];
+const DEFAULT_COMMUNITY_EVENTS: CommunityEvent[] = [];
 
 export default function EventsSection({
   isAdmin,
@@ -99,7 +66,16 @@ export default function EventsSection({
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          const cleaned = parsed.filter(ev => 
+            ev.id !== 'event_crazy_run_mega' && 
+            ev.id !== 'event_festa_desfile' &&
+            !ev.name?.includes('Mega Torneio') &&
+            !ev.name?.includes('Grande Desfile')
+          );
+          try {
+            localStorage.setItem('pkxd_custom_events', JSON.stringify(cleaned));
+          } catch (e) {}
+          return cleaned;
         }
       }
     } catch (e) {}
@@ -110,7 +86,16 @@ export default function EventsSection({
       const saved = localStorage.getItem('pkxd_event_participants');
       if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(p => 
+            p.eventId !== 'event_crazy_run_mega' && 
+            p.eventId !== 'event_festa_desfile'
+          );
+          try {
+            localStorage.setItem('pkxd_event_participants', JSON.stringify(cleaned));
+          } catch (e) {}
+          return cleaned;
+        }
       }
     } catch (e) {}
     return [];
@@ -179,18 +164,26 @@ export default function EventsSection({
     // Listen to community_events
     const eventsRef = collection(db, 'community_events');
     const unsubEvents = onSnapshot(eventsRef, (snapshot) => {
-      if (!snapshot.empty) {
-        const list: CommunityEvent[] = [];
-        snapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() } as CommunityEvent);
-        });
-        // Sort by creation date descending
-        list.sort((a, b) => b.createdAt - a.createdAt);
-        setEvents(list);
-        try {
-          localStorage.setItem('pkxd_custom_events', JSON.stringify(list));
-        } catch (e) {}
-      }
+      const list: CommunityEvent[] = [];
+      snapshot.forEach((docSnap) => {
+        const evData = { id: docSnap.id, ...docSnap.data() } as CommunityEvent;
+        if (
+          docSnap.id === 'event_crazy_run_mega' ||
+          docSnap.id === 'event_festa_desfile' ||
+          evData.name?.includes('Mega Torneio') ||
+          evData.name?.includes('Grande Desfile')
+        ) {
+          deleteDoc(doc(db, 'community_events', docSnap.id)).catch(() => {});
+        } else {
+          list.push(evData);
+        }
+      });
+      // Sort by creation date descending
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setEvents(list);
+      try {
+        localStorage.setItem('pkxd_custom_events', JSON.stringify(list));
+      } catch (e) {}
     }, (error) => {
       console.warn("Firestore events sync warning (using local):", error);
     });
@@ -198,16 +191,22 @@ export default function EventsSection({
     // Listen to event_participants
     const partRef = collection(db, 'event_participants');
     const unsubPart = onSnapshot(partRef, (snapshot) => {
-      if (!snapshot.empty) {
-        const list: EventParticipant[] = [];
-        snapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() } as EventParticipant);
-        });
-        setParticipants(list);
-        try {
-          localStorage.setItem('pkxd_event_participants', JSON.stringify(list));
-        } catch (e) {}
-      }
+      const list: EventParticipant[] = [];
+      snapshot.forEach((docSnap) => {
+        const pData = { id: docSnap.id, ...docSnap.data() } as EventParticipant;
+        if (
+          pData.eventId === 'event_crazy_run_mega' ||
+          pData.eventId === 'event_festa_desfile'
+        ) {
+          deleteDoc(doc(db, 'event_participants', docSnap.id)).catch(() => {});
+        } else {
+          list.push(pData);
+        }
+      });
+      setParticipants(list);
+      try {
+        localStorage.setItem('pkxd_event_participants', JSON.stringify(list));
+      } catch (e) {}
     }, (error) => {
       console.warn("Firestore participants sync warning:", error);
     });
@@ -365,10 +364,24 @@ export default function EventsSection({
     }
   };
 
+  // Open Presence Modal helper with auto-filled tag
+  const handleOpenPresenceModal = (event: CommunityEvent) => {
+    if (triggerAudio) triggerAudio('tap');
+    const savedTag = localStorage.getItem('pkxd_player_tag') || localStorage.getItem('pkxd_nickname') || currentUser?.displayName || '';
+    if (savedTag && savedTag !== 'JOGADOR' && savedTag !== 'JOGADOR#000') {
+      setPlayerTagInput(savedTag);
+    }
+    setPresenceError('');
+    setPresenceSuccess(false);
+    setShowPresenceModal(event);
+  };
+
   // Handle Event Delete (Admin/Organizer)
   const handleDeleteEvent = async (eventId: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir este evento e toda a sua lista de participantes?')) return;
     if (triggerAudio) triggerAudio('tap');
+    setShowDetailsModal(null);
+    setShowPresenceModal(null);
+    setShowOrganizerPanel(null);
 
     // 1. Update local state immediately
     setEvents(prev => {
@@ -397,7 +410,9 @@ export default function EventsSection({
           pData.eventHistory = pData.eventHistory.filter((h: any) => 
             h.id !== eventId && 
             h.eventName !== evToDelete?.name &&
-            h.id !== 'ev_1' && h.id !== 'ev_2'
+            h.id !== 'ev_1' && h.id !== 'ev_2' &&
+            !h.eventName?.includes('Mega Torneio') &&
+            !h.eventName?.includes('Grande Desfile')
           );
           localStorage.setItem('pkxd_passport_data', JSON.stringify(pData));
           if (db && currentUser?.uid && currentUser.uid !== 'guest_user') {
@@ -410,18 +425,18 @@ export default function EventsSection({
     // 3. Delete from Firestore if exists
     try {
       if (db) {
-        await deleteDoc(doc(db, 'community_events', eventId));
+        deleteDoc(doc(db, 'community_events', eventId)).catch(() => {});
         const eventParts = participants.filter(p => p.eventId === eventId);
         for (const p of eventParts) {
           try {
-            await deleteDoc(doc(db, 'event_participants', p.id));
+            deleteDoc(doc(db, 'event_participants', p.id)).catch(() => {});
           } catch (e) {}
         }
       }
     } catch (err) {
       console.warn("Could not delete from remote Firestore (deleted locally):", err);
     }
-    showToast('Evento excluído com sucesso.');
+    showToast('🗑️ Evento excluído com sucesso!');
   };
 
   // Handle Presence Confirmation submit
@@ -486,7 +501,13 @@ export default function EventsSection({
           date: showPresenceModal.date,
           category: showPresenceModal.category
         };
-        const currentHist = Array.isArray(pData.eventHistory) ? pData.eventHistory : [];
+        const currentHist = Array.isArray(pData.eventHistory) 
+          ? pData.eventHistory.filter((h: any) => 
+              h.id !== 'ev_1' && h.id !== 'ev_2' &&
+              !h.eventName?.includes('Mega Torneio') &&
+              !h.eventName?.includes('Grande Desfile')
+            ) 
+          : [];
         if (!currentHist.some((h: any) => h.eventName === showPresenceModal.name)) {
           pData.eventHistory = [newHistEntry, ...currentHist];
           pData.updatedAt = Date.now();
@@ -1030,10 +1051,7 @@ export default function EventsSection({
 
                     {event.status !== 'Encerrado' && (
                       <button
-                        onClick={() => {
-                          if (triggerAudio) triggerAudio('tap');
-                          setShowPresenceModal(event);
-                        }}
+                        onClick={() => handleOpenPresenceModal(event)}
                         disabled={isFull}
                         className={`flex-1 py-2.5 px-3 font-sans text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                           isFull
