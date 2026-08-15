@@ -221,9 +221,47 @@
         "redeemedUsers": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["code", "gems", "coins", "maxRedeems", "currentRedeems", "createdAt", "redeemedUsers"]
+    },
+    "Poll": {
+      "title": "Community Poll",
+      "description": "An interactive community poll where players can vote",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "totalVotes": { "type": "number" }
+      },
+      "required": ["id", "question", "options", "createdAt", "isActive", "totalVotes"]
+    },
+    "SuggestedPoll": {
+      "title": "Suggested Poll",
+      "description": "A suggested poll submitted by a fan for admin moderation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "authorName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "question", "options", "createdAt", "authorName", "status"]
     }
   },
   "firestore": {
+    "/polls/{pollId}": {
+      "schema": "Poll",
+      "description": "Collection of community polls"
+    },
+    "/suggested_polls/{pollId}": {
+      "schema": "SuggestedPoll",
+      "description": "Collection of suggested polls from fans"
+    },
     "/promo_codes/{codeId}": {
       "schema": "GeneratedPromoCode",
       "description": "Collection of generated promo codes with max usage limit"
