@@ -371,6 +371,13 @@ export default function PassportSection({
           return existing ? { ...defB, unlocked: existing.unlocked, unlockedAt: existing.unlockedAt } : defB;
         });
 
+        // Clean out old mock event history
+        const effectiveEventHistory = (parsed.eventHistory || []).filter((h: any) =>
+          h.id !== 'ev_1' && h.id !== 'ev_2' &&
+          h.eventName !== 'Mega Torneio Crazy Run Central' &&
+          h.eventName !== 'Grande Desfile Fashion & Festa na Piscina'
+        );
+
         return {
           ...parsed,
           userId: currentUser?.uid || parsed.userId || 'guest_user',
@@ -380,7 +387,8 @@ export default function PassportSection({
           level: userLevel,
           xp: fanXP,
           badges: effectiveBadges,
-          stamps: effectiveStamps
+          stamps: effectiveStamps,
+          eventHistory: effectiveEventHistory
         };
       } catch (e) {}
     }
@@ -433,22 +441,7 @@ export default function PassportSection({
           addedAt: Date.now() - 5 * 24 * 3600 * 1000
         }
       ],
-      eventHistory: [
-        {
-          id: 'ev_1',
-          eventName: 'Mega Torneio Crazy Run Central',
-          role: 'participante',
-          date: '20/08/2026',
-          category: 'Mini-games'
-        },
-        {
-          id: 'ev_2',
-          eventName: 'Grande Desfile Fashion & Festa na Piscina',
-          role: 'participante',
-          date: '25/08/2026',
-          category: 'Social'
-        }
-      ],
+      eventHistory: [],
       updatedAt: Date.now()
     };
   });
@@ -882,6 +875,33 @@ export default function PassportSection({
       const updated: PKXDPassport = {
         ...passport,
         stamps: updatedStamps,
+        updatedAt: Date.now()
+      };
+      savePassport(updated);
+      if (triggerAudio) triggerAudio('tap');
+    }
+  };
+
+  // Handle Delete Event History Item
+  const handleDeleteEventHistory = (histId: string, histName: string) => {
+    if (confirm(`Deseja remover "${histName}" do seu histórico de eventos?`)) {
+      const updatedHistory = (passport.eventHistory || []).filter(h => h.id !== histId);
+      const updated: PKXDPassport = {
+        ...passport,
+        eventHistory: updatedHistory,
+        updatedAt: Date.now()
+      };
+      savePassport(updated);
+      if (triggerAudio) triggerAudio('tap');
+    }
+  };
+
+  // Handle Clear All Event History
+  const handleClearEventHistory = () => {
+    if (confirm('Deseja limpar todo o seu histórico de participação em eventos?')) {
+      const updated: PKXDPassport = {
+        ...passport,
+        eventHistory: [],
         updatedAt: Date.now()
       };
       savePassport(updated);
@@ -1649,7 +1669,7 @@ export default function PassportSection({
       {/* ========================================================= */}
       {activeTab === 'events' && (
         <div className="space-y-4 animate-fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-emerald-400" />
@@ -1659,42 +1679,73 @@ export default function PassportSection({
                 Veja o histórico de eventos que você organizou ou confirmou presença na plataforma!
               </p>
             </div>
-          </div>
 
-          <div className="space-y-3">
-            {passport.eventHistory.map((hist) => (
-              <div
-                key={hist.id}
-                className="bg-zinc-900/80 border border-white/10 hover:border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all"
+            {passport.eventHistory && passport.eventHistory.length > 0 && (
+              <button
+                onClick={handleClearEventHistory}
+                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 rounded-xl text-xs font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto active:scale-95"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold flex-shrink-0">
-                    <Trophy className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-sans font-bold text-sm text-white">
-                      {hist.eventName}
-                    </h4>
-                    <p className="text-xs text-gray-400">
-                      Função: <span className="text-emerald-400 font-bold uppercase">{hist.role}</span> • Categoria: {hist.category}
-                    </p>
-                  </div>
-                </div>
-
-                <span className="font-mono text-xs text-gray-400 bg-black/40 px-3 py-1 rounded-xl border border-white/5 self-start sm:self-auto">
-                  📅 {hist.date}
-                </span>
-              </div>
-            ))}
-
-            {events.length > 0 && (
-              <div className="p-4 bg-purple-950/20 border border-purple-500/20 rounded-2xl flex items-center justify-between">
-                <div className="text-xs text-gray-300">
-                  <span>Há <strong>{events.length} eventos comunitários</strong> disponíveis na Central de Eventos!</span>
-                </div>
-              </div>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Limpar Histórico</span>
+              </button>
             )}
           </div>
+
+          {(!passport.eventHistory || passport.eventHistory.length === 0) ? (
+            <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-dashed border-white/10 space-y-3">
+              <Calendar className="w-12 h-12 text-gray-500 mx-auto" />
+              <h4 className="font-sans font-bold text-white text-sm">
+                Nenhum evento no seu histórico ainda
+              </h4>
+              <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                Quando você confirmar presença em torneios, festas ou desafios na aba de Eventos, eles aparecerão registrados aqui no seu Passaporte!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {passport.eventHistory.map((hist) => (
+                <div
+                  key={hist.id}
+                  className="bg-zinc-900/80 border border-white/10 hover:border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold flex-shrink-0">
+                      <Trophy className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-sans font-bold text-sm text-white">
+                        {hist.eventName}
+                      </h4>
+                      <p className="text-xs text-gray-400">
+                        Função: <span className="text-emerald-400 font-bold uppercase">{hist.role}</span> • Categoria: {hist.category}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <span className="font-mono text-xs text-gray-400 bg-black/40 px-3 py-1 rounded-xl border border-white/5">
+                      📅 {hist.date}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteEventHistory(hist.id, hist.eventName)}
+                      className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
+                      title="Excluir do Histórico"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {events.length > 0 && (
+            <div className="p-4 bg-purple-950/20 border border-purple-500/20 rounded-2xl flex items-center justify-between">
+              <div className="text-xs text-gray-300">
+                <span>Há <strong>{events.length} eventos comunitários</strong> disponíveis na Central de Eventos!</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -96,9 +96,9 @@ export default function EventsSection({
   const [events, setEvents] = useState<CommunityEvent[]>(() => {
     try {
       const saved = localStorage.getItem('pkxd_custom_events');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
@@ -108,15 +108,12 @@ export default function EventsSection({
   const [participants, setParticipants] = useState<EventParticipant[]>(() => {
     try {
       const saved = localStorage.getItem('pkxd_event_participants');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
-    return [
-      { id: 'part_sample_1', eventId: 'event_crazy_run_mega', playerIdentifier: 'LUNA#245', registeredAt: Date.now() - 3600000 },
-      { id: 'part_sample_2', eventId: 'event_crazy_run_mega', playerIdentifier: 'GABRIEL#000', registeredAt: Date.now() - 1800000 }
-    ];
+    return [];
   });
   const [selectedCategory, setSelectedCategory] = useState("Todas");
   const [statusFilter, setStatusFilter] = useState<string>("TODOS");
@@ -368,22 +365,58 @@ export default function EventsSection({
     if (!window.confirm('Tem certeza que deseja excluir este evento e toda a sua lista de participantes?')) return;
     if (triggerAudio) triggerAudio('tap');
 
+    // 1. Update local state immediately
+    setEvents(prev => {
+      const updated = prev.filter(ev => ev.id !== eventId);
+      try {
+        localStorage.setItem('pkxd_custom_events', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    setParticipants(prev => {
+      const updated = prev.filter(p => p.eventId !== eventId);
+      try {
+        localStorage.setItem('pkxd_event_participants', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    // 2. Also remove this event from user's passport event history if present
+    try {
+      const savedPassport = localStorage.getItem('pkxd_passport_data');
+      if (savedPassport) {
+        const pData = JSON.parse(savedPassport);
+        if (Array.isArray(pData.eventHistory)) {
+          const evToDelete = events.find(e => e.id === eventId);
+          pData.eventHistory = pData.eventHistory.filter((h: any) => 
+            h.id !== eventId && 
+            h.eventName !== evToDelete?.name &&
+            h.id !== 'ev_1' && h.id !== 'ev_2'
+          );
+          localStorage.setItem('pkxd_passport_data', JSON.stringify(pData));
+          if (db && currentUser?.uid && currentUser.uid !== 'guest_user') {
+            setDoc(doc(db, 'pkxd_passports', currentUser.uid), pData, { merge: true }).catch(() => {});
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Delete from Firestore if exists
     try {
       if (db) {
         await deleteDoc(doc(db, 'community_events', eventId));
-        // Delete participants
         const eventParts = participants.filter(p => p.eventId === eventId);
         for (const p of eventParts) {
-          await deleteDoc(doc(db, 'event_participants', p.id));
+          try {
+            await deleteDoc(doc(db, 'event_participants', p.id));
+          } catch (e) {}
         }
-      } else {
-        setEvents(prev => prev.filter(ev => ev.id !== eventId));
-        setParticipants(prev => prev.filter(p => p.eventId !== eventId));
       }
-      showToast('Evento excluído com sucesso.');
     } catch (err) {
-      console.error("Error deleting event:", err);
+      console.warn("Could not delete from remote Firestore (deleted locally):", err);
     }
+    showToast('Evento excluído com sucesso.');
   };
 
   // Handle Presence Confirmation submit
@@ -427,26 +460,58 @@ export default function EventsSection({
       registeredAt: Date.now()
     };
 
+    // 1. Update local state and localStorage immediately (guaranteed success)
+    setParticipants(prev => {
+      const updated = [...prev, newPart];
+      try {
+        localStorage.setItem('pkxd_event_participants', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    // 2. Automatically record in user's Passport Event History (+30 XP)
     try {
-      if (db) {
-        await setDoc(doc(db, 'event_participants', newPart.id), newPart);
-      } else {
-        setParticipants(prev => [...prev, newPart]);
+      const savedPassport = localStorage.getItem('pkxd_passport_data');
+      if (savedPassport) {
+        const pData = JSON.parse(savedPassport);
+        const newHistEntry = {
+          id: 'ev_' + Date.now(),
+          eventName: showPresenceModal.name,
+          role: 'participante',
+          date: showPresenceModal.date,
+          category: showPresenceModal.category
+        };
+        const currentHist = Array.isArray(pData.eventHistory) ? pData.eventHistory : [];
+        if (!currentHist.some((h: any) => h.eventName === showPresenceModal.name)) {
+          pData.eventHistory = [newHistEntry, ...currentHist];
+          pData.updatedAt = Date.now();
+          localStorage.setItem('pkxd_passport_data', JSON.stringify(pData));
+          if (db && currentUser?.uid && currentUser.uid !== 'guest_user') {
+            setDoc(doc(db, 'pkxd_passports', currentUser.uid), pData, { merge: true }).catch(() => {});
+          }
+        }
       }
-
-      if (triggerAudio) triggerAudio('levelUp');
-      if (onAddXP) onAddXP(30, 'Confirmou presença em evento');
-
-      setPresenceSuccess(true);
-      setTimeout(() => {
-        setPresenceSuccess(false);
-        setShowPresenceModal(null);
-        setPlayerTagInput('');
-      }, 1600);
-    } catch (err) {
-      console.error("Error confirming presence:", err);
-      setPresenceError('Erro ao registrar presença. Tente novamente.');
+    } catch (e) {
+      console.warn("Could not sync to passport:", e);
     }
+
+    // 3. Attempt async Firestore persistence in background
+    if (db) {
+      setDoc(doc(db, 'event_participants', newPart.id), newPart).catch((err) => {
+        console.warn("Participant sync to Firestore background warning (saved locally):", err);
+      });
+    }
+
+    if (triggerAudio) triggerAudio('levelUp');
+    if (onAddXP) onAddXP(30, 'Confirmou presença em evento (+30 XP)');
+
+    setPresenceSuccess(true);
+    setTimeout(() => {
+      setPresenceSuccess(false);
+      setShowPresenceModal(null);
+      setPlayerTagInput('');
+      showToast(`✓ Presença confirmada para "${rawTag}"! (+30 XP)`);
+    }, 1200);
   };
 
   // Handle Remove Participant
@@ -773,18 +838,19 @@ export default function EventsSection({
                     </span>
                   </div>
 
-                  {/* Admin controls quick menu */}
-                  {isAdmin && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/10">
-                      <button
-                        onClick={() => handleDeleteEvent(event.id)}
-                        className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-all"
-                        title="Excluir Evento"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Event actions quick menu */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/10 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteEvent(event.id);
+                      }}
+                      className="p-1.5 text-neutral-400 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all cursor-pointer"
+                      title="Excluir Evento / Torneio"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
                   {/* Organizer Tag at bottom of banner */}
                   <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
@@ -1338,7 +1404,19 @@ export default function EventsSection({
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/10 bg-zinc-950 flex justify-end">
+            <div className="p-4 border-t border-white/10 bg-zinc-950 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  const evId = showDetailsModal.id;
+                  setShowDetailsModal(null);
+                  handleDeleteEvent(evId);
+                }}
+                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Excluir Evento</span>
+              </button>
+
               <button
                 onClick={() => setShowDetailsModal(null)}
                 className="px-5 py-2 bg-neutral-800 hover:bg-neutral-700 text-white font-sans text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
