@@ -2799,8 +2799,8 @@ export default function App() {
       </div>
 
       {/* Navigation Header - Premium PK XD Purple Header with responsive navigation */}
-      <nav id="nav-header" className="sticky top-0 z-30 bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-700 border-b-4 border-purple-900 select-none py-2.5 sm:py-3 px-3 sm:px-6 shadow-xl backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <nav id="nav-header" className="sticky top-0 z-30 bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-700 border-b-4 border-purple-900 select-none py-2 sm:py-2.5 px-2 sm:px-5 shadow-xl backdrop-blur-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-3 w-full">
           
           {/* Brand Name with Click to Home */}
           <button
@@ -2808,23 +2808,24 @@ export default function App() {
               triggerAudio('tap');
               navigateTo('/');
             }}
-            className="text-left flex items-center gap-2 group cursor-pointer focus:outline-none"
+            className="text-left flex items-center gap-1.5 sm:gap-2 group cursor-pointer focus:outline-none flex-shrink-0"
           >
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-yellow-300 font-black text-lg shadow-inner group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-yellow-300 font-black text-base sm:text-lg shadow-inner group-hover:scale-105 transition-transform flex-shrink-0">
               ⚡
             </div>
-            <div>
-              <h1 className="font-sans font-black text-lg sm:text-2xl tracking-tighter text-white uppercase drop-shadow-[0_2px_0_rgba(0,0,0,0.4)] transform skew-x-[-2deg] flex items-center gap-1">
-                PKXD <span className="text-yellow-300">Central</span>
+            <div className="flex flex-col justify-center">
+              <h1 className="font-sans font-black text-base sm:text-xl md:text-2xl tracking-tighter text-white uppercase drop-shadow-[0_2px_0_rgba(0,0,0,0.4)] transform skew-x-[-2deg] flex items-center gap-1 leading-none">
+                <span>PKXD</span>
+                <span className="text-yellow-300">Central</span>
               </h1>
-              <p className="font-sans text-[8px] sm:text-[10px] text-purple-200 font-extrabold uppercase tracking-widest leading-none hidden xs:block">
+              <p className="font-sans text-[7px] sm:text-[9px] text-purple-200 font-extrabold uppercase tracking-widest leading-tight hidden md:block">
                 Notícias, Spoilers e Códigos!
               </p>
             </div>
           </button>
 
           {/* Action Links & Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
 
             {/* Auth / Login / Create Account Button in Top Nav */}
             {user ? (
@@ -2833,14 +2834,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/pkxd-id');
                 }}
-                className="p-1.5 sm:px-3 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/50 text-emerald-200 active:scale-95"
+                className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/50 text-emerald-200 active:scale-95 flex-shrink-0"
                 title={`Conectado como ${user.displayName || user.email}`}
               >
-                <div className="w-5 h-5 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[10px]">
+                <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[9px] sm:text-[10px] flex-shrink-0">
                   👤
                 </div>
-                <span className="hidden lg:inline truncate max-w-[100px]">
-                  {user.displayName?.split('#')[0] || user.email?.split('@')[0] || 'Minha Conta'}
+                <span className="hidden md:inline truncate max-w-[80px]">
+                  {user.displayName?.split('#')[0] || user.email?.split('@')[0] || 'Conta'}
                 </span>
               </button>
             ) : (
@@ -2849,12 +2850,11 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/login');
                 }}
-                className="p-2 sm:px-3.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 text-purple-950 border-yellow-300 hover:brightness-110"
+                className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 text-purple-950 border-yellow-300 hover:brightness-110 flex-shrink-0"
                 title="Fazer Login ou Criar Conta"
               >
-                <KeyRound className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Entrar</span>
-                <span className="sm:hidden text-xs font-bold font-sans">LOGIN</span>
+                <KeyRound className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden xs:inline">Entrar</span>
               </button>
             )}
 
@@ -2864,16 +2864,16 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/pkxd-id');
               }}
-              className={`p-2 sm:px-3 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md ${
+              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md flex-shrink-0 ${
                 activeTab === 'passaporte'
                   ? 'bg-yellow-400 text-purple-950 border-yellow-300 shadow-yellow-400/20'
                   : 'bg-purple-900/80 hover:bg-purple-800 text-white border-purple-400/40'
               }`}
               title="Acessar PKXD ID"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">PKXD ID</span>
-              <span className="bg-purple-950/60 text-yellow-300 text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
+              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">PKXD ID</span>
+              <span className="bg-purple-950/60 text-yellow-300 text-[8px] sm:text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
                 Lv.{fanLevel}
               </span>
             </button>
@@ -2896,12 +2896,12 @@ export default function App() {
                   });
                 }
               }}
-              className="bg-purple-900/80 border-2 border-purple-500/50 p-2 sm:p-2.5 rounded-2xl text-yellow-300 hover:bg-purple-800 transition-all cursor-pointer relative flex items-center gap-1 text-[11px] font-extrabold shadow-md active:scale-95"
+              className="h-8 sm:h-9 w-8 sm:w-9 rounded-xl sm:rounded-2xl bg-purple-900/80 border-2 border-purple-500/50 text-yellow-300 hover:bg-purple-800 transition-all cursor-pointer relative flex items-center justify-center text-[11px] font-extrabold shadow-md active:scale-95 flex-shrink-0"
               title="Central de Notificações Recentes"
             >
-              <BellRing className="w-4 h-4 animate-swing" />
+              <BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-swing" />
               {unreadCount > 0 && (
-                <span className="bg-pink-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full border border-purple-950 absolute -top-1 -right-1 shadow">
+                <span className="bg-pink-500 text-white text-[8px] font-black px-1 py-0.2 rounded-full border border-purple-950 absolute -top-1 -right-1 shadow">
                   {unreadCount}
                 </span>
               )}
@@ -2917,15 +2917,16 @@ export default function App() {
                   navigateTo('/inscricoes');
                 }
               }}
-              className={`p-2 sm:px-3.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 ${
+              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 flex-shrink-0 ${
                 isApplicationsRoute
                   ? 'bg-gradient-to-r from-cyan-400 to-teal-400 text-purple-950 border-cyan-300 hover:brightness-110'
                   : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400 hover:brightness-110'
               }`}
+              title={isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições Oficiais'}
             >
-              <Compass className="w-3.5 h-3.5" />
+              <Compass className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="hidden sm:inline">{isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições'}</span>
-              <span className="sm:hidden text-xs font-bold font-sans">INSCR.</span>
+              <span className="sm:hidden text-[10px] font-bold">Inscr.</span>
             </button>
 
             {/* Admin toggle Button */}
@@ -2934,13 +2935,14 @@ export default function App() {
                 triggerAudio('tap');
                 setShowAdminPanel(!showAdminPanel);
               }}
-              className={`p-2 sm:px-3.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 ${
+              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 flex-shrink-0 ${
                 showAdminPanel 
                 ? 'bg-yellow-400 text-purple-950 border-yellow-300' 
                 : 'bg-purple-900/80 text-gray-200 border-purple-500/50 hover:bg-purple-800'
               }`}
+              title={showAdminPanel ? 'Fechar Painel Admin' : 'Painel de Administração'}
             >
-              <Settings className={`w-3.5 h-3.5 ${showAdminPanel ? 'animate-spin' : ''}`} />
+              <Settings className={`w-3.5 h-3.5 flex-shrink-0 ${showAdminPanel ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{showAdminPanel ? 'Fechar' : 'Admin'}</span>
             </button>
           </div>
