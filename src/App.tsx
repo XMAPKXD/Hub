@@ -20,6 +20,7 @@ import PollsSection from './components/PollsSection';
 import EventsSection from './components/EventsSection';
 import PassportSection from './components/PassportSection';
 import PWAInstaller from './components/PWAInstaller';
+import AuthModal, { AuthMode } from './components/AuthModal';
 import { 
   Sparkles, 
   Settings, 
@@ -53,6 +54,7 @@ import {
   Zap,
   Globe,
   Key,
+  KeyRound,
   Bell,
   Clock,
   Video,
@@ -316,13 +318,19 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes'];
+        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
         if (pLower.includes('admin')) {
           targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
         } else if (pLower.includes('inscric')) {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
+        } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
+          targetPath = baseIsSpecial ? `/createaccount/${hashSuffix}` : (base ? `/${base}/createaccount/${hashSuffix}` : `/createaccount/${hashSuffix}`);
+        } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
+          targetPath = baseIsSpecial ? `/resetpassword/${hashSuffix}` : (base ? `/${base}/resetpassword/${hashSuffix}` : `/resetpassword/${hashSuffix}`);
+        } else if (pLower.includes('login') || pLower.includes('entrar')) {
+          targetPath = baseIsSpecial ? `/login/${hashSuffix}` : (base ? `/${base}/login/${hashSuffix}` : `/login/${hashSuffix}`);
         } else if (pLower.includes('passaporte') || pLower.includes('pkxd-id') || pLower.includes('pkxdid')) {
           targetPath = baseIsSpecial ? `/pkxd-id/${hashSuffix}` : (base ? `/${base}/pkxd-id/${hashSuffix}` : `/pkxd-id/${hashSuffix}`);
         } else if (pLower.includes('artes')) {
@@ -342,6 +350,12 @@ export default function App() {
           targetPath = `/admin${hashSuffix}`;
         } else if (pLower.includes('inscric')) {
           targetPath = `/inscricoes${hashSuffix}`;
+        } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
+          targetPath = `/createaccount${hashSuffix}`;
+        } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
+          targetPath = `/resetpassword${hashSuffix}`;
+        } else if (pLower.includes('login') || pLower.includes('entrar')) {
+          targetPath = `/login${hashSuffix}`;
         } else if (pLower.includes('passaporte') || pLower.includes('pkxd-id') || pLower.includes('pkxdid')) {
           targetPath = `/pkxd-id${hashSuffix}`;
         } else if (pLower.includes('artes')) {
@@ -385,6 +399,28 @@ export default function App() {
       navigateTo('/');
     }
   };
+
+  const isLoginRoute = currentPath.toLowerCase().includes('/login') || 
+                       (currentPath.toLowerCase().includes('login') && !currentPath.toLowerCase().includes('admin'));
+  const isRegisterRoute = currentPath.toLowerCase().includes('createaccount') || 
+                          currentPath.toLowerCase().includes('create-account') || 
+                          currentPath.toLowerCase().includes('cadastro') || 
+                          currentPath.toLowerCase().includes('register') || 
+                          currentPath.toLowerCase().includes('criar-conta');
+  const isResetRoute = currentPath.toLowerCase().includes('resetpassword') || 
+                       currentPath.toLowerCase().includes('reset-password') || 
+                       currentPath.toLowerCase().includes('esquecisenha') || 
+                       currentPath.toLowerCase().includes('recuperarsenha') || 
+                       currentPath.toLowerCase().includes('esqueci-senha');
+
+  const isAuthRoute = isLoginRoute || isRegisterRoute || isResetRoute;
+  const [explicitAuthModalOpen, setExplicitAuthModalOpen] = useState(false);
+  const [explicitAuthMode, setExplicitAuthMode] = useState<AuthMode>('login');
+
+  const isAuthModalOpen = isAuthRoute || explicitAuthModalOpen;
+  const currentAuthModalMode: AuthMode = isRegisterRoute 
+    ? 'register' 
+    : (isResetRoute ? 'resetpassword' : (isLoginRoute ? 'login' : explicitAuthMode));
 
   useEffect(() => {
     const handlePopState = () => {
@@ -2790,6 +2826,38 @@ export default function App() {
           {/* Action Links & Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
 
+            {/* Auth / Login / Create Account Button in Top Nav */}
+            {user ? (
+              <button
+                onClick={() => {
+                  triggerAudio('tap');
+                  navigateTo('/pkxd-id');
+                }}
+                className="p-1.5 sm:px-3 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/50 text-emerald-200 active:scale-95"
+                title={`Conectado como ${user.displayName || user.email}`}
+              >
+                <div className="w-5 h-5 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[10px]">
+                  👤
+                </div>
+                <span className="hidden lg:inline truncate max-w-[100px]">
+                  {user.displayName?.split('#')[0] || user.email?.split('@')[0] || 'Minha Conta'}
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  triggerAudio('tap');
+                  navigateTo('/login');
+                }}
+                className="p-2 sm:px-3.5 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 text-purple-950 border-yellow-300 hover:brightness-110"
+                title="Fazer Login ou Criar Conta"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Entrar</span>
+                <span className="sm:hidden text-xs font-bold font-sans">LOGIN</span>
+              </button>
+            )}
+
             {/* Quick Passport Link in Top Nav */}
             <button
               onClick={() => {
@@ -4325,6 +4393,25 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* DEDICATED AUTH MODAL (LOGIN / REGISTER / RESET PASSWORD) */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        initialMode={currentAuthModalMode}
+        onClose={() => {
+          setExplicitAuthModalOpen(false);
+          if (isAuthRoute) {
+            navigateTo('/');
+          }
+        }}
+        onSuccess={(loggedUser, authMode) => {
+          setUser(loggedUser);
+          setExplicitAuthModalOpen(false);
+        }}
+        triggerAudio={triggerAudio}
+        onNavigate={navigateTo}
+        onAddXP={handleAddFanXP}
+      />
 
     </div>
   );
