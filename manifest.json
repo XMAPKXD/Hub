@@ -1,13 +1,15 @@
 {
   "name": "PKXD Central - App Oficial da Comunidade",
   "short_name": "PKXD Central",
-  "description": "Central PK XD - Central de Eventos, Spoilers, Códigos, Artes e Comunidade!",
+  "description": "Central PK XD - Eventos, Spoilers Semanais, Códigos, Artes, Passaporte e Comunidade Oficial!",
   "start_url": "/",
+  "scope": "/",
+  "id": "/?source=pwa",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#7c3aed",
-  "orientation": "portrait",
-  "categories": ["entertainment", "games"],
+  "orientation": "portrait-primary",
+  "categories": ["entertainment", "games", "social"],
   "icons": [
     {
       "src": "/favicon.png",
@@ -21,5 +23,29 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Passaporte PK XD",
+      "short_name": "Passaporte",
+      "description": "Acesse seu Passaporte, Medalhas e Selos",
+      "url": "/?tab=passaporte",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Agenda de Eventos",
+      "short_name": "Agenda",
+      "description": "Veja seus eventos salvos e torneios",
+      "url": "/?tab=eventos",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Spoilers & Vídeos",
+      "short_name": "Spoilers",
+      "description": "Confira os últimos spoilers e novidades",
+      "url": "/?tab=inicio",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    }
   ]
 }
+
