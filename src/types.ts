@@ -187,6 +187,8 @@ export interface PassportBadge {
   unlocked: boolean;
   unlockedAt?: number;
   rarity?: 'Comum' | 'Raro' | 'Épico' | 'Lendário';
+  canClaim?: boolean;
+  xpReward?: number;
 }
 
 export interface PassportStamp {
@@ -197,7 +199,11 @@ export interface PassportStamp {
   date: string;
   icon: string;
   color: string;
-  acquiredAt: number;
+  acquiredAt?: number;
+  secretCode?: string;
+  description?: string;
+  xpReward?: number;
+  isAvailable?: boolean;
 }
 
 export interface PassportFriend {

@@ -31,7 +31,10 @@ import {
   ShieldCheck, 
   Star,
   Search,
-  Filter
+  Filter,
+  Gift,
+  KeyRound,
+  Coins
 } from 'lucide-react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -133,6 +136,71 @@ const DEFAULT_BADGES: PassportBadge[] = [
 ];
 
 const DEFAULT_STAMPS: PassportStamp[] = [];
+
+export const DEFAULT_OFFICIAL_AVAILABLE_STAMPS: PassportStamp[] = [
+  {
+    id: 'stamp_welcome_2026',
+    title: 'Selo Oficial de Boas-Vindas 2026',
+    eventOrSeason: 'Inauguração PKXD Central',
+    location: 'Central Plaza',
+    date: '2026',
+    icon: '🌟',
+    color: '#8b5cf6',
+    description: 'Carimbado para celebrar sua chegada ao novo portal PK XD Central.',
+    xpReward: 50,
+    isAvailable: true
+  },
+  {
+    id: 'stamp_island_explorer',
+    title: 'Explorador da Ilha',
+    eventOrSeason: 'Temporada Oficial',
+    location: 'Ilha dos Criadores',
+    date: '2026',
+    icon: '🧭',
+    color: '#06b6d4',
+    description: 'Resgatado por grandes desbravadores de novidades e eventos da Ilha PK XD.',
+    xpReward: 75,
+    isAvailable: true
+  },
+  {
+    id: 'stamp_festival_fever',
+    title: 'Festa dos Fãs PK XD',
+    eventOrSeason: 'Festival Musical',
+    location: 'Praça das Estrelas',
+    date: '2026',
+    icon: '🎉',
+    color: '#ec4899',
+    description: 'Selo oficial comemorativo do festival de dança e celebração dos criadores!',
+    xpReward: 100,
+    isAvailable: true
+  },
+  {
+    id: 'stamp_secret_vip',
+    title: 'Selo VIP Secreto da Ilha',
+    eventOrSeason: 'Edição Secreta',
+    location: 'Cofre Secreto',
+    date: '2026',
+    icon: '👑',
+    color: '#eab308',
+    description: 'Selo ultra raro desbloqueado com o código secreto CENTRALVIP ou 1000GEMAS.',
+    secretCode: 'CENTRALVIP',
+    xpReward: 200,
+    isAvailable: false
+  },
+  {
+    id: 'stamp_spoiler_insider',
+    title: 'Selo Mestre dos Spoilers',
+    eventOrSeason: 'Clube dos Vazamentos',
+    location: 'Torre de Transmissão',
+    date: '2026',
+    icon: '🔮',
+    color: '#a855f7',
+    description: 'Selo misterioso resgatado através do código SPOILERMASTER ou WELCOME.',
+    secretCode: 'SPOILERMASTER',
+    xpReward: 150,
+    isAvailable: false
+  }
+];
 
 export interface MinigameItem {
   name: string;
@@ -339,6 +407,22 @@ export default function PassportSection({
   const [newFriendGame, setNewFriendGame] = useState('Crazy Run');
   const [friendError, setFriendError] = useState('');
 
+  // Stamps System: Available official stamps for redemption
+  const [availableStamps, setAvailableStamps] = useState<PassportStamp[]>(() => {
+    const saved = localStorage.getItem('pkxd_available_stamps');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return DEFAULT_OFFICIAL_AVAILABLE_STAMPS;
+  });
+
+  // Secret code input form for stamp redemption
+  const [secretStampCode, setSecretStampCode] = useState('');
+  const [codeRedeemMsg, setCodeRedeemMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
   // Admin Stamp creation form state
   const [newStampTitle, setNewStampTitle] = useState('');
   const [newStampEvent, setNewStampEvent] = useState('');
@@ -346,6 +430,8 @@ export default function PassportSection({
   const [newStampDate, setNewStampDate] = useState('2026');
   const [newStampIcon, setNewStampIcon] = useState('🏆');
   const [newStampColor, setNewStampColor] = useState('#8b5cf6');
+  const [newStampSecretCode, setNewStampSecretCode] = useState('');
+  const [newStampXpReward, setNewStampXpReward] = useState(50);
 
   // Loaded passport data
   const [passport, setPassport] = useState<PKXDPassport>(() => {
@@ -846,6 +932,142 @@ export default function PassportSection({
     if (triggerAudio) triggerAudio('tap');
   };
 
+  // Handle Claim Stamp by player
+  const handleClaimStamp = (stamp: PassportStamp) => {
+    if (passport.stamps.some(s => s.id === stamp.id || s.title.toLowerCase() === stamp.title.toLowerCase())) {
+      setCodeRedeemMsg({ text: `Você já possui o selo "${stamp.title}" carimbado no passaporte!`, type: 'error' });
+      setTimeout(() => setCodeRedeemMsg(null), 3500);
+      return;
+    }
+
+    const claimedStamp: PassportStamp = {
+      ...stamp,
+      acquiredAt: Date.now()
+    };
+
+    const updatedStamps = [claimedStamp, ...(passport.stamps || [])];
+    const updated: PKXDPassport = {
+      ...passport,
+      stamps: updatedStamps,
+      updatedAt: Date.now()
+    };
+
+    savePassport(updated);
+
+    confetti({
+      particleCount: 60,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+
+    if (triggerAudio) triggerAudio('levelUp');
+    const xpReward = stamp.xpReward || 50;
+    if (onAddXP) onAddXP(xpReward, `Resgatou o Selo Oficial: ${stamp.title}`);
+
+    setCodeRedeemMsg({ text: `🎉 Parabéns! Selo "${stamp.title}" resgatado com sucesso! (+${xpReward} XP)`, type: 'success' });
+    setTimeout(() => setCodeRedeemMsg(null), 4000);
+  };
+
+  // Handle Redeem Secret Promo / Event Code for Stamps
+  const handleRedeemSecretStampCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = secretStampCode.trim().toUpperCase().replace(/\s+/g, '');
+    if (!cleanCode) return;
+
+    // Check if matching any secret stamp in availableStamps or built-ins
+    let matchedStamp = availableStamps.find(s => s.secretCode && s.secretCode.toUpperCase() === cleanCode);
+
+    // Fallback built-in codes
+    if (!matchedStamp) {
+      if (cleanCode === 'CENTRALVIP' || cleanCode === 'VIP2026') {
+        matchedStamp = availableStamps.find(s => s.id === 'stamp_secret_vip') || {
+          id: 'stamp_secret_vip',
+          title: 'Selo VIP Secreto da Ilha',
+          eventOrSeason: 'Edição Secreta',
+          location: 'Cofre Secreto',
+          date: '2026',
+          icon: '👑',
+          color: '#eab308',
+          description: 'Selo ultra raro desbloqueado com o código secreto CENTRALVIP.',
+          xpReward: 200,
+          isAvailable: false
+        };
+      } else if (cleanCode === 'SPOILERMASTER' || cleanCode === 'SPOILER2026') {
+        matchedStamp = availableStamps.find(s => s.id === 'stamp_spoiler_insider') || {
+          id: 'stamp_spoiler_insider',
+          title: 'Selo Mestre dos Spoilers',
+          eventOrSeason: 'Clube dos Vazamentos',
+          location: 'Torre de Transmissão',
+          date: '2026',
+          icon: '🔮',
+          color: '#a855f7',
+          description: 'Selo misterioso resgatado através do código secreto de Spoilers.',
+          xpReward: 150,
+          isAvailable: false
+        };
+      } else if (cleanCode === 'WELCOME' || cleanCode === '1000GEMAS') {
+        matchedStamp = {
+          id: 'stamp_promo_' + cleanCode.toLowerCase(),
+          title: `Selo Código Especial ${cleanCode}`,
+          eventOrSeason: 'Promoção Oficial do Site',
+          location: 'Central PK XD',
+          date: '2026',
+          icon: cleanCode === '1000GEMAS' ? '💎' : '🪙',
+          color: cleanCode === '1000GEMAS' ? '#06b6d4' : '#eab308',
+          description: `Selo de honra resgatado pelo código promocional ${cleanCode}!`,
+          xpReward: 100
+        };
+      }
+    }
+
+    if (!matchedStamp) {
+      setCodeRedeemMsg({ text: '❌ Código de selo não encontrado ou inválido. Tente CENTRALVIP, SPOILERMASTER ou 1000GEMAS!', type: 'error' });
+      if (triggerAudio) triggerAudio('tap');
+      setTimeout(() => setCodeRedeemMsg(null), 4000);
+      return;
+    }
+
+    // Check if already claimed
+    if (passport.stamps.some(s => s.id === matchedStamp!.id || s.title.toLowerCase() === matchedStamp!.title.toLowerCase())) {
+      setCodeRedeemMsg({ text: `Você já possui o selo "${matchedStamp.title}" carimbado no seu passaporte!`, type: 'error' });
+      if (triggerAudio) triggerAudio('tap');
+      setTimeout(() => setCodeRedeemMsg(null), 4000);
+      return;
+    }
+
+    // Claim stamp
+    handleClaimStamp(matchedStamp);
+    setSecretStampCode('');
+  };
+
+  // Handle Claim Badge
+  const handleClaimBadge = (badge: PassportBadge) => {
+    const updatedBadges = passport.badges.map(b => {
+      if (b.id === badge.id) {
+        return { ...b, unlocked: true, unlockedAt: Date.now() };
+      }
+      return b;
+    });
+
+    const updated: PKXDPassport = {
+      ...passport,
+      badges: updatedBadges,
+      updatedAt: Date.now()
+    };
+
+    savePassport(updated);
+
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.6 }
+    });
+
+    if (triggerAudio) triggerAudio('levelUp');
+    const xpReward = badge.rarity === 'Lendário' ? 100 : badge.rarity === 'Épico' ? 75 : badge.rarity === 'Raro' ? 50 : 30;
+    if (onAddXP) onAddXP(xpReward, `Resgatou a Medalha: ${badge.title}`);
+  };
+
   // Handle Create Stamp (Admin)
   const handleCreateStamp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -859,9 +1081,26 @@ export default function PassportSection({
       date: newStampDate.trim() || '2026',
       icon: newStampIcon.trim() || '🏆',
       color: newStampColor || '#8b5cf6',
+      secretCode: newStampSecretCode.trim().toUpperCase() || undefined,
+      xpReward: Number(newStampXpReward) || 50,
+      isAvailable: !newStampSecretCode.trim(),
       acquiredAt: Date.now()
     };
 
+    // Add to available stamps so all players can view and redeem
+    const updatedAvailable = [newStamp, ...availableStamps.filter(s => s.id !== newStamp.id)];
+    setAvailableStamps(updatedAvailable);
+    try {
+      localStorage.setItem('pkxd_available_stamps', JSON.stringify(updatedAvailable));
+    } catch (err) {}
+
+    if (db) {
+      try {
+        setDoc(doc(db, 'pkxd_available_stamps', newStamp.id), newStamp, { merge: true });
+      } catch (err) {}
+    }
+
+    // Also carimbar directly for admin who created it
     const updatedStamps = [newStamp, ...(passport.stamps || [])];
     const updated: PKXDPassport = {
       ...passport,
@@ -876,6 +1115,8 @@ export default function PassportSection({
     setNewStampDate('2026');
     setNewStampIcon('🏆');
     setNewStampColor('#8b5cf6');
+    setNewStampSecretCode('');
+    setNewStampXpReward(50);
     setIsAddStampModalOpen(false);
 
     confetti({
@@ -885,7 +1126,7 @@ export default function PassportSection({
     });
 
     if (triggerAudio) triggerAudio('success');
-    if (onAddXP) onAddXP(25, 'Criou um novo Selo Oficial no Passaporte');
+    if (onAddXP) onAddXP(25, 'Criou e publicou um novo Selo Oficial no Passaporte');
   };
 
   // Handle Delete Stamp (Admin)
@@ -1492,24 +1733,25 @@ export default function PassportSection({
       )}
 
       {/* ========================================================= */}
-      {/* TAB 3: SELOS ESPECIAIS & CARIMBOS (STAMPS) */}
+      {/* TAB 3: SELOS ESPECIAIS & CARIMBOS (STAMPS REDEMPTION) */}
       {/* ========================================================= */}
       {activeTab === 'stamps' && (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-6 animate-fade-in">
+          {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/60 p-4 rounded-2xl border border-white/10">
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
                 <BookmarkCheck className="w-5 h-5 text-cyan-400" />
-                Caderno de Carimbos & Selos da Ilha
+                Caderno de Carimbos & Resgate de Selos
               </h3>
               <p className="text-xs text-gray-400">
-                Colecione os carimbos oficiais emitidos em temporadas comemorativas e grandes eventos de PK XD!
+                Para colecionar os selos e carimbos da Ilha PK XD você precisa resgatá-los diretamente aqui ou via códigos secretos!
               </p>
             </div>
             
-            <div className="flex items-center gap-2 self-start sm:self-center">
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
               <div className="px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl font-mono text-xs font-bold text-cyan-300">
-                Selos: {passport.stamps.length}
+                Meus Selos: {passport.stamps.length}
               </div>
 
               {isAdmin && (
@@ -1521,80 +1763,200 @@ export default function PassportSection({
                   className="px-4 py-2 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-md"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Criar Selo (ADM)</span>
+                  <span>Criar Selo Oficial (ADM)</span>
                 </button>
               )}
             </div>
           </div>
 
-          {passport.stamps.length === 0 ? (
-            <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-dashed border-white/10 space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto text-2xl">
-                <BookmarkCheck className="w-7 h-7" />
-              </div>
-              <h4 className="font-sans font-black text-base text-white uppercase">Nenhum Selo Cadastrado</h4>
-              <p className="text-xs text-gray-400 max-w-md mx-auto">
-                Nenhum carimbo oficial registrado no momento. Novos selos e carimbos de eventos serão disponibilizados aqui!
-              </p>
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    if (triggerAudio) triggerAudio('tap');
-                    setIsAddStampModalOpen(true);
-                  }}
-                  className="mt-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:brightness-110 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all inline-flex items-center gap-2 cursor-pointer shadow-lg active:scale-95"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Criar Primeiro Selo (Modo ADM)</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {passport.stamps.map((stamp) => (
-                <div
-                  key={stamp.id}
-                  className="bg-zinc-900/80 border-2 border-white/10 hover:border-cyan-400/50 rounded-3xl p-5 shadow-xl transition-all relative overflow-hidden group"
-                >
-                  {/* Stamp Postal Border Effect */}
-                  <div className="absolute top-2 right-2 border-2 border-dashed border-white/20 rounded-full px-2 py-0.5 text-[8px] font-mono text-white/50 uppercase tracking-widest">
-                    OFFICIAL STAMP
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div 
-                      className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 shadow-lg border border-white/20 transform group-hover:rotate-6 transition-transform"
-                      style={{ backgroundColor: stamp.color ? `${stamp.color}30` : 'rgba(139,92,246,0.3)' }}
-                    >
-                      {stamp.icon}
-                    </div>
-
-                    <div className="space-y-1 flex-1 pr-4">
-                      <h4 className="font-sans font-black text-base text-white uppercase">
-                        {stamp.title}
-                      </h4>
-                      <p className="text-xs text-cyan-300 font-bold">
-                        {stamp.eventOrSeason}
-                      </p>
-                      <p className="text-[11px] text-gray-400">
-                        📍 {stamp.location || 'Central PK XD'} • 📅 {stamp.date}
-                      </p>
-                    </div>
-                  </div>
-
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDeleteStamp(stamp.id, stamp.title)}
-                      className="absolute bottom-3 right-3 p-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-lg border border-red-500/30 transition-all cursor-pointer z-10"
-                      title="Excluir Selo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+          {/* Feedback Message */}
+          {codeRedeemMsg && (
+            <div className={`p-4 rounded-2xl text-xs font-bold border transition-all flex items-center gap-2 animate-bounce ${
+              codeRedeemMsg.type === 'success'
+                ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-200'
+                : 'bg-red-500/20 border-red-400/40 text-red-200'
+            }`}>
+              <span>{codeRedeemMsg.text}</span>
             </div>
           )}
+
+          {/* SECTION 1: RESGATAR SELO COM CÓDIGO SECRETO */}
+          <div className="bg-gradient-to-r from-purple-950/80 via-zinc-900/90 to-indigo-950/80 p-5 rounded-3xl border border-purple-500/30 shadow-xl space-y-3">
+            <div className="flex items-center gap-2 text-purple-300">
+              <KeyRound className="w-4 h-4 text-yellow-400" />
+              <h4 className="font-sans font-black text-sm text-white uppercase tracking-wide">
+                Resgatar Selo com Código Secreto ⚡
+              </h4>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed">
+              Pegou um código exclusivo em vídeos, lives ou nos spoilers oficiais? Digite abaixo para carimbar o selo secreto no seu passaporte! (Dicas: <code className="text-yellow-300 bg-black/40 px-1 py-0.5 rounded font-mono">CENTRALVIP</code>, <code className="text-pink-300 bg-black/40 px-1 py-0.5 rounded font-mono">SPOILERMASTER</code>, <code className="text-cyan-300 bg-black/40 px-1 py-0.5 rounded font-mono">1000GEMAS</code> ou <code className="text-emerald-300 bg-black/40 px-1 py-0.5 rounded font-mono">WELCOME</code>).
+            </p>
+
+            <form onSubmit={handleRedeemSecretStampCode} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Digite o código secreto do selo (Ex: CENTRALVIP)"
+                  value={secretStampCode}
+                  onChange={(e) => setSecretStampCode(e.target.value.toUpperCase())}
+                  className="w-full bg-black/60 border border-purple-500/40 rounded-2xl px-4 py-3 text-xs font-mono text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400 uppercase font-black"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="px-6 py-3 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 hover:brightness-110 text-purple-950 font-sans font-black text-xs uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-lg active:scale-95 flex items-center justify-center gap-2 flex-shrink-0"
+              >
+                <Sparkles className="w-4 h-4 text-purple-950" />
+                <span>Resgatar Selo ⚡</span>
+              </button>
+            </form>
+          </div>
+
+          {/* SECTION 2: SELOS DISPONÍVEIS PARA RESGATE DA ILHA */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-sans font-black text-sm text-white uppercase tracking-wider flex items-center gap-2">
+                <Gift className="w-4 h-4 text-pink-400" />
+                Selos Disponíveis para Resgate ({availableStamps.filter(s => s.isAvailable !== false).length})
+              </h4>
+              <span className="text-[11px] text-gray-400 font-mono">Clique para carimbar</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableStamps.filter(s => s.isAvailable !== false).map((stamp) => {
+                const isClaimed = passport.stamps.some(s => s.id === stamp.id || s.title.toLowerCase() === stamp.title.toLowerCase());
+
+                return (
+                  <div
+                    key={stamp.id}
+                    className={`bg-zinc-900/90 border-2 rounded-3xl p-5 shadow-xl transition-all flex flex-col justify-between relative overflow-hidden group ${
+                      isClaimed ? 'border-emerald-500/40 bg-zinc-950/70' : 'border-white/10 hover:border-pink-500/40'
+                    }`}
+                  >
+                    {/* Postal Border Tag */}
+                    <div className="absolute top-2 right-2 border border-dashed border-white/20 rounded-full px-2 py-0.5 text-[8px] font-mono text-white/50 uppercase tracking-widest">
+                      {isClaimed ? '✓ RESGATADO' : 'DISPONÍVEL'}
+                    </div>
+
+                    <div className="flex items-start gap-4">
+                      <div 
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 shadow-lg border border-white/20 transform group-hover:scale-105 transition-transform"
+                        style={{ backgroundColor: stamp.color ? `${stamp.color}30` : 'rgba(139,92,246,0.3)' }}
+                      >
+                        {stamp.icon}
+                      </div>
+
+                      <div className="space-y-1 flex-1 pr-4">
+                        <h5 className="font-sans font-black text-sm text-white uppercase leading-snug">
+                          {stamp.title}
+                        </h5>
+                        <p className="text-xs text-pink-300 font-bold">
+                          {stamp.eventOrSeason}
+                        </p>
+                        <p className="text-[11px] text-gray-400">
+                          📍 {stamp.location || 'Central PK XD'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-300 leading-relaxed py-2 mt-2 border-t border-white/5">
+                      {stamp.description || 'Selo oficial comemorativo da Ilha PK XD.'}
+                    </p>
+
+                    <div className="pt-2">
+                      {isClaimed ? (
+                        <div className="w-full py-2 bg-emerald-500/15 border border-emerald-400/40 rounded-xl text-[11px] font-black uppercase text-emerald-300 flex items-center justify-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Carimbado no Passaporte ✓</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleClaimStamp(stamp)}
+                          className="w-full py-2.5 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-400 hover:to-indigo-500 text-white font-sans text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-1.5"
+                        >
+                          <Gift className="w-3.5 h-3.5 text-yellow-300" />
+                          <span>Resgatar Selo (+{stamp.xpReward || 50} XP) 🎁</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SECTION 3: MEUS SELOS CARIMBADOS NO PASSAPORTE */}
+          <div className="space-y-3 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between">
+              <h4 className="font-sans font-black text-sm text-white uppercase tracking-wider flex items-center gap-2">
+                <BookmarkCheck className="w-4 h-4 text-cyan-400" />
+                Meus Selos Carimbados no Passaporte ({passport.stamps.length})
+              </h4>
+            </div>
+
+            {passport.stamps.length === 0 ? (
+              <div className="text-center py-10 bg-zinc-900/40 rounded-3xl border border-dashed border-white/10 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto text-xl">
+                  <BookmarkCheck className="w-6 h-6" />
+                </div>
+                <h5 className="font-sans font-black text-sm text-white uppercase">Você ainda não resgatou nenhum selo!</h5>
+                <p className="text-xs text-gray-400 max-w-md mx-auto">
+                  Clique no botão "Resgatar Selo" nos selos disponíveis acima ou insira um código secreto para carimbar seu passaporte!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {passport.stamps.map((stamp) => (
+                  <div
+                    key={stamp.id}
+                    className="bg-zinc-900/80 border-2 border-white/10 hover:border-cyan-400/50 rounded-3xl p-5 shadow-xl transition-all relative overflow-hidden group"
+                  >
+                    {/* Stamp Postal Border Effect */}
+                    <div className="absolute top-2 right-2 border-2 border-dashed border-white/20 rounded-full px-2 py-0.5 text-[8px] font-mono text-cyan-300 uppercase tracking-widest">
+                      CARIMBO OFICIAL
+                    </div>
+
+                    <div className="flex items-start gap-4">
+                      <div 
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 shadow-lg border border-white/20 transform group-hover:rotate-6 transition-transform"
+                        style={{ backgroundColor: stamp.color ? `${stamp.color}30` : 'rgba(139,92,246,0.3)' }}
+                      >
+                        {stamp.icon}
+                      </div>
+
+                      <div className="space-y-1 flex-1 pr-4">
+                        <h4 className="font-sans font-black text-base text-white uppercase">
+                          {stamp.title}
+                        </h4>
+                        <p className="text-xs text-cyan-300 font-bold">
+                          {stamp.eventOrSeason}
+                        </p>
+                        <p className="text-[11px] text-gray-400">
+                          📍 {stamp.location || 'Central PK XD'} • 📅 {stamp.date}
+                        </p>
+                        {stamp.acquiredAt && (
+                          <p className="text-[10px] text-emerald-400 font-mono">
+                            ✓ Resgatado em {new Date(stamp.acquiredAt).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeleteStamp(stamp.id, stamp.title)}
+                        className="absolute bottom-3 right-3 p-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-lg border border-red-500/30 transition-all cursor-pointer z-10"
+                        title="Excluir Selo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -2211,13 +2573,32 @@ export default function PassportSection({
 
             <div className="p-3 bg-black/40 rounded-xl border border-white/10 text-xs font-mono">
               {selectedBadge.unlocked ? (
-                <span className="text-emerald-400 font-bold flex items-center justify-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> Conquista Desbloqueada!
-                </span>
+                <div className="space-y-2">
+                  <span className="text-emerald-400 font-bold flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" /> Conquista Resgatada & Desbloqueada!
+                  </span>
+                  {selectedBadge.unlockedAt && (
+                    <p className="text-[10px] text-gray-400 text-center">
+                      Desbloqueado em {new Date(selectedBadge.unlockedAt).toLocaleDateString('pt-BR')}
+                    </p>
+                  )}
+                </div>
               ) : (
-                <span className="text-amber-400 font-bold">
-                  🔒 Bloqueada — Conclua os objetivos para liberar!
-                </span>
+                <div className="space-y-2">
+                  <span className="text-amber-400 font-bold block text-center">
+                    🔒 Conquista Disponível para Resgate!
+                  </span>
+                  <button
+                    onClick={() => {
+                      handleClaimBadge(selectedBadge);
+                      setSelectedBadge({ ...selectedBadge, unlocked: true, unlockedAt: Date.now() });
+                    }}
+                    className="w-full py-2.5 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-sans font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <Gift className="w-3.5 h-3.5 text-yellow-300" />
+                    <span>Resgatar Conquista (+{selectedBadge.rarity === 'Lendário' ? 100 : selectedBadge.rarity === 'Épico' ? 75 : selectedBadge.rarity === 'Raro' ? 50 : 30} XP)</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
