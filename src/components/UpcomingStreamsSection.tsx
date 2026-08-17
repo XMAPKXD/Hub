@@ -44,53 +44,7 @@ interface UpcomingStreamsSectionProps {
 }
 
 // Curated default scheduled streams if database is starting fresh
-const DEFAULT_UPCOMING_STREAMS: UpcomingStreamItem[] = [
-  {
-    id: 'default_stream_1',
-    title: 'MEGA LIVE DOS INSCRITOS: 5 CÓDIGOS DE GEMAS AO VIVO! 💎⚡',
-    creatorOrChannel: 'PKXD Central Oficial',
-    streamType: 'live_codes',
-    platform: 'youtube',
-    scheduledDate: new Date(Date.now() + 2 * 3600 * 1000 + 45 * 60 * 1000).toISOString(),
-    targetUrl: 'https://youtube.com',
-    rewardsSummary: '💎 50 a 100 Gemas + 🪙 20.000 Moedas Grátis',
-    hintsOrInstructions: 'Os códigos secretos aparecem na tela durante o Crazy Run e no chat fixado!',
-    bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80',
-    status: 'scheduled',
-    remindersCount: 142,
-    createdAt: Date.now() - 3600 * 1000
-  },
-  {
-    id: 'default_stream_2',
-    title: 'ESTREIA DO SPOILER SECRETO + 2 CUPONS DA NOVA ATUALIZAÇÃO 🚀',
-    creatorOrChannel: 'Canal Parceiro PK XD',
-    streamType: 'spoiler_premiere',
-    platform: 'youtube',
-    scheduledDate: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-    targetUrl: 'https://youtube.com',
-    rewardsSummary: '🎟️ Cupom de Caixa Surpresa + 💎 30 Gemas',
-    hintsOrInstructions: 'Assista até os créditos finais do vídeo para resgatar o código especial!',
-    bannerUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=800&q=80',
-    status: 'scheduled',
-    remindersCount: 98,
-    createdAt: Date.now() - 7200 * 1000
-  },
-  {
-    id: 'default_stream_3',
-    title: 'FESTA NO SERVIDOR: BUSCA POR CÓDIGOS ESCONDIDOS NA ILHA 🏝️🎁',
-    creatorOrChannel: 'Equipe PKXD Central',
-    streamType: 'gem_giveaway',
-    platform: 'youtube',
-    scheduledDate: new Date(Date.now() + 48 * 3600 * 1000 + 30 * 60 * 1000).toISOString(),
-    targetUrl: 'https://youtube.com',
-    rewardsSummary: '🪙 50.000 Moedas + Itens Especiais de Decoração',
-    hintsOrInstructions: 'Entre no mesmo servidor para participar das salas privadas com códigos!',
-    bannerUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    status: 'scheduled',
-    remindersCount: 215,
-    createdAt: Date.now() - 14400 * 1000
-  }
-];
+const DEFAULT_UPCOMING_STREAMS: UpcomingStreamItem[] = [];
 
 export default function UpcomingStreamsSection({
   isAdmin,
@@ -98,7 +52,7 @@ export default function UpcomingStreamsSection({
   onAddXP,
   triggerAudio
 }: UpcomingStreamsSectionProps) {
-  const [streams, setStreams] = useState<UpcomingStreamItem[]>(DEFAULT_UPCOMING_STREAMS);
+  const [streams, setStreams] = useState<UpcomingStreamItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'live' | 'gems' | 'spoilers'>('all');
   const [activeReminders, setActiveReminders] = useState<string[]>(() => {
@@ -138,18 +92,18 @@ export default function UpcomingStreamsSection({
           }));
           setStreams(list);
         } else {
-          setStreams(DEFAULT_UPCOMING_STREAMS);
+          setStreams([]);
         }
         setLoading(false);
       }, (err) => {
-        console.warn('Upcoming streams snapshot error, using fallback:', err);
-        setStreams(DEFAULT_UPCOMING_STREAMS);
+        console.warn('Upcoming streams snapshot error:', err);
+        setStreams([]);
         setLoading(false);
       });
 
       return () => unsub();
     } catch (err) {
-      setStreams(DEFAULT_UPCOMING_STREAMS);
+      setStreams([]);
       setLoading(false);
     }
   }, []);
@@ -682,16 +636,27 @@ export default function UpcomingStreamsSection({
       )}
 
       {filteredStreams.length === 0 && (
-        <div className="text-center py-12 bg-zinc-950/60 rounded-2xl border border-white/5 space-y-3">
+        <div className="text-center py-12 bg-zinc-950/60 rounded-2xl border border-white/5 space-y-3 px-4">
           <div className="w-12 h-12 rounded-full bg-yellow-500/10 text-yellow-400 flex items-center justify-center mx-auto">
             <Radio className="w-6 h-6" />
           </div>
           <h4 className="font-sans font-black text-sm text-white uppercase">
-            Nenhuma transmissão encontrada neste filtro
+            {streams.length === 0 ? 'Nenhuma Live ou Transmissão Agendada' : 'Nenhuma transmissão encontrada neste filtro'}
           </h4>
-          <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-            Selecione a aba "Todos" para visualizar todos os próximos vídeos e eventos agendados com cupons.
+          <p className="text-xs text-zinc-400 max-w-md mx-auto">
+            {streams.length === 0
+              ? 'Assim que uma nova transmissão ou vídeo oficial com códigos e cupons for agendado pelo administrador, ele aparecerá aqui!'
+              : 'Selecione a aba "Todos" para visualizar todos os próximos vídeos e eventos agendados com cupons.'}
           </p>
+          {isAdmin && streams.length === 0 && (
+            <button
+              onClick={() => handleOpenAdminModal()}
+              className="mt-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-amber-500 hover:brightness-110 text-zinc-950 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-lg inline-flex items-center gap-1.5 active:scale-95"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Agendar Transmissão Oficial</span>
+            </button>
+          )}
         </div>
       )}
 

@@ -118,7 +118,7 @@ const DEFAULT_BADGES: PassportBadge[] = [
   {
     id: 'badge_friendly',
     title: 'Amigo da Ilha',
-    description: 'Conectou amigos ao seu Passaporte PK XD.',
+    description: 'Conectou amigos ao seu PKXD ID.',
     icon: '🤝',
     category: 'social',
     unlocked: false,
@@ -1228,10 +1228,10 @@ export default function PassportSection({
               Identidade Digital da Comunidade
             </div>
             <h2 className="font-sans font-black text-2xl sm:text-4xl text-white uppercase tracking-tight leading-tight">
-              PASSAPORTE <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-400">PK XD</span> 🛂
+              PKXD <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-400">ID</span> 🪪
             </h2>
             <p className="font-sans text-xs sm:text-sm text-gray-300 max-w-xl leading-relaxed">
-              Seu documento oficial na Ilha! Colecione medalhas, carimbos de temporadas, conecte amigos, suba de nível com suas atividades e compartilhe seu QR Code exclusivo!
+              Sua identidade digital oficial na Ilha PK XD! Colecione medalhas, carimbos de temporadas, conecte amigos, suba de nível com suas atividades e compartilhe seu QR Code exclusivo!
             </p>
           </div>
 
@@ -1384,7 +1384,7 @@ export default function PassportSection({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[9px] font-mono uppercase bg-yellow-400 text-black font-black px-2 py-0.5 rounded-full shadow-sm">
-                        Passaporte Compartilhado
+                        PKXD ID Compartilhado
                       </span>
                       <span className="text-xs text-pink-300 font-bold">Nível {cardLevel}</span>
                     </div>
@@ -1417,7 +1417,7 @@ export default function PassportSection({
                     className="flex-1 sm:flex-none px-3.5 py-2.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-200 font-sans font-bold text-xs uppercase rounded-xl transition-all border border-white/20 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <BookmarkCheck className="w-4 h-4 text-cyan-300" />
-                    <span>Ver Meu Passaporte</span>
+                    <span>Ver Meu PKXD ID</span>
                   </button>
                 </div>
               </div>
@@ -1445,7 +1445,7 @@ export default function PassportSection({
                           REPÚBLICA DE PK XD
                         </h3>
                         <p className="font-mono text-[9px] text-white/70 uppercase tracking-widest">
-                          PASSAPORTE OFICIAL DA COMUNIDADE
+                          PKXD ID OFICIAL DA COMUNIDADE
                         </p>
                       </div>
                     </div>
@@ -1555,7 +1555,7 @@ export default function PassportSection({
                   <div className="flex items-center justify-between border-b border-white/10 pb-3">
                     <div className="flex items-center gap-2 text-purple-300 font-black text-xs uppercase tracking-wider">
                       <QrCode className="w-4 h-4" />
-                      <span>QR Code do Passaporte</span>
+                      <span>QR Code do PKXD ID</span>
                     </div>
                     <span className="text-[9px] font-mono text-gray-400">Escaneie para ver perfil</span>
                   </div>
@@ -1789,7 +1789,7 @@ export default function PassportSection({
               </h4>
             </div>
             <p className="text-xs text-gray-300 leading-relaxed">
-              Pegou um código exclusivo em vídeos, lives ou nos spoilers oficiais? Digite abaixo para carimbar o selo secreto no seu passaporte! (Dicas: <code className="text-yellow-300 bg-black/40 px-1 py-0.5 rounded font-mono">CENTRALVIP</code>, <code className="text-pink-300 bg-black/40 px-1 py-0.5 rounded font-mono">SPOILERMASTER</code>, <code className="text-cyan-300 bg-black/40 px-1 py-0.5 rounded font-mono">1000GEMAS</code> ou <code className="text-emerald-300 bg-black/40 px-1 py-0.5 rounded font-mono">WELCOME</code>).
+              Pegou um código exclusivo em vídeos, lives ou nos spoilers oficiais? Digite abaixo para carimbar o selo secreto no seu PKXD ID! (Dicas: <code className="text-yellow-300 bg-black/40 px-1 py-0.5 rounded font-mono">CENTRALVIP</code>, <code className="text-pink-300 bg-black/40 px-1 py-0.5 rounded font-mono">SPOILERMASTER</code>, <code className="text-cyan-300 bg-black/40 px-1 py-0.5 rounded font-mono">1000GEMAS</code> ou <code className="text-emerald-300 bg-black/40 px-1 py-0.5 rounded font-mono">WELCOME</code>).
             </p>
 
             <form onSubmit={handleRedeemSecretStampCode} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
@@ -1868,7 +1868,7 @@ export default function PassportSection({
                       {isClaimed ? (
                         <div className="w-full py-2 bg-emerald-500/15 border border-emerald-400/40 rounded-xl text-[11px] font-black uppercase text-emerald-300 flex items-center justify-center gap-1.5">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Carimbado no Passaporte ✓</span>
+                          <span>Carimbado no PKXD ID ✓</span>
                         </div>
                       ) : (
                         <button
@@ -1891,7 +1891,7 @@ export default function PassportSection({
             <div className="flex items-center justify-between">
               <h4 className="font-sans font-black text-sm text-white uppercase tracking-wider flex items-center gap-2">
                 <BookmarkCheck className="w-4 h-4 text-cyan-400" />
-                Meus Selos Carimbados no Passaporte ({passport.stamps.length})
+                Meus Selos Carimbados no PKXD ID ({passport.stamps.length})
               </h4>
             </div>
 
@@ -1902,7 +1902,7 @@ export default function PassportSection({
                 </div>
                 <h5 className="font-sans font-black text-sm text-white uppercase">Você ainda não resgatou nenhum selo!</h5>
                 <p className="text-xs text-gray-400 max-w-md mx-auto">
-                  Clique no botão "Resgatar Selo" nos selos disponíveis acima ou insira um código secreto para carimbar seu passaporte!
+                  Clique no botão "Resgatar Selo" nos selos disponíveis acima ou insira um código secreto para carimbar seu PKXD ID!
                 </p>
               </div>
             ) : (
@@ -1969,7 +1969,7 @@ export default function PassportSection({
             <div>
               <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
                 <Users className="w-5 h-5 text-pink-400" />
-                Amigos Conectados no Passaporte
+                Amigos Conectados no PKXD ID
               </h3>
               <p className="text-xs text-gray-400">
                 Adicione as Tags de PK XD dos seus amigos para acompanhar seus níveis e minigames favoritos!
@@ -2091,7 +2091,7 @@ export default function PassportSection({
                 Nenhum evento no seu histórico ainda
               </h4>
               <p className="text-xs text-gray-400 max-w-sm mx-auto">
-                Quando você confirmar presença em torneios, festas ou desafios na aba de Eventos, eles aparecerão registrados aqui no seu Passaporte!
+                Quando você confirmar presença em torneios, festas ou desafios na aba de Eventos, eles aparecerão registrados aqui no seu PKXD ID!
               </p>
             </div>
           ) : (
@@ -2158,7 +2158,7 @@ export default function PassportSection({
             <div className="flex items-center gap-2 text-purple-400">
               <Edit3 className="w-5 h-5" />
               <h3 className="font-sans font-black text-lg text-white uppercase tracking-wider">
-                Editar Passaporte PKXD ✏️
+                Editar PKXD ID ✏️
               </h3>
             </div>
 
@@ -2470,7 +2470,7 @@ export default function PassportSection({
                 <QrCode className="w-6 h-6" />
               </div>
               <h3 className="font-sans font-black text-xl text-white uppercase tracking-wider">
-                Compartilhar Passaporte
+                Compartilhar PKXD ID
               </h3>
               <p className="text-xs text-gray-300">
                 Mostre suas conquistas e medalhas para seus amigos de PK XD!
@@ -2511,7 +2511,7 @@ export default function PassportSection({
                 </button>
 
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`✨ Confira meu Passaporte Oficial no PK XD Central com minhas conquistas e medalhas!\n🎮 Meu Nick: ${passport.nickname}\n🆔 Tag: ${passport.playerTag}\n🛂 Acesse meu Passaporte: ${typeof window !== 'undefined' ? window.location.origin : 'https://pkxdcentral.site'}/?passaporte=${encodeURIComponent(passport.playerTag)}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`✨ Confira meu PKXD ID Oficial no PK XD Central com minhas conquistas e medalhas!\n🎮 Meu Nick: ${passport.nickname}\n🆔 Tag: ${passport.playerTag}\n🪪 Acesse meu PKXD ID: ${typeof window !== 'undefined' ? window.location.origin : 'https://pkxdcentral.site'}/?pkxd-id=${encodeURIComponent(passport.playerTag)}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
@@ -2624,7 +2624,7 @@ export default function PassportSection({
                 Criar Selo Oficial (Modo ADM)
               </h3>
               <p className="text-xs text-gray-400">
-                Adicione carimbos comemorativos e oficiais ao Passaporte PK XD.
+                Adicione carimbos comemorativos e oficiais ao PKXD ID.
               </p>
             </div>
 

@@ -316,15 +316,15 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'comunidade', 'missoes'];
+        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
         if (pLower.includes('admin')) {
           targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
         } else if (pLower.includes('inscric')) {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
-        } else if (pLower.includes('passaporte')) {
-          targetPath = baseIsSpecial ? `/passaporte/${hashSuffix}` : (base ? `/${base}/passaporte/${hashSuffix}` : `/passaporte/${hashSuffix}`);
+        } else if (pLower.includes('passaporte') || pLower.includes('pkxd-id') || pLower.includes('pkxdid')) {
+          targetPath = baseIsSpecial ? `/pkxd-id/${hashSuffix}` : (base ? `/${base}/pkxd-id/${hashSuffix}` : `/pkxd-id/${hashSuffix}`);
         } else if (pLower.includes('artes')) {
           targetPath = baseIsSpecial ? `/artes/${hashSuffix}` : (base ? `/${base}/artes/${hashSuffix}` : `/artes/${hashSuffix}`);
         } else if (pLower.includes('evento')) {
@@ -342,8 +342,8 @@ export default function App() {
           targetPath = `/admin${hashSuffix}`;
         } else if (pLower.includes('inscric')) {
           targetPath = `/inscricoes${hashSuffix}`;
-        } else if (pLower.includes('passaporte')) {
-          targetPath = `/passaporte${hashSuffix}`;
+        } else if (pLower.includes('passaporte') || pLower.includes('pkxd-id') || pLower.includes('pkxdid')) {
+          targetPath = `/pkxd-id${hashSuffix}`;
         } else if (pLower.includes('artes')) {
           targetPath = `/artes${hashSuffix}`;
         } else if (pLower.includes('evento')) {
@@ -411,7 +411,7 @@ export default function App() {
       setActiveTab('artes');
     } else if (pLower.includes('evento')) {
       setActiveTab('eventos');
-    } else if (pLower.includes('passaporte')) {
+    } else if (pLower.includes('passaporte') || pLower.includes('pkxd-id') || pLower.includes('pkxdid') || pLower.includes('/id')) {
       setActiveTab('passaporte');
     } else if (pLower.includes('comunidade') || pLower.includes('mural')) {
       setActiveTab('comunidade');
@@ -2794,17 +2794,17 @@ export default function App() {
             <button
               onClick={() => {
                 triggerAudio('tap');
-                navigateTo('/passaporte');
+                navigateTo('/pkxd-id');
               }}
               className={`p-2 sm:px-3 rounded-2xl border font-sans text-[11px] font-black tracking-wide uppercase transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-md ${
                 activeTab === 'passaporte'
                   ? 'bg-yellow-400 text-purple-950 border-yellow-300 shadow-yellow-400/20'
                   : 'bg-purple-900/80 hover:bg-purple-800 text-white border-purple-400/40'
               }`}
-              title="Acessar Passaporte PKXD"
+              title="Acessar PKXD ID"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Passaporte</span>
+              <span className="hidden md:inline">PKXD ID</span>
               <span className="bg-purple-950/60 text-yellow-300 text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
                 Lv.{fanLevel}
               </span>
@@ -3360,7 +3360,7 @@ export default function App() {
               <button
                 onClick={() => {
                   triggerAudio('tap');
-                  navigateTo('/passaporte');
+                  navigateTo('/pkxd-id');
                 }}
                 className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center relative ${
                   activeTab === 'passaporte'
@@ -3369,7 +3369,7 @@ export default function App() {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">Passaporte</span>
+                <span className="truncate">PKXD ID</span>
               </button>
               
               <button
