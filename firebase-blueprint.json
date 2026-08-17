@@ -251,9 +251,34 @@
         "status": { "type": "string" }
       },
       "required": ["id", "question", "options", "createdAt", "authorName", "status"]
+    },
+    "UpcomingStreamItem": {
+      "title": "Upcoming Video or Live Stream with Codes",
+      "description": "A scheduled YouTube or live broadcast with gift codes and rewards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "creatorOrChannel": { "type": "string" },
+        "streamType": { "type": "string" },
+        "platform": { "type": "string" },
+        "scheduledDate": { "type": "string" },
+        "targetUrl": { "type": "string" },
+        "rewardsSummary": { "type": "string" },
+        "hintsOrInstructions": { "type": "string" },
+        "bannerUrl": { "type": "string" },
+        "status": { "type": "string" },
+        "remindersCount": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "title", "creatorOrChannel", "streamType", "scheduledDate", "targetUrl", "rewardsSummary", "createdAt"]
     }
   },
   "firestore": {
+    "/upcoming_streams/{streamId}": {
+      "schema": "UpcomingStreamItem",
+      "description": "Scheduled live streams and videos featuring promo codes and game rewards"
+    },
     "/polls/{pollId}": {
       "schema": "Poll",
       "description": "Collection of community polls"

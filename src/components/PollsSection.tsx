@@ -350,7 +350,8 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
       </div>
 
       {/* Active Polls Container */}
-      <div className="space-y-6">
+      <div className="max-h-[580px] overflow-y-auto pr-1.5 sm:pr-2 space-y-6 scrollbar-thin scrollbar-thumb-cyan-500/40 scrollbar-track-black/30">
+        <div className="space-y-6">
         {activePolls.length === 0 ? (
           <div className="p-8 text-center text-zinc-400 bg-black/20 rounded-2xl border border-white/5 space-y-3">
             <p className="italic text-xs">Nenhuma enquete ativa no momento. Seja o primeiro a sugerir ou criar uma!</p>
@@ -504,6 +505,7 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
             );
           })
         )}
+        </div>
       </div>
 
       {/* Closed Polls (History) */}

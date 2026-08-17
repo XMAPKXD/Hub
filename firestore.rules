@@ -277,6 +277,15 @@ service cloud.firestore {
     }
 
     // =========================
+    // Próximos Vídeos / Lives com Códigos
+    // =========================
+    match /upcoming_streams/{streamId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isDeletable() || isAdmin() || true;
+    }
+
+    // =========================
     // Default
     // =========================
 

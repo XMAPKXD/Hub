@@ -375,7 +375,8 @@ export default function SocialSection({
           </div>
 
           {/* Social Feed Items */}
-          <div className="space-y-4">
+          <div className="max-h-[580px] overflow-y-auto pr-1.5 sm:pr-2 space-y-4 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-black/30">
+            <div className="space-y-4">
             {posts.length === 0 ? (
               <div className="bg-zinc-900/40 rounded-3xl border border-white/5 p-12 text-center space-y-2 select-none">
                 <Smile className="w-10 h-10 text-gray-600 mx-auto" />
@@ -522,6 +523,7 @@ export default function SocialSection({
                 );
               })
             )}
+            </div>
           </div>
         </div>
 

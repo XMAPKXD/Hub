@@ -888,7 +888,8 @@ export default function EventsSection({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="max-h-[580px] overflow-y-auto pr-1.5 sm:pr-2 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-black/30">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredEvents.map((event) => {
             const eventParts = participants.filter(p => p.eventId === event.id);
             const isFull = event.maxParticipants ? eventParts.length >= event.maxParticipants : false;
@@ -1096,6 +1097,7 @@ export default function EventsSection({
               </div>
             );
           })}
+          </div>
         </div>
       )}
 

@@ -246,7 +246,7 @@ export default function MissionsSection({
             </h4>
           </div>
 
-          <div className="space-y-3">
+          <div className="max-h-[500px] overflow-y-auto pr-1.5 sm:pr-2 space-y-3 scrollbar-thin scrollbar-thumb-emerald-500/40 scrollbar-track-black/30">
             {missions.map((mission) => {
               let stateBadge = 'bg-zinc-800 text-zinc-400 border-zinc-700/50';
               let badgeText = 'Pendente ⏱️';

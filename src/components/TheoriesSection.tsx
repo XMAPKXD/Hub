@@ -99,66 +99,68 @@ export default function TheoriesSection({ theories, isAdmin, currentUser, onLike
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {theories.map((theory) => {
-            const isLiked = likedList.includes(theory.id);
-            return (
-              <div 
-                key={theory.id}
-                className="bg-black/30 border border-white/5 hover:border-pink-500/20 p-5 rounded-2xl space-y-4 transition-all"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2.5 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-pink-400 px-2.5 py-1 bg-pink-500/10 border border-pink-500/20 rounded-md">
-                      ✍️ {theory.author || 'PKXD Central'}
-                    </span>
-                    <span className="text-gray-500 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {theory.createdAt && !isNaN(new Date(theory.createdAt).getTime())
-                        ? new Date(theory.createdAt).toLocaleDateString('pt-BR')
-                        : 'Sem Data'}
-                    </span>
+        <div className="max-h-[520px] overflow-y-auto pr-1.5 sm:pr-2 space-y-4 scrollbar-thin scrollbar-thumb-pink-500/40 scrollbar-track-black/30">
+          <div className="space-y-4">
+            {theories.map((theory) => {
+              const isLiked = likedList.includes(theory.id);
+              return (
+                <div 
+                  key={theory.id}
+                  className="bg-black/30 border border-white/5 hover:border-pink-500/20 p-5 rounded-2xl space-y-4 transition-all"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-pink-400 px-2.5 py-1 bg-pink-500/10 border border-pink-500/20 rounded-md">
+                        ✍️ {theory.author || 'PKXD Central'}
+                      </span>
+                      <span className="text-gray-500 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {theory.createdAt && !isNaN(new Date(theory.createdAt).getTime())
+                          ? new Date(theory.createdAt).toLocaleDateString('pt-BR')
+                          : 'Sem Data'}
+                      </span>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        onClick={() => { playTapSound(); onDelete(theory.id); }}
+                        className="text-xs font-bold text-red-400 hover:text-red-300 inline-flex items-center gap-1 cursor-pointer"
+                        title="Deletar teoria"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Excluir</span>
+                      </button>
+                    )}
                   </div>
-                  {isAdmin && (
-                    <button
-                      onClick={() => { playTapSound(); onDelete(theory.id); }}
-                      className="text-xs font-bold text-red-400 hover:text-red-300 inline-flex items-center gap-1 cursor-pointer"
-                      title="Deletar teoria"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Excluir</span>
-                    </button>
-                  )}
-                </div>
 
-                <div className="space-y-2">
-                  <h4 className="font-sans font-black text-base text-gray-100 uppercase tracking-wide">
-                    {theory.title}
-                  </h4>
-                  <p className="font-sans text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                    {theory.content}
-                  </p>
-                </div>
+                  <div className="space-y-2">
+                    <h4 className="font-sans font-black text-base text-gray-100 uppercase tracking-wide">
+                      {theory.title}
+                    </h4>
+                    <p className="font-sans text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                      {theory.content}
+                    </p>
+                  </div>
 
-                <div className="pt-3 border-t border-white/5 flex flex-col gap-4">
-                  <div className="flex flex-wrap gap-2.5">
-                    <button
-                      onClick={() => handleLikeClick(theory.id)}
-                      disabled={isLiked}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                        isLiked 
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-default'
-                          : 'bg-zinc-900 border-zinc-800 hover:border-pink-500/30 text-gray-300 hover:text-pink-400 cursor-pointer'
-                      }`}
-                    >
-                      <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? 'fill-emerald-400' : ''}`} />
-                      <span>Concordar • {theory.likes || 0} Votos</span>
-                    </button>
+                  <div className="pt-3 border-t border-white/5 flex flex-col gap-4">
+                    <div className="flex flex-wrap gap-2.5">
+                      <button
+                        onClick={() => handleLikeClick(theory.id)}
+                        disabled={isLiked}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                          isLiked 
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-default'
+                            : 'bg-zinc-900 border-zinc-800 hover:border-pink-500/30 text-gray-300 hover:text-pink-400 cursor-pointer'
+                        }`}
+                      >
+                        <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? 'fill-emerald-400' : ''}`} />
+                        <span>Concordar • {theory.likes || 0} Votos</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </section>

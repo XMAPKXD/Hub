@@ -799,7 +799,8 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
         </div>
       ) : (
         /* Bento Grid of assets & videos */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="max-h-[580px] overflow-y-auto pr-1.5 sm:pr-2 scrollbar-thin scrollbar-thumb-pink-500/40 scrollbar-track-black/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredArtes.map((art, idx) => {
             const isArtVid = art.isVideo || 
               art.category === "Vídeos" || 
@@ -945,6 +946,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
