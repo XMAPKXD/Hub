@@ -1575,7 +1575,7 @@ export default function PassportSection({
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="font-sans font-black text-xs sm:text-sm tracking-wider uppercase text-white drop-shadow">
-                            REPÚBLICA DE PK XD
+                            PKXD ID
                           </span>
                           <span className="bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 text-[8px] font-mono font-black px-1.5 py-0.2 rounded">
                             CITIZEN
