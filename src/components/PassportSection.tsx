@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
+import html2canvas from 'html2canvas';
 import { 
   PKXDPassport, 
   PassportBadge, 
@@ -34,7 +35,12 @@ import {
   Filter,
   Gift,
   KeyRound,
-  Coins
+  Coins,
+  Download,
+  Camera,
+  Loader2,
+  Palette,
+  CheckCircle
 } from 'lucide-react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -385,6 +391,11 @@ export default function PassportSection({
   // Active tab inside Passport
   const [activeTab, setActiveTab] = useState<'card' | 'badges' | 'stamps' | 'friends' | 'events'>('card');
   
+  // Card ref for high-resolution PNG downloads
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isDownloadingCard, setIsDownloadingCard] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+
   // Filter for Badges
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
   const [friendSearch, setFriendSearch] = useState('');
@@ -1184,20 +1195,131 @@ export default function PassportSection({
     });
   };
 
-  // Get theme card gradients
+  // Get theme card gradients and styling attributes
   const getThemeGradients = (theme: PKXDPassport['cardTheme']) => {
     switch (theme) {
       case 'cyber-blue':
-        return 'from-blue-600 via-indigo-900 to-cyan-950 border-cyan-400/60 shadow-[0_10px_35px_rgba(6,182,212,0.25)]';
+        return {
+          bg: 'from-cyan-950 via-slate-900 to-blue-950 border-cyan-400/80 shadow-[0_12px_45px_rgba(6,182,212,0.35)]',
+          chip: 'from-cyan-300 via-teal-400 to-blue-600 border-cyan-200 text-cyan-950',
+          accentText: 'text-cyan-300',
+          badgeBorder: 'border-cyan-500/40 bg-cyan-950/60',
+          levelBar: 'from-cyan-400 via-blue-400 to-indigo-400',
+          glow1: 'bg-cyan-500/20',
+          glow2: 'bg-blue-500/20',
+          ringColor: 'border-cyan-400/80 ring-cyan-400/30'
+        };
       case 'golden-vip':
-        return 'from-amber-600 via-yellow-900 to-zinc-950 border-yellow-400/70 shadow-[0_10px_35px_rgba(234,179,8,0.25)]';
+        return {
+          bg: 'from-amber-950 via-zinc-950 to-yellow-950 border-yellow-400/90 shadow-[0_12px_45px_rgba(234,179,8,0.35)]',
+          chip: 'from-yellow-200 via-amber-400 to-yellow-600 border-yellow-100 text-amber-950',
+          accentText: 'text-yellow-300',
+          badgeBorder: 'border-yellow-500/40 bg-amber-950/60',
+          levelBar: 'from-yellow-300 via-amber-400 to-orange-400',
+          glow1: 'bg-yellow-500/20',
+          glow2: 'bg-amber-500/20',
+          ringColor: 'border-yellow-400/80 ring-yellow-400/30'
+        };
       case 'sunset-pink':
-        return 'from-pink-600 via-purple-900 to-rose-950 border-pink-400/60 shadow-[0_10px_35px_rgba(236,72,153,0.25)]';
+        return {
+          bg: 'from-pink-950 via-purple-950 to-rose-950 border-pink-400/80 shadow-[0_12px_45px_rgba(236,72,153,0.35)]',
+          chip: 'from-pink-300 via-rose-400 to-purple-600 border-pink-200 text-purple-950',
+          accentText: 'text-pink-300',
+          badgeBorder: 'border-pink-500/40 bg-pink-950/60',
+          levelBar: 'from-pink-400 via-rose-400 to-purple-400',
+          glow1: 'bg-pink-500/20',
+          glow2: 'bg-rose-500/20',
+          ringColor: 'border-pink-400/80 ring-pink-400/30'
+        };
       case 'emerald-gamer':
-        return 'from-emerald-600 via-teal-900 to-zinc-950 border-emerald-400/60 shadow-[0_10px_35px_rgba(16,185,129,0.25)]';
+        return {
+          bg: 'from-emerald-950 via-slate-950 to-teal-950 border-emerald-400/80 shadow-[0_12px_45px_rgba(16,185,129,0.35)]',
+          chip: 'from-emerald-300 via-teal-400 to-green-600 border-emerald-200 text-emerald-950',
+          accentText: 'text-emerald-300',
+          badgeBorder: 'border-emerald-500/40 bg-emerald-950/60',
+          levelBar: 'from-emerald-400 via-teal-300 to-cyan-400',
+          glow1: 'bg-emerald-500/20',
+          glow2: 'bg-teal-500/20',
+          ringColor: 'border-emerald-400/80 ring-emerald-400/30'
+        };
+      case 'volcano-red':
+        return {
+          bg: 'from-red-950 via-zinc-950 to-orange-950 border-orange-500/80 shadow-[0_12px_45px_rgba(249,115,22,0.35)]',
+          chip: 'from-orange-300 via-amber-400 to-red-600 border-orange-200 text-orange-950',
+          accentText: 'text-orange-300',
+          badgeBorder: 'border-orange-500/40 bg-red-950/60',
+          levelBar: 'from-orange-400 via-red-500 to-amber-300',
+          glow1: 'bg-orange-500/20',
+          glow2: 'bg-red-500/20',
+          ringColor: 'border-orange-500/80 ring-orange-500/30'
+        };
+      case 'frost-diamond':
+        return {
+          bg: 'from-sky-950 via-slate-950 to-blue-950 border-sky-300/90 shadow-[0_12px_45px_rgba(56,189,248,0.35)]',
+          chip: 'from-sky-200 via-blue-300 to-indigo-500 border-white text-blue-950',
+          accentText: 'text-sky-300',
+          badgeBorder: 'border-sky-500/40 bg-sky-950/60',
+          levelBar: 'from-sky-300 via-blue-400 to-teal-300',
+          glow1: 'bg-sky-500/20',
+          glow2: 'bg-blue-500/20',
+          ringColor: 'border-sky-400/80 ring-sky-400/30'
+        };
       case 'neon-purple':
       default:
-        return 'from-purple-700 via-indigo-950 to-pink-950 border-purple-500/60 shadow-[0_10px_35px_rgba(168,85,247,0.25)]';
+        return {
+          bg: 'from-purple-950 via-indigo-950 to-zinc-950 border-purple-400/80 shadow-[0_12px_45px_rgba(168,85,247,0.35)]',
+          chip: 'from-yellow-300 via-amber-400 to-yellow-600 border-yellow-200 text-purple-950',
+          accentText: 'text-purple-300',
+          badgeBorder: 'border-purple-500/40 bg-purple-950/60',
+          levelBar: 'from-yellow-300 via-pink-400 to-cyan-300',
+          glow1: 'bg-purple-500/20',
+          glow2: 'bg-pink-500/20',
+          ringColor: 'border-purple-400/80 ring-purple-400/30'
+        };
+    }
+  };
+
+  // Download Card as High Quality PNG Image
+  const handleDownloadCard = async (targetNickname?: string, targetTag?: string) => {
+    if (!cardRef.current) return;
+    setIsDownloadingCard(true);
+    try {
+      if (triggerAudio) triggerAudio('tap');
+      
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3, // Ultra crisp Retina resolution
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        imageTimeout: 6000,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const cleanNick = (targetNickname || passport.nickname || 'PKXD').replace(/[^a-zA-Z0-9_]/g, '_');
+      const cleanTag = (targetTag || passport.playerTag || '000').replace(/[^a-zA-Z0-9_]/g, '_');
+      
+      const link = document.createElement('a');
+      link.download = `PKXD_ID_${cleanNick}_${cleanTag}.png`;
+      link.href = imgData;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      if (triggerAudio) triggerAudio('levelUp');
+      if (onAddXP) onAddXP(15, 'Baixou e salvou o cartão oficial PKXD ID');
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 4000);
+    } catch (err) {
+      console.error('Erro ao baixar cartão PKXD ID:', err);
+      alert('Não foi possível gerar a imagem no momento. Tente novamente!');
+    } finally {
+      setIsDownloadingCard(false);
     }
   };
 
@@ -1353,7 +1475,7 @@ export default function PassportSection({
       </div>
 
       {/* ========================================================= */}
-      {/* TAB 1: VISUAL PASSPORT CARD (HOLOGRAPHIC OFFICIAL CARD) */}
+      {/* TAB 1: VISUAL PKXD ID CARD (PREMIUM HOLOGRAPHIC CITIZEN CARD) */}
       {/* ========================================================= */}
       {activeTab === 'card' && (() => {
         const displayPassport = viewingSharedPassport || {
@@ -1365,14 +1487,18 @@ export default function PassportSection({
         const cardLevel = viewingSharedPassport ? Number(viewingSharedPassport.level || 1) : effectiveLevel;
         const cardXP = viewingSharedPassport ? Number(viewingSharedPassport.xp || 0) : effectiveXP;
         const cardTotalXP = viewingSharedPassport ? (viewingSharedPassport.totalXp || ((cardLevel - 1) * 100 + cardXP)) : totalLifetimeXP;
+        const themeStyle = getThemeGradients(displayPassport.cardTheme);
+        const unlockedBadgesCount = (displayPassport.badges || []).filter(b => b.unlocked).length;
+        const totalBadgesCount = (displayPassport.badges || []).length;
+        const stampsCount = (displayPassport.stamps || []).length;
 
         return (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-6 animate-fade-in">
             {/* Banner when viewing a friend's shared passport */}
             {isViewingOther && (
-              <div className="bg-gradient-to-r from-purple-900/90 via-pink-900/90 to-indigo-900/90 border-2 border-pink-500/60 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="bg-gradient-to-r from-purple-900/95 via-pink-900/90 to-indigo-900/95 border-2 border-pink-500/70 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5 w-full sm:w-auto">
-                  <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-yellow-300 shadow-md bg-black/60 flex-shrink-0">
+                  <div className="w-13 h-13 rounded-2xl overflow-hidden border-2 border-yellow-300 shadow-md bg-black/60 flex-shrink-0">
                     <img 
                       src={displayPassport.avatarUrl || PRESET_AVATARS[0]} 
                       alt={displayPassport.nickname} 
@@ -1383,7 +1509,7 @@ export default function PassportSection({
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-mono uppercase bg-yellow-400 text-black font-black px-2 py-0.5 rounded-full shadow-sm">
+                      <span className="text-[9px] font-mono uppercase bg-yellow-400 text-black font-black px-2.5 py-0.5 rounded-full shadow-sm">
                         PKXD ID Compartilhado
                       </span>
                       <span className="text-xs text-pink-300 font-bold">Nível {cardLevel}</span>
@@ -1424,100 +1550,126 @@ export default function PassportSection({
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Main Holographic Card */}
-              <div className="lg:col-span-7">
-                <div className={`bg-gradient-to-br ${getThemeGradients(displayPassport.cardTheme)} border-2 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden transition-all duration-300`}>
-                  {/* Holographic Watermark Glow */}
-                  <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full filter blur-xl pointer-events-none" />
-                  <div className="absolute top-1/2 left-0 w-36 h-36 bg-purple-500/20 rounded-full filter blur-2xl pointer-events-none" />
-                  <div className="absolute bottom-2 right-4 font-mono text-[9px] text-white/30 uppercase tracking-widest select-none">
-                    PKXD CITIZENSHIP CARD • ID #{displayPassport.playerTag.replace('#', '')}
-                  </div>
+              {/* Main Card and Card Action Controls */}
+              <div className="lg:col-span-7 space-y-4">
+                
+                {/* 🌟 HOLOGRAPHIC PKXD ID CARD ELEMENT (CAPTURE TARGET) 🌟 */}
+                <div 
+                  ref={cardRef} 
+                  id="pkxd-passport-card" 
+                  className={`bg-gradient-to-br ${themeStyle.bg} border-2 rounded-3xl p-5 sm:p-7 text-white shadow-2xl relative overflow-hidden transition-all duration-300 select-none`}
+                >
+                  {/* Ambient Glows */}
+                  <div className={`absolute -top-12 -right-12 w-52 h-52 ${themeStyle.glow1} rounded-full filter blur-2xl pointer-events-none`} />
+                  <div className={`absolute -bottom-12 -left-12 w-52 h-52 ${themeStyle.glow2} rounded-full filter blur-2xl pointer-events-none`} />
+                  
+                  {/* Subtle Holographic Linear Overlay */}
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
 
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
+                  {/* Top Bar: Holographic Header & Chip & Level Pill */}
+                  <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-4 relative z-10">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
-                        <ShieldCheck className="w-5 h-5 text-yellow-300" />
+                      <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/25 shadow-inner flex-shrink-0">
+                        <ShieldCheck className="w-5 h-5 text-yellow-300 drop-shadow" />
                       </div>
                       <div>
-                        <h3 className="font-sans font-black text-sm tracking-wider uppercase">
-                          REPÚBLICA DE PK XD
-                        </h3>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-sans font-black text-xs sm:text-sm tracking-wider uppercase text-white drop-shadow">
+                            REPÚBLICA DE PK XD
+                          </span>
+                          <span className="bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 text-[8px] font-mono font-black px-1.5 py-0.2 rounded">
+                            CITIZEN
+                          </span>
+                        </div>
                         <p className="font-mono text-[9px] text-white/70 uppercase tracking-widest">
-                          PKXD ID OFICIAL DA COMUNIDADE
+                          DOCUMENTO OFICIAL DA COMUNIDADE
                         </p>
                       </div>
                     </div>
 
-                    <div className="px-3 py-1 bg-black/40 backdrop-blur-md border border-white/20 rounded-full font-mono font-bold text-xs text-yellow-300 flex items-center gap-1.5 shadow-sm">
-                      <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 animate-pulse" />
-                      <span>NÍVEL {cardLevel}</span>
+                    <div className="flex items-center gap-2">
+                      {/* Realistic Gold Microchip */}
+                      <div className={`hidden sm:flex w-9 h-7 rounded-md bg-gradient-to-br ${themeStyle.chip} border shadow-md relative overflow-hidden items-center justify-center`}>
+                        <div className="absolute inset-0 border border-black/20 rounded-[2px]" />
+                        <div className="w-full h-[1px] bg-black/25" />
+                        <div className="h-full w-[1px] bg-black/25 absolute" />
+                        <div className="w-3.5 h-2.5 rounded-sm border border-black/30 bg-white/20" />
+                      </div>
+
+                      {/* Level Pill */}
+                      <div className="px-3 py-1 bg-black/50 backdrop-blur-md border border-white/20 rounded-full font-mono font-extrabold text-xs text-yellow-300 flex items-center gap-1 shadow-sm">
+                        <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 animate-pulse" />
+                        <span>NÍVEL {cardLevel}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Card Main Body */}
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-                    {/* Avatar with Ring */}
+                  {/* Card Main Profile Cluster */}
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 relative z-10">
+                    {/* Avatar with Glow & Ring */}
                     <div className="relative group flex-shrink-0">
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl bg-black/60 p-1">
+                      <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 ${themeStyle.ringColor} shadow-xl bg-black/70 p-1`}>
                         <img 
                           src={displayPassport.avatarUrl || PRESET_AVATARS[0]} 
                           alt={displayPassport.nickname} 
                           className="w-full h-full object-cover rounded-xl"
                           referrerPolicy="no-referrer"
+                          crossOrigin="anonymous"
                           onError={(e) => {
                             (e.target as any).src = PRESET_AVATARS[0];
                           }}
                         />
                       </div>
-                      <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-black font-black text-[10px] px-2 py-0.5 rounded-md shadow uppercase">
-                        LVL {cardLevel}
+                      <div className="absolute -bottom-2 -right-1.5 bg-yellow-400 text-black font-black text-[9px] font-mono px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider flex items-center gap-0.5">
+                        <span>LVL</span>
+                        <span>{cardLevel}</span>
                       </div>
                     </div>
 
-                    {/* Info and Tags */}
-                    <div className="flex-1 text-center sm:text-left space-y-2">
-                      <div className="space-y-0.5">
+                    {/* Identity Info, Tag & Bio */}
+                    <div className="flex-1 text-center sm:text-left space-y-2 w-full min-w-0">
+                      <div>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                          <h4 className="font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-white drop-shadow-sm">
+                          <h4 className="font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-white drop-shadow truncate max-w-[240px]">
                             {displayPassport.nickname}
                           </h4>
-                          <button
+                          <div
                             onClick={handleCopyTag}
-                            className="px-2 py-0.5 bg-black/40 hover:bg-black/60 border border-white/20 rounded-md font-mono text-xs font-bold text-cyan-300 flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                            className="px-2 py-0.5 bg-black/40 hover:bg-black/60 border border-white/20 rounded-md font-mono text-xs font-bold text-cyan-300 inline-flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-sm"
                             title="Clique para copiar a Tag"
                           >
                             <span>{displayPassport.playerTag}</span>
                             {copiedTag ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                          </button>
+                          </div>
                         </div>
                         
-                        <p className="font-sans font-extrabold text-xs text-yellow-300 uppercase tracking-wide flex items-center justify-center sm:justify-start gap-1">
-                          <Sparkles className="w-3 h-3 text-yellow-300" />
-                          <span>{displayPassport.title}</span>
+                        <p className={`font-sans font-extrabold text-xs ${themeStyle.accentText} uppercase tracking-wide flex items-center justify-center sm:justify-start gap-1 mt-0.5`}>
+                          <Sparkles className="w-3.5 h-3.5 fill-current" />
+                          <span>{displayPassport.title || 'Explorador da Ilha'}</span>
                         </p>
                       </div>
 
-                      <p className="font-sans text-xs text-white/85 leading-relaxed italic bg-black/20 p-2.5 rounded-xl border border-white/10">
-                        "{displayPassport.bio}"
+                      {/* Bio Quote */}
+                      <p className="font-sans text-xs text-white/90 leading-relaxed italic bg-black/35 p-2.5 rounded-xl border border-white/10 shadow-inner">
+                        "{displayPassport.bio || 'Explorador dedicado da Ilha PK XD!'}"
                       </p>
 
-                      {/* Level Progress Bar - strictly linked to account Level & XP */}
-                      <div className="space-y-1.5 pt-1">
+                      {/* Level Progress Bar */}
+                      <div className="space-y-1 pt-0.5">
                         <div className="flex justify-between items-center text-[10px] font-mono text-white/90">
                           <span className="flex items-center gap-1 font-bold text-yellow-300">
-                            <Flame className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 animate-pulse" />
-                            <span>Progresso Nível {cardLevel}</span>
+                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                            <span>Progresso XP</span>
                           </span>
-                          <span className="font-bold text-cyan-300 font-mono">
-                            <span className="text-yellow-300">{cardXP % 100}/100 XP</span>
-                            <span className="text-white/60 ml-1.5 font-normal">({cardTotalXP} XP Total)</span>
+                          <span className="font-bold font-mono">
+                            <span className="text-yellow-300">{cardXP % 100}</span>
+                            <span className="text-white/60">/100 XP</span>
+                            <span className="text-cyan-300 ml-1.5 font-normal">({cardTotalXP} XP Total)</span>
                           </span>
                         </div>
-                        <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
+                        <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
                           <div 
-                            className="h-full bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300 rounded-full transition-all duration-500 shadow-sm"
+                            className={`h-full bg-gradient-to-r ${themeStyle.levelBar} rounded-full transition-all duration-500 shadow-sm`}
                             style={{ width: `${Math.min(100, Math.max(0, cardXP % 100))}%` }}
                           />
                         </div>
@@ -1525,26 +1677,148 @@ export default function PassportSection({
                     </div>
                   </div>
 
-                  {/* Card Meta Stats Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-6 pt-4 border-t border-white/15 text-xs font-sans">
-                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
-                      <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">🎮 Minigame Favorito</span>
-                      <strong className="text-white text-xs truncate flex items-center gap-1">
+                  {/* 4 Feature Specification Chips */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3.5 border-t border-white/15 text-xs font-sans relative z-10">
+                    <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🎮 Jogo Favorito</span>
+                      <strong className="text-white text-[11px] truncate flex items-center justify-center sm:justify-start gap-1">
                         <span>{getMinigameIcon(displayPassport.favoriteMinigame)}</span>
                         <span className="truncate">{displayPassport.favoriteMinigame}</span>
                       </strong>
                     </div>
 
-                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5">
-                      <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">🏠 Estilo de Casa</span>
-                      <strong className="text-white text-xs truncate block">{displayPassport.houseTheme}</strong>
+                    <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🏠 Estilo de Casa</span>
+                      <strong className="text-white text-[11px] truncate block">{displayPassport.houseTheme}</strong>
                     </div>
 
-                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/10 space-y-0.5 col-span-2 sm:col-span-1">
-                      <span className="text-[10px] uppercase font-mono font-bold text-white/60 block">⏱️ Na Comunidade</span>
-                      <strong className="text-white text-xs truncate block">{displayPassport.timeInCommunity}</strong>
+                    <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🏆 Conquistas</span>
+                      <strong className="text-yellow-300 text-[11px] font-mono font-bold truncate block">
+                        {unlockedBadgesCount}/{totalBadgesCount} Desbloq.
+                      </strong>
+                    </div>
+
+                    <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">📬 Selos Oficiais</span>
+                      <strong className="text-cyan-300 text-[11px] font-mono font-bold truncate block">
+                        {stampsCount} Coletados
+                      </strong>
                     </div>
                   </div>
+
+                  {/* Barcode & Security Watermark Footer */}
+                  <div className="mt-3.5 pt-2.5 border-t border-white/10 flex items-center justify-between font-mono text-[8px] sm:text-[9px] text-white/50 relative z-10">
+                    <div className="flex items-center gap-2">
+                      {/* Barcode graphic lines */}
+                      <div className="flex items-center gap-[2px] h-4 bg-white/80 p-0.5 rounded-[2px]">
+                        <div className="w-[2px] h-full bg-black" />
+                        <div className="w-[1px] h-full bg-black" />
+                        <div className="w-[3px] h-full bg-black" />
+                        <div className="w-[1px] h-full bg-black" />
+                        <div className="w-[2px] h-full bg-black" />
+                        <div className="w-[1px] h-full bg-black" />
+                        <div className="w-[2px] h-full bg-black" />
+                        <div className="w-[3px] h-full bg-black" />
+                      </div>
+                      <span className="tracking-widest">ID #{displayPassport.playerTag.replace('#', '')}</span>
+                    </div>
+
+                    <span className="uppercase tracking-widest text-right">
+                      VERIFICADO • CENTRAL PKXD
+                    </span>
+                  </div>
+                </div>
+
+                {/* 🚀 ACTION TOOLBAR: DOWNLOAD, EDIT, SHARE & THEME PICKER 🚀 */}
+                <div className="bg-zinc-900/90 border border-purple-500/30 rounded-3xl p-4 sm:p-5 space-y-4 shadow-xl">
+                  {/* Big Primary Action: Download Button */}
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <button
+                      onClick={() => handleDownloadCard(displayPassport.nickname, displayPassport.playerTag)}
+                      disabled={isDownloadingCard}
+                      className="flex-1 py-3 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:brightness-110 active:scale-[0.98] text-zinc-950 font-sans font-black text-sm uppercase tracking-wider rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isDownloadingCard ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Gerando Imagem HD...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-5 h-5 text-zinc-950" />
+                          <span>Baixar Cartão PKXD ID (PNG HD)</span>
+                        </>
+                      )}
+                    </button>
+
+                    {!isViewingOther && (
+                      <button
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="py-3 px-4 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/40 text-purple-200 font-sans font-black text-xs uppercase tracking-wider rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4 text-pink-300" />
+                        <span>Editar</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {downloadSuccess && (
+                    <div className="p-3 bg-emerald-950/70 border border-emerald-400/50 rounded-xl text-emerald-300 text-xs font-sans font-bold flex items-center gap-2 animate-bounce">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>Seu cartão PKXD ID foi baixado em alta definição com sucesso! 📸✨</span>
+                    </div>
+                  )}
+
+                  {/* Instant Card Theme Picker */}
+                  {!isViewingOther && (
+                    <div className="space-y-2 pt-2 border-t border-white/10">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-sans font-black uppercase text-gray-300 flex items-center gap-1.5">
+                          <Palette className="w-4 h-4 text-pink-400" />
+                          <span>Mudar Tema do Cartão:</span>
+                        </span>
+                        <span className="font-mono text-[10px] text-purple-300 uppercase font-bold">
+                          {passport.cardTheme || 'neon-purple'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 sm:grid-cols-7 gap-1.5">
+                        {[
+                          { id: 'neon-purple', label: 'Cosmic', bg: 'from-purple-600 to-indigo-900' },
+                          { id: 'cyber-blue', label: 'Cyber', bg: 'from-cyan-500 to-blue-900' },
+                          { id: 'golden-vip', label: 'VIP Gold', bg: 'from-yellow-400 to-amber-900' },
+                          { id: 'sunset-pink', label: 'Sunset', bg: 'from-pink-500 to-rose-900' },
+                          { id: 'emerald-gamer', label: 'Matrix', bg: 'from-emerald-400 to-teal-900' },
+                          { id: 'volcano-red', label: 'Magma', bg: 'from-orange-500 to-red-900' },
+                          { id: 'frost-diamond', label: 'Frost', bg: 'from-sky-300 to-blue-800' }
+                        ].map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => {
+                              const updated = { ...passport, cardTheme: t.id as any };
+                              setPassport(updated);
+                              localStorage.setItem('pkxd_passport_data', JSON.stringify(updated));
+                              if (currentUser?.uid) {
+                                setDoc(doc(db, 'passports', currentUser.uid), updated, { merge: true }).catch(() => {});
+                              }
+                              if (triggerAudio) triggerAudio('tap');
+                            }}
+                            className={`p-1.5 rounded-xl border text-center transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                              passport.cardTheme === t.id
+                                ? 'border-yellow-400 bg-yellow-400/20 scale-105 shadow-md ring-2 ring-yellow-400/40'
+                                : 'border-white/10 hover:border-white/30 bg-black/40'
+                            }`}
+                          >
+                            <div className={`w-full h-4 rounded-md bg-gradient-to-r ${t.bg} shadow-inner`} />
+                            <span className="text-[9px] font-sans font-bold text-white truncate max-w-full">
+                              {t.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1557,7 +1831,7 @@ export default function PassportSection({
                       <QrCode className="w-4 h-4" />
                       <span>QR Code do PKXD ID</span>
                     </div>
-                    <span className="text-[9px] font-mono text-gray-400">Escaneie para ver perfil</span>
+                    <span className="text-[9px] font-mono text-gray-400">Escaneie para abrir perfil</span>
                   </div>
 
                   {qrCodeDataUrl ? (
@@ -2268,13 +2542,15 @@ export default function PassportSection({
               {/* Card Theme Selection */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-extrabold uppercase text-neutral-400">Tema Visual do Cartão</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {[
-                    { id: 'neon-purple', label: 'Neon Purple', color: 'bg-purple-600' },
+                    { id: 'neon-purple', label: 'Neon Cosmic', color: 'bg-purple-600' },
                     { id: 'cyber-blue', label: 'Cyber Blue', color: 'bg-cyan-600' },
                     { id: 'golden-vip', label: 'Golden VIP', color: 'bg-yellow-600' },
                     { id: 'sunset-pink', label: 'Sunset Pink', color: 'bg-pink-600' },
-                    { id: 'emerald-gamer', label: 'Emerald', color: 'bg-emerald-600' }
+                    { id: 'emerald-gamer', label: 'Emerald', color: 'bg-emerald-600' },
+                    { id: 'volcano-red', label: 'Magma Red', color: 'bg-red-600' },
+                    { id: 'frost-diamond', label: 'Frost Ice', color: 'bg-sky-400' }
                   ].map((t) => (
                     <button
                       key={t.id}

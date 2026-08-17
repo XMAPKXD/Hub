@@ -239,7 +239,7 @@ export interface PKXDPassport {
   timeInCommunity: string;
   favoriteMinigame: string;
   houseTheme: string;
-  cardTheme: 'neon-purple' | 'cyber-blue' | 'golden-vip' | 'sunset-pink' | 'emerald-gamer';
+  cardTheme: 'neon-purple' | 'cyber-blue' | 'golden-vip' | 'sunset-pink' | 'emerald-gamer' | 'volcano-red' | 'frost-diamond';
   badges: PassportBadge[];
   stamps: PassportStamp[];
   friends: PassportFriend[];
