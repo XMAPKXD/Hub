@@ -206,9 +206,9 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
         for (const activePoll of activePollsSnapshot) {
           const pRef = doc(db, 'polls', activePoll.id);
           try {
-            await updateDoc(pRef, { isActive: false });
+            await setDoc(pRef, { isActive: false, admin_secret: "pkxd2026_super_secret_admin_key" }, { merge: true });
           } catch (e) {
-            await setDoc(pRef, { isActive: false }, { merge: true });
+            console.warn("Could not deactivate previous poll:", e);
           }
         }
 
@@ -220,18 +220,20 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
           votes: 0
         }));
 
-        const finalImgUrl = newImageUrl.trim() || undefined;
-
-        await setDoc(pollRef, {
+        const pollData: Record<string, any> = {
           id: pollId,
           question: cleanQ,
           options: optionsArray,
-          imageUrl: finalImgUrl,
           createdAt: Date.now(),
           isActive: true,
           totalVotes: 0,
           admin_secret: "pkxd2026_super_secret_admin_key"
-        });
+        };
+        if (newImageUrl.trim()) {
+          pollData.imageUrl = newImageUrl.trim();
+        }
+
+        await setDoc(pollRef, pollData);
 
         const shareUrl = `${window.location.origin}${window.location.pathname}?enquete=${pollId}#polls-section`;
         setCreatedShareUrl(shareUrl);
@@ -243,17 +245,20 @@ export default function PollsSection({ onAddXP, isAdmin }: PollsSectionProps) {
         // Regular fan submits a suggested poll
         const suggestionId = 'sug_poll_' + Date.now();
         const sugRef = doc(db, 'suggested_polls', suggestionId);
-        const finalImgUrl = newImageUrl.trim() || undefined;
-
-        await setDoc(sugRef, {
+        
+        const sugData: Record<string, any> = {
           id: suggestionId,
           question: cleanQ,
           options: cleanOpts,
-          imageUrl: finalImgUrl,
           createdAt: Date.now(),
           authorName: localStorage.getItem('pkxd_nickname') || 'Fã Anonimo',
           status: 'pending'
-        });
+        };
+        if (newImageUrl.trim()) {
+          sugData.imageUrl = newImageUrl.trim();
+        }
+
+        await setDoc(sugRef, sugData);
 
         playSuccessSound();
         onAddXP(30, 'Sugeriu uma Enquete para o Fã-Clube! 🔮');
