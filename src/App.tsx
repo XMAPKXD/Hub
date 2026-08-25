@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { INITIAL_NEWS } from './components/initialNews';
 import { NewsItem, FeaturedVideo, Theory, ShortItem, PastSpoiler, AppNotification } from './types';
+import { loadFromCache, saveToCache, DEFAULT_CACHED_VIDEOS } from './utils/cache';
 import CountdownWidget from './components/CountdownWidget';
 import GiftCountdown from './components/GiftCountdown';
 import WhatsAppPromo from './components/WhatsAppPromo';
@@ -158,10 +159,16 @@ export default function App() {
   const [pastSpoilerToEdit, setPastSpoilerToEdit] = useState<PastSpoiler | null>(null);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
-  // State hooks for new components
-  const [featuredList, setFeaturedList] = useState<FeaturedVideo[]>([]);
-  const [theoriesList, setTheoriesList] = useState<Theory[]>([]);
-  const [shortsList, setShortsList] = useState<ShortItem[]>([]);
+  // State hooks for new components with instant cache hydration
+  const [featuredList, setFeaturedList] = useState<FeaturedVideo[]>(() => {
+    return loadFromCache<FeaturedVideo[]>('pkxd_cache_featured_videos', DEFAULT_CACHED_VIDEOS);
+  });
+  const [theoriesList, setTheoriesList] = useState<Theory[]>(() => {
+    return loadFromCache<Theory[]>('pkxd_cache_theories', []);
+  });
+  const [shortsList, setShortsList] = useState<ShortItem[]>(() => {
+    return loadFromCache<ShortItem[]>('pkxd_cache_shorts', []);
+  });
 
   // State for alternative/extra countdown timer
   const [extraCountdownTitle, setExtraCountdownTitle] = useState('Spoiler Surpresa! 🔥');
@@ -1157,7 +1164,10 @@ export default function App() {
         const timeB = b.createdAt || parseInt(b.id) || 0;
         return timeB - timeA;
       });
-      setFeaturedList(list);
+      if (list.length > 0) {
+        setFeaturedList(list);
+        saveToCache('pkxd_cache_featured_videos', list);
+      }
     }, (error) => {
       console.warn("Could not fetch featured videos:", error);
     });
@@ -1177,7 +1187,10 @@ export default function App() {
         const timeB = b.createdAt || parseInt(b.id) || 0;
         return timeB - timeA;
       });
-      setTheoriesList(list);
+      if (list.length > 0) {
+        setTheoriesList(list);
+        saveToCache('pkxd_cache_theories', list);
+      }
     }, (error) => {
       console.warn("Could not fetch theories:", error);
     });
@@ -1197,7 +1210,10 @@ export default function App() {
         const timeB = b.createdAt || parseInt(b.id) || 0;
         return timeB - timeA;
       });
-      setShortsList(list);
+      if (list.length > 0) {
+        setShortsList(list);
+        saveToCache('pkxd_cache_shorts', list);
+      }
     }, (error) => {
       console.warn("Could not fetch shorts:", error);
     });
@@ -1217,7 +1233,10 @@ export default function App() {
         const timeB = b.createdAt || parseInt(b.id) || 0;
         return timeB - timeA;
       });
-      setPastSpoilers(list);
+      if (list.length > 0) {
+        setPastSpoilers(list);
+        saveToCache('pkxd_cache_past_spoilers', list);
+      }
     }, (error) => {
       console.warn("Could not fetch past spoilers:", error);
     });
