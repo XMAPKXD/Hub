@@ -172,6 +172,8 @@ export interface CommunityEvent {
   approvedAt?: number;
   createdById?: string;
   admin_secret?: string;
+  requiresPin?: boolean; // Whether registration requires a security PIN / password
+  pinCode?: string; // Secret PIN or password set by organizer to confirm presence
 }
 
 // ===================================

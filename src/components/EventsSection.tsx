@@ -30,7 +30,13 @@ import {
   Bell,
   BookmarkCheck,
   CalendarPlus,
-  Zap
+  Zap,
+  Lock,
+  Unlock,
+  KeyRound,
+  Eye,
+  EyeOff,
+  ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -137,8 +143,15 @@ export default function EventsSection({
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [createSuccessMsg, setCreateSuccessMsg] = useState(false);
 
+  // PIN / Password Protection states for Create Event
+  const [newEventRequiresPin, setNewEventRequiresPin] = useState(false);
+  const [newEventPinCode, setNewEventPinCode] = useState('');
+  const [showPinInCreateForm, setShowPinInCreateForm] = useState(false);
+
   // Presence Confirmation state
   const [playerTagInput, setPlayerTagInput] = useState('');
+  const [presencePinInput, setPresencePinInput] = useState('');
+  const [showPresencePinInput, setShowPresencePinInput] = useState(false);
   const [hasAutoFilledTag, setHasAutoFilledTag] = useState(false);
   const [presenceError, setPresenceError] = useState('');
   const [presenceSuccess, setPresenceSuccess] = useState(false);
@@ -377,6 +390,11 @@ export default function EventsSection({
       return;
     }
 
+    if (newEventRequiresPin && !newEventPinCode.trim()) {
+      alert('Por favor, defina o PIN ou Senha de confirmação de presença do evento.');
+      return;
+    }
+
     const cat = newEventCategory === 'CUSTOM' ? customCategory || 'Outros' : newEventCategory;
     const maxPart = newMaxParticipants ? parseInt(newMaxParticipants, 10) : undefined;
 
@@ -395,7 +413,9 @@ export default function EventsSection({
       status: 'Aprovado',
       createdAt: Date.now(),
       approvedAt: Date.now(),
-      createdById: currentUser?.uid || 'user_' + Date.now()
+      createdById: currentUser?.uid || 'user_' + Date.now(),
+      requiresPin: newEventRequiresPin,
+      pinCode: newEventRequiresPin ? newEventPinCode.trim().toUpperCase() : undefined
     };
 
     // Clean undefined fields for Firestore compatibility
@@ -438,6 +458,9 @@ export default function EventsSection({
       setNewMaxParticipants('');
       setNewEventDate('');
       setNewEventTime('');
+      setNewEventRequiresPin(false);
+      setNewEventPinCode('');
+      setShowPinInCreateForm(false);
       showToast('🎉 Evento criado e publicado com sucesso!');
     }, 1200);
   };
@@ -474,6 +497,8 @@ export default function EventsSection({
       setPlayerTagInput('');
       setHasAutoFilledTag(false);
     }
+    setPresencePinInput('');
+    setShowPresencePinInput(false);
     setPresenceError('');
     setPresenceSuccess(false);
     setShowPresenceModal(event);
@@ -559,6 +584,22 @@ export default function EventsSection({
     // Auto-format if user forgot '#'
     if (!rawTag.includes('#')) {
       rawTag = rawTag + '#000';
+    }
+
+    // Validate Event Security PIN / Password if required
+    if (showPresenceModal.requiresPin && showPresenceModal.pinCode) {
+      const cleanPinInput = presencePinInput.trim().toUpperCase();
+      const expectedPin = showPresenceModal.pinCode.trim().toUpperCase();
+
+      if (!cleanPinInput) {
+        setPresenceError('🔒 Este evento exige o PIN / Senha de confirmação. Digite o código de acesso para confirmar sua presença!');
+        return;
+      }
+
+      if (cleanPinInput !== expectedPin) {
+        setPresenceError('❌ PIN / Senha de acesso incorreta! Peça a senha de confirmação ao organizador do evento.');
+        return;
+      }
     }
 
     const eventId = showPresenceModal.id;
@@ -1101,6 +1142,13 @@ export default function EventsSection({
                     <span className="px-2.5 py-1 bg-black/60 backdrop-blur-md text-pink-300 border border-white/10 text-[10px] font-black uppercase rounded-lg">
                       {event.category}
                     </span>
+
+                    {event.requiresPin && event.pinCode && (
+                      <span className="px-2.5 py-1 bg-amber-500 text-purple-950 font-mono text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Com PIN 🔒
+                      </span>
+                    )}
                   </div>
 
                   {/* Event actions quick menu */}
@@ -1264,11 +1312,13 @@ export default function EventsSection({
                         className={`flex-1 py-2.5 px-3 font-sans text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                           isFull
                             ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                            : event.requiresPin
+                            ? 'bg-gradient-to-r from-amber-500 to-pink-600 text-white hover:brightness-110 active:scale-95'
                             : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:brightness-110 active:scale-95'
                         }`}
                       >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>{isFull ? 'Esgotado' : 'Confirmar Presença ✋'}</span>
+                        {event.requiresPin ? <Lock className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                        <span>{isFull ? 'Esgotado' : event.requiresPin ? 'Confirmar c/ PIN 🔒' : 'Confirmar Presença ✋'}</span>
                       </button>
                     )}
 
@@ -1451,6 +1501,68 @@ export default function EventsSection({
                       />
                     </div>
 
+                    {/* PIN / Password Protection Option */}
+                    <div className="p-3.5 rounded-2xl bg-black/40 border border-purple-500/30 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 flex-shrink-0">
+                            <Lock className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <label className="text-xs font-black uppercase text-white tracking-wide block">
+                              Proteger Inscrição com PIN / Senha? 🔒
+                            </label>
+                            <span className="text-[10px] text-neutral-400 block leading-tight">
+                              Apenas jogadores com a senha poderão confirmar presença
+                            </span>
+                          </div>
+                        </div>
+
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={newEventRequiresPin}
+                            onChange={(e) => setNewEventRequiresPin(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-500 peer-checked:to-pink-500"></div>
+                        </label>
+                      </div>
+
+                      {newEventRequiresPin && (
+                        <div className="pt-2 border-t border-white/10 space-y-2 animate-fade-in">
+                          <label className="block text-[10px] font-extrabold uppercase text-amber-300">
+                            Crie o PIN / Senha Secreta do Evento *
+                          </label>
+                          <div className="relative flex items-center">
+                            <div className="absolute left-3 text-amber-400">
+                              <KeyRound className="w-4 h-4" />
+                            </div>
+                            <input
+                              type={showPinInCreateForm ? "text" : "password"}
+                              required={newEventRequiresPin}
+                              maxLength={20}
+                              placeholder="Ex: 1234, FESTA2026 ou VIPPKXD"
+                              value={newEventPinCode}
+                              onChange={(e) => setNewEventPinCode(e.target.value.toUpperCase())}
+                              className="w-full pl-9 pr-10 py-2 bg-black/60 border border-amber-500/40 rounded-xl text-xs text-amber-300 font-mono font-black focus:outline-none focus:ring-1 focus:ring-amber-400 uppercase tracking-widest placeholder-zinc-600"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPinInCreateForm(!showPinInCreateForm)}
+                              className="absolute right-3 text-neutral-400 hover:text-white cursor-pointer"
+                              title={showPinInCreateForm ? "Ocultar PIN" : "Mostrar PIN"}
+                            >
+                              {showPinInCreateForm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-amber-200/80 leading-relaxed font-sans">
+                            💡 <strong>Como funciona:</strong> Quem for confirmar presença precisará digitar exatamente esta senha/PIN. Você poderá ver e copiar o PIN no painel do organizador a qualquer momento!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Banner Image Choice */}
                     <div className="space-y-2 border border-white/10 bg-black/20 p-3 rounded-2xl">
                       <label className="block text-[10px] font-extrabold uppercase text-neutral-400">
@@ -1582,6 +1694,51 @@ export default function EventsSection({
                   </p>
                 </div>
 
+                {/* PIN / Password Input for Protected Events */}
+                {showPresenceModal.requiresPin && showPresenceModal.pinCode && (
+                  <div className="space-y-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl animate-fade-in">
+                    <div className="flex items-center gap-2 text-amber-300">
+                      <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                      <div>
+                        <span className="text-xs font-black uppercase block leading-tight">
+                          Senha / PIN Obrigatório 🔒
+                        </span>
+                        <span className="text-[10px] text-amber-200/80 block font-normal leading-tight">
+                          Este evento é restrito pelo criador ({showPresenceModal.organizerName}).
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 pt-1">
+                      <label className="text-[10px] font-extrabold uppercase text-amber-300 flex items-center justify-between">
+                        <span>Digite o PIN / Senha de Acesso *</span>
+                        <span className="text-[9px] text-amber-400/80 font-mono font-bold">REQUERIDO</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <div className="absolute left-3 text-amber-400">
+                          <KeyRound className="w-4 h-4" />
+                        </div>
+                        <input
+                          type={showPresencePinInput ? "text" : "password"}
+                          required
+                          placeholder="Digite o PIN fornecido pelo organizador"
+                          value={presencePinInput}
+                          onChange={(e) => setPresencePinInput(e.target.value.toUpperCase())}
+                          className="w-full pl-9 pr-10 py-2.5 bg-black/70 border border-amber-500/50 rounded-xl text-xs text-amber-300 font-mono font-black focus:outline-none focus:ring-2 focus:ring-amber-500 uppercase tracking-widest placeholder-zinc-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPresencePinInput(!showPresencePinInput)}
+                          className="absolute right-3 text-neutral-400 hover:text-white cursor-pointer"
+                          title={showPresencePinInput ? "Ocultar PIN" : "Mostrar PIN"}
+                        >
+                          {showPresencePinInput ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {presenceError && (
                   <div className="p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-300 font-bold">
                     ⚠️ {presenceError}
@@ -1632,7 +1789,7 @@ export default function EventsSection({
                   {showDetailsModal.description}
                 </p>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono pt-2 border-t border-white/5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono pt-2 border-t border-white/5">
                   <div>
                     <span className="text-[9px] text-neutral-500 uppercase block">Data e Hora</span>
                     <strong className="text-purple-300">{showDetailsModal.date} às {showDetailsModal.time}</strong>
@@ -1645,7 +1802,52 @@ export default function EventsSection({
                     <span className="text-[9px] text-neutral-500 uppercase block">Status</span>
                     <strong className="text-pink-400">{showDetailsModal.status}</strong>
                   </div>
+                  <div>
+                    <span className="text-[9px] text-neutral-500 uppercase block">Segurança</span>
+                    <strong className="text-amber-400 flex items-center gap-1">
+                      {showDetailsModal.requiresPin ? (
+                        <>
+                          <Lock className="w-3 h-3 text-amber-400" />
+                          <span>Com PIN 🔒</span>
+                        </>
+                      ) : (
+                        <span className="text-emerald-400">Pública 🌐</span>
+                      )}
+                    </strong>
+                  </div>
                 </div>
+
+                {/* Show PIN Box if Event Requires PIN */}
+                {showDetailsModal.requiresPin && showDetailsModal.pinCode && (
+                  <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl flex flex-wrap items-center justify-between gap-2 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 flex-shrink-0">
+                        <KeyRound className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-amber-300 block leading-tight">
+                          PIN / Senha de Inscrição:
+                        </span>
+                        <span className="font-mono font-black text-xs text-yellow-300 tracking-widest bg-black/60 px-2 py-0.5 rounded border border-white/10 inline-block mt-0.5">
+                          {showDetailsModal.pinCode}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (triggerAudio) triggerAudio('tap');
+                        navigator.clipboard.writeText(showDetailsModal.pinCode || '');
+                        showToast(`🔑 PIN "${showDetailsModal.pinCode}" copiado para a área de transferência!`);
+                      }}
+                      className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-purple-950 font-sans text-[11px] font-black uppercase rounded-lg flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar PIN</span>
+                    </button>
+                  </div>
+                )}
 
                 {showDetailsModal.rules && (
                   <div className="pt-2">
