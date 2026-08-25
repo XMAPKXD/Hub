@@ -583,7 +583,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
         )}
       </div>
 
-      {/* Grid of Media Assets */}
+      {/* Grid of Media Assets with limited max-height scroll container */}
       {filteredArtes.length === 0 ? (
         <div className="py-16 text-center border-2 border-dashed border-white/10 rounded-3xl bg-zinc-900/30 space-y-3">
           <Film className="w-12 h-12 text-zinc-600 mx-auto" />
@@ -609,162 +609,164 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredArtes.map((art, idx) => {
-            const isArtVid = art.isVideo || 
-              art.category === "Vídeos" || 
-              (art.imageUrl && (
-                art.imageUrl.startsWith('data:video/') || 
-                art.imageUrl.endsWith('.mp4') || 
-                art.imageUrl.endsWith('.webm') || 
-                art.imageUrl.endsWith('.mov') ||
-                art.imageUrl.includes('youtube.com') ||
-                art.imageUrl.includes('youtu.be')
-              ));
+        <div className="max-h-[580px] overflow-y-auto pr-1.5 sm:pr-2 scrollbar-thin scrollbar-thumb-pink-500/40 scrollbar-track-black/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredArtes.map((art, idx) => {
+              const isArtVid = art.isVideo || 
+                art.category === "Vídeos" || 
+                (art.imageUrl && (
+                  art.imageUrl.startsWith('data:video/') || 
+                  art.imageUrl.endsWith('.mp4') || 
+                  art.imageUrl.endsWith('.webm') || 
+                  art.imageUrl.endsWith('.mov') ||
+                  art.imageUrl.includes('youtube.com') ||
+                  art.imageUrl.includes('youtu.be')
+                ));
 
-            const isLiked = likedIds.includes(art.id);
+              const isLiked = likedIds.includes(art.id);
 
-            return (
-              <div 
-                key={art.id}
-                onClick={() => {
-                  triggerAudio('tap');
-                  setSelectedAsset(art);
-                }}
-                className="group bg-zinc-900/70 border border-white/10 hover:border-pink-500/50 rounded-2xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-pink-950/20 flex flex-col justify-between relative cursor-pointer"
-              >
-                {/* Category Pill Tag */}
-                <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 pointer-events-none">
-                  <span className="bg-black/80 backdrop-blur-md text-pink-300 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg border border-pink-500/40 flex items-center gap-1 shadow-md">
-                    {isArtVid ? <VideoIcon className="w-3 h-3 text-cyan-400" /> : <ImageIcon className="w-3 h-3 text-pink-400" />}
-                    <span>{art.category}</span>
-                  </span>
-                </div>
-
-                {/* Floating Heart & Share Actions */}
-                <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => handleToggleLike(art.id, e)}
-                    className={`p-1.5 rounded-xl border backdrop-blur-md transition-all shadow-md active:scale-90 cursor-pointer ${
-                      isLiked 
-                        ? 'bg-pink-600 text-white border-pink-400' 
-                        : 'bg-black/70 hover:bg-zinc-800 text-zinc-300 border-white/20 hover:text-pink-400'
-                    }`}
-                    title={isLiked ? "Remover dos favoritos" : "Favoritar"}
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-white' : ''}`} />
-                  </button>
-
-                  <button
-                    onClick={(e) => handleShareAsset(art, e)}
-                    className="p-1.5 bg-black/70 hover:bg-zinc-800 text-zinc-300 hover:text-cyan-300 rounded-xl border border-white/20 transition-all shadow-md active:scale-90 cursor-pointer"
-                    title="Compartilhar link"
-                  >
-                    {copiedId === art.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
-                  </button>
-
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => handleDeleteArt(art.id, art.title, e)}
-                      className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 rounded-xl border border-red-500/40 transition-all shadow-md active:scale-90 cursor-pointer"
-                      title="Excluir Mídia"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Media Preview Box */}
+              return (
                 <div 
-                  className="relative aspect-video w-full overflow-hidden flex items-center justify-center border-b border-white/10 bg-zinc-950"
-                  style={!isArtVid ? {
-                    backgroundColor: '#18181b',
-                    backgroundImage: `
-                      linear-gradient(45deg, #27272a 25%, transparent 25%), 
-                      linear-gradient(-45deg, #27272a 25%, transparent 25%), 
-                      linear-gradient(45deg, transparent 75%, #27272a 75%), 
-                      linear-gradient(-45deg, transparent 75%, #27272a 75%)
-                    `,
-                    backgroundSize: '16px 16px',
-                    backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px'
-                  } : {}}
+                  key={art.id}
+                  onClick={() => {
+                    triggerAudio('tap');
+                    setSelectedAsset(art);
+                  }}
+                  className="group bg-zinc-900/70 border border-white/10 hover:border-pink-500/50 rounded-2xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-pink-950/20 flex flex-col justify-between relative cursor-pointer"
                 >
-                  {isArtVid ? (
-                    (art.imageUrl.includes('youtube.com') || art.imageUrl.includes('youtu.be')) ? (
-                      <iframe
-                        src={getYouTubeEmbedUrl(art.imageUrl)}
-                        title={art.title}
-                        className="w-full h-full border-0 pointer-events-auto"
-                        allowFullScreen
-                      />
-                    ) : (
-                      <video 
-                        src={art.imageUrl} 
-                        playsInline
-                        preload="metadata"
-                        className="w-full h-full object-contain bg-black"
-                      />
-                    )
-                  ) : (
-                    <img 
-                      src={art.imageUrl} 
-                      alt={art.title} 
-                      className="max-w-full max-h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        (e.target as any).style.display = 'none';
-                      }}
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                    />
-                  )}
+                  {/* Category Pill Tag */}
+                  <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 pointer-events-none">
+                    <span className="bg-black/80 backdrop-blur-md text-pink-300 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg border border-pink-500/40 flex items-center gap-1 shadow-md">
+                      {isArtVid ? <VideoIcon className="w-3 h-3 text-cyan-400" /> : <ImageIcon className="w-3 h-3 text-pink-400" />}
+                      <span>{art.category}</span>
+                    </span>
+                  </div>
 
-                  {/* Hover visual cue */}
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                    <div className="p-2 bg-pink-500/30 backdrop-blur-md rounded-full border border-pink-400/50 text-white flex items-center gap-1.5 text-xs font-black uppercase shadow-lg">
-                      <Maximize2 className="w-4 h-4" />
-                      <span>Ver Completo</span>
+                  {/* Floating Heart & Share Actions */}
+                  <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => handleToggleLike(art.id, e)}
+                      className={`p-1.5 rounded-xl border backdrop-blur-md transition-all shadow-md active:scale-90 cursor-pointer ${
+                        isLiked 
+                          ? 'bg-pink-600 text-white border-pink-400' 
+                          : 'bg-black/70 hover:bg-zinc-800 text-zinc-300 border-white/20 hover:text-pink-400'
+                      }`}
+                      title={isLiked ? "Remover dos favoritos" : "Favoritar"}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-white' : ''}`} />
+                    </button>
+
+                    <button
+                      onClick={(e) => handleShareAsset(art, e)}
+                      className="p-1.5 bg-black/70 hover:bg-zinc-800 text-zinc-300 hover:text-cyan-300 rounded-xl border border-white/20 transition-all shadow-md active:scale-90 cursor-pointer"
+                      title="Compartilhar link"
+                    >
+                      {copiedId === art.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => handleDeleteArt(art.id, art.title, e)}
+                        className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 rounded-xl border border-red-500/40 transition-all shadow-md active:scale-90 cursor-pointer"
+                        title="Excluir Mídia"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Media Preview Box */}
+                  <div 
+                    className="relative aspect-video w-full overflow-hidden flex items-center justify-center border-b border-white/10 bg-zinc-950"
+                    style={!isArtVid ? {
+                      backgroundColor: '#18181b',
+                      backgroundImage: `
+                        linear-gradient(45deg, #27272a 25%, transparent 25%), 
+                        linear-gradient(-45deg, #27272a 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #27272a 75%), 
+                        linear-gradient(-45deg, transparent 75%, #27272a 75%)
+                      `,
+                      backgroundSize: '16px 16px',
+                      backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px'
+                    } : {}}
+                  >
+                    {isArtVid ? (
+                      (art.imageUrl.includes('youtube.com') || art.imageUrl.includes('youtu.be')) ? (
+                        <iframe
+                          src={getYouTubeEmbedUrl(art.imageUrl)}
+                          title={art.title}
+                          className="w-full h-full border-0 pointer-events-auto"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <video 
+                          src={art.imageUrl} 
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-contain bg-black"
+                        />
+                      )
+                    ) : (
+                      <img 
+                        src={art.imageUrl} 
+                        alt={art.title} 
+                        className="max-w-full max-h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as any).style.display = 'none';
+                        }}
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                      />
+                    )}
+
+                    {/* Hover visual cue */}
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <div className="p-2 bg-pink-500/30 backdrop-blur-md rounded-full border border-pink-400/50 text-white flex items-center gap-1.5 text-xs font-black uppercase shadow-lg">
+                        <Maximize2 className="w-4 h-4" />
+                        <span>Ver Completo</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Details & Actions Footer */}
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3 bg-gradient-to-b from-zinc-900/60 to-zinc-950/80">
+                    <div className="space-y-1">
+                      <h3 className="font-sans font-black text-xs sm:text-sm text-white leading-tight uppercase tracking-wide group-hover:text-pink-300 transition-colors flex items-center gap-1.5">
+                        {isArtVid && <VideoIcon className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
+                        <span className="line-clamp-1">{art.title}</span>
+                      </h3>
+                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                        {art.description}
+                      </p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2 border-t border-white/5">
+                      <button
+                        onClick={(e) => handleDownload(art.downloadUrl || art.imageUrl, art.title, isArtVid, e)}
+                        className="flex-1 py-2 px-3 bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30 border border-pink-400/30 hover:border-pink-400/60 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider text-pink-200 hover:text-white text-center flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+                      >
+                        <Download className="w-3.5 h-3.5 text-pink-300" />
+                        <span>{isArtVid ? 'Baixar Vídeo' : 'Baixar Foto'}</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => handleCopyLink(art.downloadUrl || art.imageUrl, art.id, e)}
+                        className="p-2 bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 rounded-xl transition-all cursor-pointer text-zinc-400 hover:text-white"
+                        title="Copiar link direto"
+                      >
+                        {copiedId === art.id ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                {/* Details & Actions Footer */}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3 bg-gradient-to-b from-zinc-900/60 to-zinc-950/80">
-                  <div className="space-y-1">
-                    <h3 className="font-sans font-black text-xs sm:text-sm text-white leading-tight uppercase tracking-wide group-hover:text-pink-300 transition-colors flex items-center gap-1.5">
-                      {isArtVid && <VideoIcon className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
-                      <span className="line-clamp-1">{art.title}</span>
-                    </h3>
-                    <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
-                      {art.description}
-                    </p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2 border-t border-white/5">
-                    <button
-                      onClick={(e) => handleDownload(art.downloadUrl || art.imageUrl, art.title, isArtVid, e)}
-                      className="flex-1 py-2 px-3 bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30 border border-pink-400/30 hover:border-pink-400/60 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider text-pink-200 hover:text-white text-center flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
-                    >
-                      <Download className="w-3.5 h-3.5 text-pink-300" />
-                      <span>{isArtVid ? 'Baixar Vídeo' : 'Baixar Foto'}</span>
-                    </button>
-
-                    <button
-                      onClick={(e) => handleCopyLink(art.downloadUrl || art.imageUrl, art.id, e)}
-                      className="p-2 bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 rounded-xl transition-all cursor-pointer text-zinc-400 hover:text-white"
-                      title="Copiar link direto"
-                    >
-                      {copiedId === art.id ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
