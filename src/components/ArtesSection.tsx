@@ -29,7 +29,7 @@ import {
   Layers,
   Sparkle
 } from 'lucide-react';
-import { loadFromCache, saveToCache, DEFAULT_CACHED_ARTES } from '../utils/cache';
+import { loadFromCache, saveToCache } from '../utils/cache';
 
 interface ArtesSectionProps {
   isAdmin: boolean;
@@ -48,9 +48,9 @@ interface BatchUploadItem {
 }
 
 export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: ArtesSectionProps) {
-  // Instant Cache initialization: loads in 0ms!
+  // Instant Cache initialization with real site assets: loads in 0ms!
   const [artes, setArtes] = useState<ArtAsset[]>(() => {
-    return loadFromCache<ArtAsset[]>('pkxd_cache_artes', DEFAULT_CACHED_ARTES as ArtAsset[]);
+    return loadFromCache<ArtAsset[]>('pkxd_cache_artes', []);
   });
   const [loading, setLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("Todas");
@@ -711,7 +711,7 @@ export default function ArtesSection({ isAdmin, triggerAudio, soundEnabled }: Ar
                       alt={art.title} 
                       className="max-w-full max-h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
                       onError={(e) => {
-                        (e.target as any).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400";
+                        (e.target as any).style.display = 'none';
                       }}
                       referrerPolicy="no-referrer"
                       loading="lazy"

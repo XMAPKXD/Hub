@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { INITIAL_NEWS } from './components/initialNews';
 import { NewsItem, FeaturedVideo, Theory, ShortItem, PastSpoiler, AppNotification } from './types';
-import { loadFromCache, saveToCache, DEFAULT_CACHED_VIDEOS } from './utils/cache';
+import { loadFromCache, saveToCache } from './utils/cache';
 import CountdownWidget from './components/CountdownWidget';
 import GiftCountdown from './components/GiftCountdown';
 import WhatsAppPromo from './components/WhatsAppPromo';
@@ -125,7 +125,9 @@ export default function App() {
     }
   });
 
-  const [pastSpoilers, setPastSpoilers] = useState<PastSpoiler[]>([]);
+  const [pastSpoilers, setPastSpoilers] = useState<PastSpoiler[]>(() => {
+    return loadFromCache<PastSpoiler[]>('pkxd_cache_past_spoilers', []);
+  });
 
   const [siteLogoUrl, setSiteLogoUrl] = useState(() => {
     try {
@@ -159,9 +161,9 @@ export default function App() {
   const [pastSpoilerToEdit, setPastSpoilerToEdit] = useState<PastSpoiler | null>(null);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
-  // State hooks for new components with instant cache hydration
+  // State hooks for new components with instant cache hydration from real site data
   const [featuredList, setFeaturedList] = useState<FeaturedVideo[]>(() => {
-    return loadFromCache<FeaturedVideo[]>('pkxd_cache_featured_videos', DEFAULT_CACHED_VIDEOS);
+    return loadFromCache<FeaturedVideo[]>('pkxd_cache_featured_videos', []);
   });
   const [theoriesList, setTheoriesList] = useState<Theory[]>(() => {
     return loadFromCache<Theory[]>('pkxd_cache_theories', []);
