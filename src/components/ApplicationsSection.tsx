@@ -20,7 +20,13 @@ import {
   CheckCircle,
   Eye,
   Star,
-  Settings
+  Settings,
+  Upload,
+  Image as ImageIcon,
+  Instagram,
+  Youtube,
+  Link2,
+  X
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, doc, setDoc, getDocs, deleteDoc } from 'firebase/firestore';
@@ -167,16 +173,25 @@ export default function ApplicationsSection({
     }
   };
 
-  // Form states - Tab 1: Panel Highlight
+  // Form states - Tab 1: Panel Highlight & Sugestão de Criador
   const [panelCreator, setPanelCreator] = useState('');
   const [panelUrl, setPanelUrl] = useState('');
   const [panelDescription, setPanelDescription] = useState('');
-  const [panelSocial, setPanelSocial] = useState('');
+  const [panelCreatorPhoto, setPanelCreatorPhoto] = useState('');
+  const [panelPhotoInputType, setPanelPhotoInputType] = useState<'upload' | 'url'>('upload');
+  const [panelInstagram, setPanelInstagram] = useState('');
+  const [panelTikTok, setPanelTikTok] = useState('');
+  const [panelYouTube, setPanelYouTube] = useState('');
 
   // Form states - Tab 2: Shorts Highlight
   const [shortsCreator, setShortsCreator] = useState('');
   const [shortsUrl, setShortsUrl] = useState('');
   const [shortsTitle, setShortsTitle] = useState('');
+  const [shortsCreatorPhoto, setShortsCreatorPhoto] = useState('');
+  const [shortsPhotoInputType, setShortsPhotoInputType] = useState<'upload' | 'url'>('upload');
+  const [shortsInstagram, setShortsInstagram] = useState('');
+  const [shortsTikTok, setShortsTikTok] = useState('');
+  const [shortsYouTube, setShortsYouTube] = useState('');
 
   // Form states - Tab 3: Submit Theory
   const [theoryTitle, setTheoryTitle] = useState('');
@@ -189,6 +204,21 @@ export default function ApplicationsSection({
   const [adminAge, setAdminAge] = useState('');
   const [adminReason, setAdminReason] = useState('');
   const [adminHours, setAdminHours] = useState('');
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('⚠️ A foto é muito pesada (limite de 5MB). Por favor, escolha outra imagem.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setter(result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const triggerAudio = (type: 'tap' | 'success' | 'levelUp') => {
     if (!soundEnabled) return;
@@ -207,11 +237,18 @@ export default function ApplicationsSection({
     setPanelCreator('');
     setPanelUrl('');
     setPanelDescription('');
-    setPanelSocial('');
+    setPanelCreatorPhoto('');
+    setPanelInstagram('');
+    setPanelTikTok('');
+    setPanelYouTube('');
 
     setShortsCreator('');
     setShortsUrl('');
     setShortsTitle('');
+    setShortsCreatorPhoto('');
+    setShortsInstagram('');
+    setShortsTikTok('');
+    setShortsYouTube('');
 
     setTheoryTitle('');
     setTheoryContent('');
@@ -242,51 +279,84 @@ export default function ApplicationsSection({
 
     try {
       if (activeTab === 'panel') {
-        if (!panelCreator || !panelUrl || !panelDescription) {
-          throw new Error('Por favor, preencha todos os campos obrigatórios.');
+        if (!panelCreator.trim() || !panelUrl.trim() || !panelDescription.trim()) {
+          throw new Error('Por favor, preencha todos os campos obrigatórios (Nome, Link do Conteúdo e Descrição).');
         }
+
+        // Validate that at least ONE social media network is provided
+        const hasSocial = Boolean(panelInstagram.trim() || panelTikTok.trim() || panelYouTube.trim());
+        if (!hasSocial) {
+          throw new Error('Por favor, informe pelo menos UMA rede social do indicado (Instagram, TikTok ou YouTube)!');
+        }
+
+        const socialParts: string[] = [];
+        if (panelInstagram.trim()) socialParts.push(`Instagram: ${panelInstagram.trim()}`);
+        if (panelTikTok.trim()) socialParts.push(`TikTok: ${panelTikTok.trim()}`);
+        if (panelYouTube.trim()) socialParts.push(`YouTube: ${panelYouTube.trim()}`);
+
         collectionName = 'applications_panel';
         payload = {
           ...payload,
-          creator: panelCreator,
-          url: panelUrl,
-          description: panelDescription,
-          social: panelSocial
+          creator: panelCreator.trim(),
+          url: panelUrl.trim(),
+          description: panelDescription.trim(),
+          creatorPhoto: panelCreatorPhoto.trim() || null,
+          instagram: panelInstagram.trim() || null,
+          tiktok: panelTikTok.trim() || null,
+          youtube: panelYouTube.trim() || null,
+          social: socialParts.join(' • ')
         };
       } else if (activeTab === 'shorts') {
-        if (!shortsCreator || !shortsUrl || !shortsTitle) {
-          throw new Error('Por favor, preencha todos os campos obrigatórios.');
+        if (!shortsCreator.trim() || !shortsUrl.trim() || !shortsTitle.trim()) {
+          throw new Error('Por favor, preencha todos os campos obrigatórios (Canal, Link do Short e Título).');
         }
+
+        // Validate that at least ONE social media network is provided
+        const hasSocial = Boolean(shortsInstagram.trim() || shortsTikTok.trim() || shortsYouTube.trim());
+        if (!hasSocial) {
+          throw new Error('Por favor, informe pelo menos UMA rede social do indicado (Instagram, TikTok ou YouTube)!');
+        }
+
+        const socialParts: string[] = [];
+        if (shortsInstagram.trim()) socialParts.push(`Instagram: ${shortsInstagram.trim()}`);
+        if (shortsTikTok.trim()) socialParts.push(`TikTok: ${shortsTikTok.trim()}`);
+        if (shortsYouTube.trim()) socialParts.push(`YouTube: ${shortsYouTube.trim()}`);
+
         collectionName = 'applications_shorts';
         payload = {
           ...payload,
-          creator: shortsCreator,
-          url: shortsUrl,
-          title: shortsTitle
+          creator: shortsCreator.trim(),
+          url: shortsUrl.trim(),
+          title: shortsTitle.trim(),
+          creatorPhoto: shortsCreatorPhoto.trim() || null,
+          instagram: shortsInstagram.trim() || null,
+          tiktok: shortsTikTok.trim() || null,
+          youtube: shortsYouTube.trim() || null,
+          social: socialParts.join(' • ')
         };
       } else if (activeTab === 'theory') {
-        if (!theoryTitle || !theoryContent || !theoryAuthor) {
+        if (!theoryTitle.trim() || !theoryContent.trim() || !theoryAuthor.trim()) {
           throw new Error('Por favor, preencha todos os campos obrigatórios.');
         }
         collectionName = 'applications_theories';
         payload = {
           ...payload,
-          title: theoryTitle,
-          content: theoryContent,
-          author: theoryAuthor
+          title: theoryTitle.trim(),
+          content: theoryContent.trim(),
+          author: theoryAuthor.trim()
         };
       } else if (activeTab === 'admin') {
-        if (!adminName || !adminContact || !adminAge || !adminReason || !adminHours) {
+        if (!adminName.trim() || !adminContact.trim() || !adminAge || !adminReason.trim() || !adminHours.trim()) {
           throw new Error('Por favor, preencha todos os campos obrigatórios.');
         }
         collectionName = 'applications_admin';
         payload = {
           ...payload,
-          name: adminName,
-          contact: adminContact,
+          name: adminName.trim(),
+          contact: adminContact.trim(),
           age: adminAge,
-          reason: adminReason,
-          hours: adminHours
+          reason: adminReason.trim(),
+          hours: adminHours.trim()
         };
       }
 
@@ -304,7 +374,7 @@ export default function ApplicationsSection({
       triggerAudio('levelUp');
       setSubmitStatus({
         success: true,
-        message: 'Inscrição enviada com sucesso! Ela foi guardada na nuvem do PKXD Central e nossa equipe vai analisar em breve! 🌟'
+        message: 'Sugestão / Inscrição enviada com sucesso! Guardada na nuvem do PKXD Central para análise da equipe! 🌟'
       });
       
       // Award XP
@@ -541,13 +611,63 @@ export default function ApplicationsSection({
                       ) : (
                         appsPanel.map((item) => (
                           <div key={item.id} className="p-4 bg-zinc-950/70 border border-white/5 rounded-2xl space-y-3 relative">
-                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
-                              <div>
-                                <span className="text-[10px] text-purple-400 font-bold uppercase block">CRIADOR</span>
-                                <h4 className="font-sans font-black text-xs text-white">{item.creator}</h4>
-                                {item.social && <p className="text-[10px] text-gray-400">{item.social}</p>}
+                            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/5 pb-3">
+                              <div className="flex items-center gap-3">
+                                {item.creatorPhoto ? (
+                                  <img 
+                                    src={item.creatorPhoto} 
+                                    alt={item.creator} 
+                                    className="w-12 h-12 rounded-2xl object-cover border border-purple-500/40 shadow-md bg-zinc-900 flex-shrink-0"
+                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-2xl bg-purple-950/50 border border-purple-500/30 flex items-center justify-center text-purple-300 font-black text-sm flex-shrink-0">
+                                    {item.creator?.charAt(0)?.toUpperCase() || '👤'}
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-[10px] text-purple-400 font-bold uppercase block">CRIADOR INDICADO</span>
+                                  <h4 className="font-sans font-black text-sm text-white">{item.creator}</h4>
+                                  <span className="text-[9px] font-mono text-gray-500">{new Date(item.createdAt).toLocaleString()}</span>
+                                </div>
                               </div>
-                              <span className="text-[9px] font-mono text-gray-500">{new Date(item.createdAt).toLocaleString()}</span>
+
+                              {/* Social Badges */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {item.instagram && (
+                                  <a
+                                    href={item.instagram.startsWith('http') ? item.instagram : `https://instagram.com/${item.instagram.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-bold hover:bg-pink-500/25 transition-colors"
+                                  >
+                                    <Instagram className="w-3 h-3" />
+                                    <span>{item.instagram.startsWith('@') ? item.instagram : `@${item.instagram.replace('https://instagram.com/', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.tiktok && (
+                                  <a
+                                    href={item.tiktok.startsWith('http') ? item.tiktok : `https://tiktok.com/@${item.tiktok.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold hover:bg-cyan-500/25 transition-colors"
+                                  >
+                                    <span className="font-black text-[10px]">TikTok:</span>
+                                    <span>{item.tiktok.startsWith('@') ? item.tiktok : `@${item.tiktok.replace('https://tiktok.com/@', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.youtube && (
+                                  <a
+                                    href={item.youtube.startsWith('http') ? item.youtube : `https://youtube.com/@${item.youtube.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-bold hover:bg-red-500/25 transition-colors"
+                                  >
+                                    <Youtube className="w-3 h-3" />
+                                    <span>{item.youtube.startsWith('@') ? item.youtube : item.youtube.replace('https://youtube.com/@', '')}</span>
+                                  </a>
+                                )}
+                              </div>
                             </div>
 
                             <div className="space-y-1.5 text-xs">
@@ -644,12 +764,63 @@ export default function ApplicationsSection({
                       ) : (
                         appsShorts.map((item) => (
                           <div key={item.id} className="p-4 bg-zinc-950/70 border border-white/5 rounded-2xl space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
-                              <div>
-                                <span className="text-[10px] text-cyan-400 font-bold uppercase block">CANAL</span>
-                                <h4 className="font-sans font-black text-xs text-white">{item.creator}</h4>
+                            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/5 pb-3">
+                              <div className="flex items-center gap-3">
+                                {item.creatorPhoto ? (
+                                  <img 
+                                    src={item.creatorPhoto} 
+                                    alt={item.creator} 
+                                    className="w-12 h-12 rounded-2xl object-cover border border-cyan-500/40 shadow-md bg-zinc-900 flex-shrink-0"
+                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-2xl bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-black text-sm flex-shrink-0">
+                                    {item.creator?.charAt(0)?.toUpperCase() || '📱'}
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-[10px] text-cyan-400 font-bold uppercase block">CANAL / CRIADOR</span>
+                                  <h4 className="font-sans font-black text-sm text-white">{item.creator}</h4>
+                                  <span className="text-[9px] font-mono text-gray-500">{new Date(item.createdAt).toLocaleString()}</span>
+                                </div>
                               </div>
-                              <span className="text-[9px] font-mono text-gray-500">{new Date(item.createdAt).toLocaleString()}</span>
+
+                              {/* Social Badges */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {item.instagram && (
+                                  <a
+                                    href={item.instagram.startsWith('http') ? item.instagram : `https://instagram.com/${item.instagram.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-bold hover:bg-pink-500/25 transition-colors"
+                                  >
+                                    <Instagram className="w-3 h-3" />
+                                    <span>{item.instagram.startsWith('@') ? item.instagram : `@${item.instagram.replace('https://instagram.com/', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.tiktok && (
+                                  <a
+                                    href={item.tiktok.startsWith('http') ? item.tiktok : `https://tiktok.com/@${item.tiktok.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold hover:bg-cyan-500/25 transition-colors"
+                                  >
+                                    <span className="font-black text-[10px]">TikTok:</span>
+                                    <span>{item.tiktok.startsWith('@') ? item.tiktok : `@${item.tiktok.replace('https://tiktok.com/@', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.youtube && (
+                                  <a
+                                    href={item.youtube.startsWith('http') ? item.youtube : `https://youtube.com/@${item.youtube.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-bold hover:bg-red-500/25 transition-colors"
+                                  >
+                                    <Youtube className="w-3 h-3" />
+                                    <span>{item.youtube.startsWith('@') ? item.youtube : item.youtube.replace('https://youtube.com/@', '')}</span>
+                                  </a>
+                                )}
+                              </div>
                             </div>
 
                             <div className="space-y-1.5 text-xs">
@@ -936,19 +1107,19 @@ export default function ApplicationsSection({
             <form onSubmit={handleSubmit} className="space-y-5">
               
               {activeTab === 'panel' && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="border-b border-white/5 pb-2">
                     <h3 className="font-sans font-black text-base uppercase text-purple-300">
-                      🎥 Inscrição para Destaque no Painel de Vídeos
+                      🎥 Sugestão & Indicação de Criador / Destaque de Vídeo
                     </h3>
                     <p className="text-[11px] text-gray-400 font-sans leading-normal">
-                      Quer ver sua transmissão ou vídeo em destaque na nossa Central de Vídeos? Envie os dados abaixo!
+                      Indique seu canal ou sugira um criador talentoso de PK XD para entrar nos destaques oficiais da nossa Central!
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Nome do Criador *</label>
+                      <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wider font-mono">Nome do Indicado / Criador *</label>
                       <input
                         type="text"
                         required
@@ -960,7 +1131,7 @@ export default function ApplicationsSection({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Link do Vídeo / Live (YouTube) *</label>
+                      <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wider font-mono">Link do Vídeo / Live / Canal *</label>
                       <input
                         type="url"
                         required
@@ -972,57 +1143,198 @@ export default function ApplicationsSection({
                     </div>
                   </div>
 
+                  {/* Real Photo of Nominee */}
+                  <div className="p-4 rounded-2xl bg-zinc-950/60 border border-purple-500/20 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <label className="text-[11px] font-bold text-purple-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Foto Real do Indicado (Opcional - Sem fotos falsas!)</span>
+                        </label>
+                        <p className="text-[10px] text-gray-400 font-sans">
+                          Envie uma foto real do avatar ou canal do indicado do seu aparelho ou cole o link direto da imagem.
+                        </p>
+                      </div>
+
+                      {/* Input type switch */}
+                      <div className="flex items-center bg-black/50 p-1 rounded-xl border border-white/5 text-[10px] font-bold font-mono">
+                        <button
+                          type="button"
+                          onClick={() => setPanelPhotoInputType('upload')}
+                          className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                            panelPhotoInputType === 'upload' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          Upload Foto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPanelPhotoInputType('url')}
+                          className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                            panelPhotoInputType === 'url' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          Colar Link
+                        </button>
+                      </div>
+                    </div>
+
+                    {panelPhotoInputType === 'upload' ? (
+                      <div>
+                        <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-zinc-800 hover:border-purple-500/50 rounded-xl bg-black/30 cursor-pointer transition-all">
+                          <Upload className="w-5 h-5 text-purple-400 mb-1" />
+                          <span className="text-xs font-bold text-gray-300">Clique para selecionar foto do celular / PC</span>
+                          <span className="text-[10px] text-gray-500 font-mono">PNG, JPG, WEBP (Max 5MB)</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageFileChange(e, setPanelCreatorPhoto)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <input
+                          type="url"
+                          value={panelCreatorPhoto}
+                          onChange={(e) => setPanelCreatorPhoto(e.target.value)}
+                          placeholder="https://exemplo.com/foto_do_indicado.png"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-purple-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+                    )}
+
+                    {/* Preview real photo */}
+                    {panelCreatorPhoto && (
+                      <div className="flex items-center gap-3 bg-black/40 p-2.5 rounded-xl border border-purple-500/30">
+                        <img
+                          src={panelCreatorPhoto}
+                          alt="Foto do Indicado"
+                          className="w-12 h-12 rounded-xl object-cover border border-purple-500/50 bg-zinc-900 flex-shrink-0"
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-white truncate">Foto do indicado anexada com sucesso!</p>
+                          <p className="text-[10px] text-purple-300 font-mono">Foto real selecionada</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPanelCreatorPhoto('')}
+                          className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg cursor-pointer transition-colors"
+                          title="Remover foto"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Social Networks of Nominee - At least 1 mandatory */}
+                  <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-3">
+                    <div className="border-b border-white/5 pb-2 flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <label className="text-[11px] font-bold text-purple-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                          <Link2 className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Redes Sociais do Indicado *</span>
+                        </label>
+                        <p className="text-[10px] text-gray-400 font-sans">
+                          Você pode preencher as três, mas <strong className="text-purple-300">pelo menos uma (Instagram, TikTok ou YouTube) é obrigatória!</strong>
+                        </p>
+                      </div>
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">
+                        Pelo menos 1 obrigatório
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Instagram */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                          <Instagram className="w-3 h-3 text-pink-400" />
+                          <span>Instagram</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={panelInstagram}
+                          onChange={(e) => setPanelInstagram(e.target.value)}
+                          placeholder="@usuario ou link"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-pink-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+
+                      {/* TikTok */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                          <Smartphone className="w-3 h-3 text-cyan-400" />
+                          <span>TikTok</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={panelTikTok}
+                          onChange={(e) => setPanelTikTok(e.target.value)}
+                          placeholder="@usuario ou link"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-cyan-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+
+                      {/* YouTube */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-red-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                          <Youtube className="w-3 h-3 text-red-400" />
+                          <span>YouTube</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={panelYouTube}
+                          onChange={(e) => setPanelYouTube(e.target.value)}
+                          placeholder="@canal ou link"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-red-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Descrição do Conteúdo *</label>
+                    <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wider font-mono">Descrição / Motivo da Indicação *</label>
                     <textarea
                       required
                       rows={3}
                       value={panelDescription}
                       onChange={(e) => setPanelDescription(e.target.value)}
-                      placeholder="Conte um pouco sobre o vídeo ou do que trata a sua live de códigos de PK XD..."
+                      placeholder="Conte um pouco sobre o criador/vídeo, por que merece destaque no PKXD Central..."
                       className="w-full bg-black/40 border border-zinc-800 focus:border-purple-500 rounded-xl p-3 text-xs text-white placeholder-gray-500 outline-none transition-all resize-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Rede Social / Instagram (Opcional)</label>
-                    <input
-                      type="text"
-                      value={panelSocial}
-                      onChange={(e) => setPanelSocial(e.target.value)}
-                      placeholder="@instagram_do_criador"
-                      className="w-full bg-black/40 border border-zinc-800 focus:border-purple-500 rounded-xl p-3 text-xs text-white placeholder-gray-500 outline-none transition-all"
                     />
                   </div>
                 </div>
               )}
 
               {activeTab === 'shorts' && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="border-b border-white/5 pb-2">
                     <h3 className="font-sans font-black text-base uppercase text-cyan-300">
-                      📱 Inscrição para Destaque de Shorts
+                      📱 Sugestão & Indicação de Shorts
                     </h3>
                     <p className="text-[11px] text-gray-400 font-sans leading-normal">
-                      Destaque os seus melhores e mais engraçados curtas (Shorts) de PK XD no nosso feed rotativo!
+                      Indique seus curtas ou os vídeos curtos mais legais de PK XD para entrar no nosso feed rotativo!
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Canal do YouTube *</label>
+                      <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wider font-mono">Nome do Canal / Indicado *</label>
                       <input
                         type="text"
                         required
                         value={shortsCreator}
                         onChange={(e) => setShortsCreator(e.target.value)}
-                        placeholder="Nome do seu Canal de Shorts"
+                        placeholder="Nome do Criador ou Canal"
                         className="w-full bg-black/40 border border-zinc-800 focus:border-cyan-500 rounded-xl p-3 text-xs text-white placeholder-gray-500 outline-none transition-all"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">URL do Short (YouTube ou TikTok) *</label>
+                      <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wider font-mono">URL do Short (YouTube ou TikTok) *</label>
                       <input
                         type="url"
                         required
@@ -1034,8 +1346,160 @@ export default function ApplicationsSection({
                     </div>
                   </div>
 
+                  {/* Real Photo of Shorts Nominee */}
+                  <div className="p-4 rounded-2xl bg-zinc-950/60 border border-cyan-500/20 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <label className="text-[11px] font-bold text-cyan-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Foto Real do Indicado (Opcional - Sem fotos falsas!)</span>
+                        </label>
+                        <p className="text-[10px] text-gray-400 font-sans">
+                          Envie uma foto real do avatar ou canal do indicado do seu aparelho ou cole o link direto da imagem.
+                        </p>
+                      </div>
+
+                      {/* Input type switch */}
+                      <div className="flex items-center bg-black/50 p-1 rounded-xl border border-white/5 text-[10px] font-bold font-mono">
+                        <button
+                          type="button"
+                          onClick={() => setShortsPhotoInputType('upload')}
+                          className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                            shortsPhotoInputType === 'upload' ? 'bg-cyan-600 text-black font-black shadow' : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          Upload Foto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShortsPhotoInputType('url')}
+                          className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                            shortsPhotoInputType === 'url' ? 'bg-cyan-600 text-black font-black shadow' : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          Colar Link
+                        </button>
+                      </div>
+                    </div>
+
+                    {shortsPhotoInputType === 'upload' ? (
+                      <div>
+                        <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-zinc-800 hover:border-cyan-500/50 rounded-xl bg-black/30 cursor-pointer transition-all">
+                          <Upload className="w-5 h-5 text-cyan-400 mb-1" />
+                          <span className="text-xs font-bold text-gray-300">Clique para selecionar foto do celular / PC</span>
+                          <span className="text-[10px] text-gray-500 font-mono">PNG, JPG, WEBP (Max 5MB)</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageFileChange(e, setShortsCreatorPhoto)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <input
+                          type="url"
+                          value={shortsCreatorPhoto}
+                          onChange={(e) => setShortsCreatorPhoto(e.target.value)}
+                          placeholder="https://exemplo.com/foto_do_indicado.png"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-cyan-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+                    )}
+
+                    {/* Preview real photo */}
+                    {shortsCreatorPhoto && (
+                      <div className="flex items-center gap-3 bg-black/40 p-2.5 rounded-xl border border-cyan-500/30">
+                        <img
+                          src={shortsCreatorPhoto}
+                          alt="Foto do Indicado"
+                          className="w-12 h-12 rounded-xl object-cover border border-cyan-500/50 bg-zinc-900 flex-shrink-0"
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-white truncate">Foto do indicado anexada com sucesso!</p>
+                          <p className="text-[10px] text-cyan-300 font-mono">Foto real selecionada</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShortsCreatorPhoto('')}
+                          className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg cursor-pointer transition-colors"
+                          title="Remover foto"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Social Networks of Nominee - At least 1 mandatory */}
+                  <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-3">
+                    <div className="border-b border-white/5 pb-2 flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <label className="text-[11px] font-bold text-cyan-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                          <Link2 className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Redes Sociais do Indicado *</span>
+                        </label>
+                        <p className="text-[10px] text-gray-400 font-sans">
+                          Você pode preencher as três, mas <strong className="text-cyan-300">pelo menos uma (Instagram, TikTok ou YouTube) é obrigatória!</strong>
+                        </p>
+                      </div>
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+                        Pelo menos 1 obrigatório
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Instagram */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-pink-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                          <Instagram className="w-3 h-3 text-pink-400" />
+                          <span>Instagram</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={shortsInstagram}
+                          onChange={(e) => setShortsInstagram(e.target.value)}
+                          placeholder="@usuario ou link"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-pink-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+
+                      {/* TikTok */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                          <Smartphone className="w-3 h-3 text-cyan-400" />
+                          <span>TikTok</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={shortsTikTok}
+                          onChange={(e) => setShortsTikTok(e.target.value)}
+                          placeholder="@usuario ou link"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-cyan-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+
+                      {/* YouTube */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-red-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                          <Youtube className="w-3 h-3 text-red-400" />
+                          <span>YouTube</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={shortsYouTube}
+                          onChange={(e) => setShortsYouTube(e.target.value)}
+                          placeholder="@canal ou link"
+                          className="w-full bg-black/40 border border-zinc-800 focus:border-red-500 rounded-xl p-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Frase de Efeito ou Título do Short *</label>
+                    <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wider font-mono">Frase de Efeito ou Título do Short *</label>
                     <input
                       type="text"
                       required

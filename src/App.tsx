@@ -2387,360 +2387,7 @@ export default function App() {
   return (
     <div id="pkxd-app-root" className="theme-dark min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-yellow-400 selection:text-black pb-16 relative overflow-x-hidden bg-pkxd-texture">
       
-      {/* Entry Auth & Guest Modal Overlay */}
-      <AnimatePresence>
-        {!isAuthInitializing && !user && !continuedAsGuest && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl overflow-y-auto">
-            {/* Ambient glows behind the modal */}
-            <div className="absolute top-1/4 left-1/4 w-60 h-60 bg-pink-500/10 rounded-full filter blur-3xl pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 w-60 h-60 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none" />
-            
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="bg-zinc-900 border border-pink-500/30 rounded-3xl w-full max-w-md p-6 sm:p-8 relative shadow-[0_10px_50px_rgba(219,39,119,0.2)] space-y-6 text-center select-none my-8"
-            >
-              {/* Header Icon */}
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 border border-pink-500/30 flex items-center justify-center text-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.35)] animate-pulse">
-                <Gamepad2 className="w-8 h-8 fill-pink-400" />
-              </div>
-
-              {/* Title Block */}
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 bg-pink-500/10 border border-pink-500/30 px-3 py-1 rounded-full text-pink-400 font-mono text-[10px] font-extrabold uppercase tracking-widest">
-                  <Sparkles className="w-3 h-3 text-pink-400" />
-                  Portal PK XD Central
-                </div>
-                <h3 className="font-sans font-black text-2xl text-white uppercase tracking-wider leading-none pt-2">
-                  Seja Bem-vindo! 🔮
-                </h3>
-                <p className="font-sans text-[11px] text-zinc-400 leading-normal">
-                  Crie sua conta de fã para subir no Ranking, mudar seu apelido e salvar suas conquistas!
-                </p>
-              </div>
-
-              {/* Auth Mode Tabs Selector */}
-              <div className="flex bg-zinc-950/80 p-1 rounded-2xl border border-white/5">
-                <button
-                  type="button"
-                  onClick={() => handleSwitchTab('register')}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                    modalAuthTab === 'register' ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  🚀 Criar Conta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSwitchTab('login')}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                    modalAuthTab === 'login' ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  🔑 Já tenho Conta
-                </button>
-              </div>
-
-              {/* Error messages block */}
-              {(googleAuthError || modalAuthError) && (
-                <div className="bg-red-500/15 border border-red-500/30 p-3.5 rounded-2xl text-left flex gap-2.5 items-start text-xs text-red-200">
-                  <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="leading-relaxed font-sans text-[11px]">
-                    {modalAuthError || googleAuthError}
-                  </p>
-                </div>
-              )}
-
-              {/* Form Render */}
-              {pendingEmailVerification ? (
-                <div className="space-y-4 text-left">
-                  <div className="bg-emerald-500/15 border border-emerald-500/30 p-3.5 rounded-2xl space-y-2 text-xs text-emerald-200">
-                    <div className="font-bold uppercase tracking-wider text-[10px] text-emerald-400 flex items-center gap-1.5">
-                      <Mail className="w-4 h-4 text-emerald-400 animate-bounce" />
-                      <span>E-MAIL DE CONFIRMAÇÃO ENVIADO!</span>
-                    </div>
-                    <p className="text-[11px] leading-relaxed text-zinc-300 font-sans">
-                      Enviamos um código de verificação de 6 dígitos para o seu e-mail: <strong className="text-yellow-300 font-mono">{pendingEmailVerification.email}</strong>.
-                    </p>
-                    <div className="p-2.5 bg-black/40 rounded-xl border border-emerald-500/30 flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 text-[10px] uppercase font-bold">Seu Código:</span>
-                      <span className="text-yellow-300 font-mono font-black text-sm tracking-widest">{pendingEmailVerification.code}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1.5 ml-0.5">
-                      Digite o Código de 6 dígitos:
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      required
-                      placeholder="000000"
-                      value={verificationCodeInput}
-                      onChange={(e) => setVerificationCodeInput(e.target.value.replace(/\D/g, ''))}
-                      className="w-full text-center bg-zinc-950 border-2 border-pink-500/50 rounded-2xl py-3 text-2xl font-mono font-black tracking-[0.4em] text-yellow-300 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-500/50 transition-all"
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmEmailCode}
-                    disabled={isAuthenticating || verificationCodeInput.length !== 6}
-                    className="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 disabled:opacity-50 text-white rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-lg"
-                  >
-                    {isAuthenticating ? 'Verificando Código... 🚀' : 'Confirmar Código e Ativar Conta! ⚡'}
-                  </button>
-
-                  <div className="flex flex-col gap-2 pt-2 text-center border-t border-white/5">
-                    <button
-                      type="button"
-                      disabled={resendCooldown > 0}
-                      onClick={handleResendVerificationCode}
-                      className="text-xs text-pink-400 hover:text-pink-300 font-bold uppercase tracking-wider disabled:opacity-40 cursor-pointer"
-                    >
-                      {resendCooldown > 0 ? `Reenviar novo código em (${resendCooldown}s)...` : '🔄 Reenviar Código por E-mail'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPendingEmailVerification(null);
-                        setVerificationCodeInput('');
-                        setModalAuthError(null);
-                      }}
-                      className="text-[11px] text-zinc-400 hover:text-zinc-200 underline cursor-pointer"
-                    >
-                      ✏️ Voltar e alterar e-mail ou dados
-                    </button>
-                  </div>
-                </div>
-              ) : modalAuthTab === 'register' ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setModalAuthError(null);
-                    const cleanName = modalPkxdName.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
-                    const cleanNumber = modalPkxdNumber.trim().replace(/[^0-9]/g, '');
-
-                    if (!cleanName || cleanName.length < 2) {
-                      setModalAuthError('⚠️ Por favor, digite seu Nome no PK XD (mínimo 2 letras)!');
-                      return;
-                    }
-                    if (!cleanNumber || cleanNumber.length < 1) {
-                      setModalAuthError('⚠️ Por favor, digite o Número / Tag # do seu PK XD (ex: 245 ou 000)!');
-                      return;
-                    }
-                    if (modalPassword.length < 6) {
-                      setModalAuthError('⚠️ A senha precisa ter pelo menos 6 caracteres!');
-                      return;
-                    }
-                    const combinedTag = `${cleanName}#${cleanNumber}`;
-                    handleEmailRegister(modalEmail, modalPassword, combinedTag);
-                  }}
-                  className="space-y-4 text-left"
-                >
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
-                          Nome no PK XD (Nick) *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          maxLength={16}
-                          placeholder="Ex: LUNA ou GABRIEL"
-                          value={modalPkxdName}
-                          onChange={(e) => setModalPkxdName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
-                          className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white uppercase placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all font-mono font-bold"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
-                          Número / Tag # do PK XD *
-                        </label>
-                        <div className="relative flex items-center">
-                          <span className="absolute left-3 font-mono font-black text-xs text-pink-400">#</span>
-                          <input
-                            type="text"
-                            required
-                            maxLength={6}
-                            placeholder="Ex: 245 ou 000"
-                            value={modalPkxdNumber}
-                            onChange={(e) => setModalPkxdNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                            className="w-full bg-zinc-950 border border-white/10 rounded-xl pl-7 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all font-mono font-bold"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Live preview badge */}
-                    <div className="p-2.5 bg-purple-950/40 border border-purple-500/30 rounded-xl flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 font-medium">🎮 Sua Tag Completa PK XD:</span>
-                      <span className="font-mono font-black text-yellow-300 bg-black/60 px-2 py-0.5 rounded-lg border border-yellow-400/30">
-                        {modalPkxdName.trim() || 'SEUNICK'}#{modalPkxdNumber.trim() || '000'}
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
-                        E-mail
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="seuemail@exemplo.com"
-                        value={modalEmail}
-                        onChange={(e) => setModalEmail(e.target.value)}
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
-                        Senha Secreta
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={6}
-                        placeholder="Mínimo 6 caracteres"
-                        value={modalPassword}
-                        onChange={(e) => setModalPassword(e.target.value)}
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isAuthenticating}
-                    className="w-full py-3 mt-2 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 disabled:opacity-50 text-white rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-lg hover:scale-[1.01]"
-                  >
-                    {isAuthenticating ? 'Enviando Código... 🚀' : 'Criar Conta (Enviar Código) 📩'}
-                  </button>
-
-                  <div className="relative py-2 flex items-center justify-center">
-                    <span className="absolute bg-zinc-900 px-3 text-[10px] font-black text-zinc-500 uppercase tracking-widest">OU</span>
-                    <hr className="w-full border-white/5" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerAudio('tap');
-                      handleLogin();
-                    }}
-                    disabled={isAuthenticating}
-                    className="w-full py-3 bg-white hover:bg-zinc-100 text-zinc-900 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 border border-white/10 shadow-md"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.9h6.6c-.28 1.5-1.11 2.76-2.39 3.62v3h3.86c2.26-2.08 3.67-5.14 3.67-8.45z"/>
-                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.1A11.99 11.99 0 0 0 12 24z"/>
-                      <path fill="#FBBC05" d="M5.27 14.29a7.18 7.18 0 0 1 0-4.58V6.6H1.29a11.99 11.99 0 0 0 0 10.79l3.98-3.1z"/>
-                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A11.99 11.99 0 0 0 1.29 6.6l3.98 3.1c.95-2.85 3.6-4.95 6.73-4.95z"/>
-                    </svg>
-                    Criar / Entrar com o Google
-                  </button>
-                </form>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setModalAuthError(null);
-                    handleEmailLogin(modalEmail, modalPassword);
-                  }}
-                  className="space-y-4 text-left"
-                >
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
-                        E-mail
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="seuemail@exemplo.com"
-                        value={modalEmail}
-                        onChange={(e) => setModalEmail(e.target.value)}
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1 ml-0.5">
-                        Senha Secreta
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={6}
-                        placeholder="Digite sua senha"
-                        value={modalPassword}
-                        onChange={(e) => setModalPassword(e.target.value)}
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isAuthenticating}
-                    className="w-full py-3 mt-2 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 disabled:opacity-50 text-white rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-lg hover:scale-[1.01]"
-                  >
-                    {isAuthenticating ? 'Entrando... 🔑' : 'Entrar no meu Perfil! 🔑'}
-                  </button>
-
-                  <div className="relative py-2 flex items-center justify-center">
-                    <span className="absolute bg-zinc-900 px-3 text-[10px] font-black text-zinc-500 uppercase tracking-widest">OU</span>
-                    <hr className="w-full border-white/5" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerAudio('tap');
-                      handleLogin();
-                    }}
-                    disabled={isAuthenticating}
-                    className="w-full py-3 bg-white hover:bg-zinc-100 text-zinc-900 rounded-xl font-sans font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 border border-white/10"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.9h6.6c-.28 1.5-1.11 2.76-2.39 3.62v3h3.86c2.26-2.08 3.67-5.14 3.67-8.45z"/>
-                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.1A11.99 11.99 0 0 0 12 24z"/>
-                      <path fill="#FBBC05" d="M5.27 14.29a7.18 7.18 0 0 1 0-4.58V6.6H1.29a11.99 11.99 0 0 0 0 10.79l3.98-3.1z"/>
-                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A11.99 11.99 0 0 0 1.29 6.6l3.98 3.1c.95-2.85 3.6-4.95 6.73-4.95z"/>
-                    </svg>
-                    Entrar com o Google
-                  </button>
-                </form>
-              )}
-
-              {/* Bottom Guest Option */}
-              <div className="border-t border-white/5 pt-4 space-y-2">
-                <p className="text-[10px] text-zinc-500 font-bold">
-                  Quer apenas dar uma olhadinha no portal antes?
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerAudio('success');
-                    sessionStorage.setItem('pkxd_continued_as_guest', 'true');
-                    setContinuedAsGuest(true);
-                  }}
-                  className="w-full py-2.5 bg-zinc-800/60 hover:bg-zinc-800 border border-white/5 hover:border-white/10 text-zinc-400 hover:text-zinc-200 font-sans text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer hover:scale-[1.01]"
-                >
-                  Continuar como Convidado 💬
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Ambient glows and background */}
       
       {/* Premium ambient space backdrop glows */}
       <div className="absolute top-1/4 right-[10%] w-[500px] h-[500px] pointer-events-none select-none rounded-full" style={{ backgroundImage: 'radial-gradient(circle, var(--glow-1) 0%, transparent 70%)' }} />
@@ -2819,23 +2466,25 @@ export default function App() {
         </button>
       </div>
 
-      {/* Navigation Header - Premium PK XD Purple Header with responsive navigation */}
-      <nav id="nav-header" className="sticky top-0 z-30 bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-700 border-b-4 border-purple-900 select-none py-2 sm:py-2.5 px-2 sm:px-5 shadow-xl backdrop-blur-md">
+      {/* Navigation Header - Fully responsive and accessible PK XD Central Header */}
+      <nav id="nav-header" className="sticky top-0 z-40 bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 border-b-2 border-purple-950 select-none py-2 px-2 sm:px-4 shadow-xl backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-3 w-full">
           
-          {/* Brand Name with Click to Home */}
+          {/* Brand Name & Logo with Click to Home */}
           <button
+            id="brand-home-btn"
             onClick={() => {
               triggerAudio('tap');
               navigateTo('/');
             }}
-            className="text-left flex items-center gap-1.5 sm:gap-2 group cursor-pointer focus:outline-none flex-shrink-0"
+            className="text-left flex items-center gap-1.5 sm:gap-2 group cursor-pointer focus:outline-none shrink-0"
+            title="Ir para o Início do PKXD Central"
           >
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-yellow-300 font-black text-base sm:text-lg shadow-inner group-hover:scale-105 transition-transform flex-shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 text-purple-950 flex items-center justify-center font-black text-base sm:text-lg shadow-[0_2px_10px_rgba(251,191,36,0.35)] border border-yellow-300 group-hover:scale-105 transition-transform shrink-0">
               ⚡
             </div>
             <div className="flex flex-col justify-center">
-              <h1 className="font-sans font-black text-base sm:text-xl md:text-2xl tracking-tighter text-white uppercase drop-shadow-[0_2px_0_rgba(0,0,0,0.4)] transform skew-x-[-2deg] flex items-center gap-1 leading-none">
+              <h1 className="font-sans font-black text-sm xs:text-base sm:text-xl tracking-tight text-white uppercase drop-shadow-sm flex items-center gap-1 leading-none">
                 <span>PKXD</span>
                 <span className="text-yellow-300">Central</span>
               </h1>
@@ -2845,62 +2494,12 @@ export default function App() {
             </div>
           </button>
 
-          {/* Action Links & Controls */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* Action Links & Controls (Optimized for Mobile and Desktop) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0 max-w-[calc(100%-110px)] sm:max-w-none overflow-x-auto no-scrollbar py-0.5">
 
-            {/* Auth / Login / Create Account Button in Top Nav */}
-            {user ? (
-              <button
-                onClick={() => {
-                  triggerAudio('tap');
-                  navigateTo('/pkxd-id');
-                }}
-                className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/50 text-emerald-200 active:scale-95 flex-shrink-0"
-                title={`Conectado como ${user.displayName || user.email}`}
-              >
-                <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[9px] sm:text-[10px] flex-shrink-0">
-                  👤
-                </div>
-                <span className="hidden md:inline truncate max-w-[80px]">
-                  {user.displayName?.split('#')[0] || user.email?.split('@')[0] || 'Conta'}
-                </span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  triggerAudio('tap');
-                  navigateTo('/login');
-                }}
-                className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 text-purple-950 border-yellow-300 hover:brightness-110 flex-shrink-0"
-                title="Fazer Login ou Criar Conta"
-              >
-                <KeyRound className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="hidden xs:inline">Entrar</span>
-              </button>
-            )}
-
-            {/* Quick Passport Link in Top Nav */}
-            <button
-              onClick={() => {
-                triggerAudio('tap');
-                navigateTo('/pkxd-id');
-              }}
-              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md flex-shrink-0 ${
-                activeTab === 'passaporte'
-                  ? 'bg-yellow-400 text-purple-950 border-yellow-300 shadow-yellow-400/20'
-                  : 'bg-purple-900/80 hover:bg-purple-800 text-white border-purple-400/40'
-              }`}
-              title="Acessar PKXD ID"
-            >
-              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline">PKXD ID</span>
-              <span className="bg-purple-950/60 text-yellow-300 text-[8px] sm:text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
-                Lv.{fanLevel}
-              </span>
-            </button>
-
-            {/* Notification center bell with badge */}
+            {/* 1. Notification Center Bell */}
             <button 
+              id="nav-notifications-btn"
               type="button"
               onClick={() => {
                 triggerAudio('tap');
@@ -2917,19 +2516,20 @@ export default function App() {
                   });
                 }
               }}
-              className="h-8 sm:h-9 w-8 sm:w-9 rounded-xl sm:rounded-2xl bg-purple-900/80 border-2 border-purple-500/50 text-yellow-300 hover:bg-purple-800 transition-all cursor-pointer relative flex items-center justify-center text-[11px] font-extrabold shadow-md active:scale-95 flex-shrink-0"
-              title="Central de Notificações Recentes"
+              className="h-8 sm:h-9 w-8 sm:w-9 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-400/50 text-yellow-300 transition-all cursor-pointer relative flex items-center justify-center text-xs font-black shadow-md active:scale-95 shrink-0"
+              title="Central de Notificações"
             >
-              <BellRing className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-swing" />
+              <BellRing className="w-4 h-4 animate-swing" />
               {unreadCount > 0 && (
-                <span className="bg-pink-500 text-white text-[8px] font-black px-1 py-0.2 rounded-full border border-purple-950 absolute -top-1 -right-1 shadow">
+                <span className="bg-pink-500 text-white text-[8px] font-black px-1 py-0.2 rounded-full border border-purple-950 absolute -top-1 -right-1 shadow animate-pulse">
                   {unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Inscrições page navigation tab */}
+            {/* 2. Inscrições Page Navigation Tab */}
             <button
+              id="nav-inscricoes-btn"
               onClick={() => {
                 triggerAudio('tap');
                 if (isApplicationsRoute) {
@@ -2938,32 +2538,87 @@ export default function App() {
                   navigateTo('/inscricoes');
                 }
               }}
-              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 flex-shrink-0 ${
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 isApplicationsRoute
                   ? 'bg-gradient-to-r from-cyan-400 to-teal-400 text-purple-950 border-cyan-300 hover:brightness-110'
-                  : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400 hover:brightness-110'
+                  : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400/50 hover:brightness-110'
               }`}
               title={isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições Oficiais'}
             >
-              <Compass className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline">{isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições'}</span>
-              <span className="sm:hidden text-[10px] font-bold">Inscr.</span>
+              <Compass className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xs:inline">{isApplicationsRoute ? 'Voltar' : 'Inscrições'}</span>
+              <span className="xs:hidden text-[10px] font-bold">{isApplicationsRoute ? 'Hub' : 'Inscr.'}</span>
             </button>
 
-            {/* Admin toggle Button */}
+            {/* 3. Quick Passport / PKXD ID Tab */}
             <button
+              id="nav-pkxd-id-btn"
+              onClick={() => {
+                triggerAudio('tap');
+                navigateTo('/pkxd-id');
+              }}
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+                activeTab === 'passaporte'
+                  ? 'bg-yellow-400 text-purple-950 border-yellow-300 shadow-yellow-400/20'
+                  : 'bg-purple-900/80 hover:bg-purple-800 text-white border-purple-400/40'
+              }`}
+              title="Acessar PKXD ID e Perfil"
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">PKXD ID</span>
+              <span className="bg-purple-950/60 text-yellow-300 text-[8px] sm:text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
+                Lv.{fanLevel}
+              </span>
+            </button>
+
+            {/* 4. Login / Profile Button */}
+            {user ? (
+              <button
+                id="nav-user-profile-btn"
+                onClick={() => {
+                  triggerAudio('tap');
+                  navigateTo('/pkxd-id');
+                }}
+                className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/50 text-emerald-200 active:scale-95 shrink-0 whitespace-nowrap"
+                title={`Conectado como ${user.displayName || user.email}`}
+              >
+                <div className="w-4 h-4 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[9px] shrink-0">
+                  👤
+                </div>
+                <span className="hidden sm:inline truncate max-w-[70px]">
+                  {user.displayName?.split('#')[0] || 'Perfil'}
+                </span>
+              </button>
+            ) : (
+              <button
+                id="nav-login-btn"
+                onClick={() => {
+                  triggerAudio('tap');
+                  setExplicitAuthModalOpen(true);
+                }}
+                className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 text-purple-950 border-yellow-300 hover:brightness-110 shrink-0 whitespace-nowrap"
+                title="Fazer Login ou Criar Conta"
+              >
+                <KeyRound className="w-3.5 h-3.5 shrink-0" />
+                <span>Entrar</span>
+              </button>
+            )}
+
+            {/* 5. Admin Toggle Button */}
+            <button
+              id="nav-admin-btn"
               onClick={() => {
                 triggerAudio('tap');
                 setShowAdminPanel(!showAdminPanel);
               }}
-              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-xl sm:rounded-2xl border font-sans text-[10px] sm:text-[11px] font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 flex-shrink-0 ${
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 showAdminPanel 
                 ? 'bg-yellow-400 text-purple-950 border-yellow-300' 
-                : 'bg-purple-900/80 text-gray-200 border-purple-500/50 hover:bg-purple-800'
+                : 'bg-purple-950/80 text-gray-200 border-purple-500/50 hover:bg-purple-900'
               }`}
               title={showAdminPanel ? 'Fechar Painel Admin' : 'Painel de Administração'}
             >
-              <Settings className={`w-3.5 h-3.5 flex-shrink-0 ${showAdminPanel ? 'animate-spin' : ''}`} />
+              <Settings className={`w-3.5 h-3.5 shrink-0 ${showAdminPanel ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{showAdminPanel ? 'Fechar' : 'Admin'}</span>
             </button>
           </div>

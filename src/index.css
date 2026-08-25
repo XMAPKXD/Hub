@@ -82,30 +82,25 @@ body {
 }
 
 /* Buttons in Light Mode - Apple Style */
-#pkxd-app-root.theme-light button:not(.unstyled),
 #pkxd-app-root.theme-light .button-primary {
-  background: rgba(124, 58, 237, 0.08) !important;
-  border: 1px solid rgba(124, 58, 237, 0.2) !important;
-  color: #6d28d9 !important;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.04) !important;
-  text-shadow: none !important;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: #6d28d9;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.04);
 }
 
-#pkxd-app-root.theme-light button:not(.unstyled):hover,
 #pkxd-app-root.theme-light .button-primary:hover {
-  background: rgba(124, 58, 237, 0.15) !important;
-  color: #5b21b6 !important;
+  background: rgba(124, 58, 237, 0.15);
+  color: #5b21b6;
   transform: translateY(-1px);
 }
 
 /* Special High-contrast / Action Buttons in Light Mode */
-#pkxd-app-root.theme-light button.bg-purple-600,
-#pkxd-app-root.theme-light button.bg-neutral-900,
 #pkxd-app-root.theme-light .btn-dark-apple {
-  background: #0f172a !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(15, 23, 42, 0.1) !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
 
 #pkxd-app-root.theme-light button.bg-purple-600:hover,
@@ -199,40 +194,25 @@ body {
 }
 
 /* Buttons in Dark Mode - Apple Style */
-#pkxd-app-root.theme-dark button:not(.unstyled),
 #pkxd-app-root.theme-dark .button-primary {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: #f1f5f9 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-#pkxd-app-root.theme-dark button:not(.unstyled):hover,
 #pkxd-app-root.theme-dark .button-primary:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
 /* Special high contrast buttons in Dark Mode */
-#pkxd-app-root.theme-dark button.bg-purple-600,
-#pkxd-app-root.theme-dark button.bg-neutral-900,
 #pkxd-app-root.theme-dark .btn-dark-apple {
-  background: #9333ea !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(147, 51, 234, 0.2) !important;
-  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.3) !important;
-}
-
-#pkxd-app-root.theme-dark button.bg-purple-600:hover,
-#pkxd-app-root.theme-dark button.bg-neutral-900:hover {
-  background: #a855f7 !important;
-}
-
-#pkxd-app-root.theme-dark button.bg-emerald-500 {
-  background: #10b981 !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(16, 185, 129, 0.1) !important;
+  background: #9333ea;
+  color: #ffffff;
+  border: 1px solid rgba(147, 51, 234, 0.2);
+  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.3);
 }
 
 /* Countdown blocks in Dark Mode */

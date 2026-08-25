@@ -3,7 +3,8 @@ import { NewsItem, FeaturedVideo, Theory, ShortItem, PastSpoiler, AppComment, Ge
 import { 
   PlusCircle, Save, Sparkles, RefreshCw, X, Image, ExternalLink, Video, 
   Smartphone, BookOpen, Clock, Wand2, Loader2, Play, BellRing, AlertTriangle, Globe,
-  UserCheck, Trash2, CheckCircle, ShieldAlert, Check, MessageSquare, BarChart3
+  UserCheck, Trash2, CheckCircle, ShieldAlert, Check, MessageSquare, BarChart3,
+  Instagram, Youtube
 } from 'lucide-react';
 import { playTapSound, playSuccessSound } from '../utils/audio';
 import { auth, db } from '../firebase';
@@ -3306,9 +3307,62 @@ export default function AdminPanel({
                       <div className="grid grid-cols-1 gap-3.5">
                         {appsPanel.map((item) => (
                           <div key={item.id} className="bg-black/40 border border-zinc-850 p-4 rounded-xl space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                              <span className="font-bold text-gray-200">Criador: <strong className="text-purple-300">{item.creator}</strong></span>
-                              <span className="text-[10px] text-gray-400 font-mono">Social: {item.social || 'Não informado'}</span>
+                            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/5 pb-2.5">
+                              <div className="flex items-center gap-3">
+                                {item.creatorPhoto ? (
+                                  <img 
+                                    src={item.creatorPhoto} 
+                                    alt={item.creator} 
+                                    className="w-11 h-11 rounded-xl object-cover border border-purple-500/40 shadow-sm bg-zinc-900 flex-shrink-0"
+                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <div className="w-11 h-11 rounded-xl bg-purple-950/60 border border-purple-500/30 flex items-center justify-center text-purple-300 font-bold text-xs flex-shrink-0">
+                                    {item.creator?.charAt(0)?.toUpperCase() || '👤'}
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-[9px] text-purple-400 font-bold uppercase block font-mono">CRIADOR INDICADO</span>
+                                  <span className="font-bold text-white text-sm">{item.creator}</span>
+                                </div>
+                              </div>
+
+                              {/* Social badges */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {item.instagram && (
+                                  <a
+                                    href={item.instagram.startsWith('http') ? item.instagram : `https://instagram.com/${item.instagram.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-bold hover:bg-pink-500/25"
+                                  >
+                                    <Instagram className="w-3 h-3" />
+                                    <span>{item.instagram.startsWith('@') ? item.instagram : `@${item.instagram.replace('https://instagram.com/', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.tiktok && (
+                                  <a
+                                    href={item.tiktok.startsWith('http') ? item.tiktok : `https://tiktok.com/@${item.tiktok.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold hover:bg-cyan-500/25"
+                                  >
+                                    <span className="font-black text-[9px]">TikTok:</span>
+                                    <span>{item.tiktok.startsWith('@') ? item.tiktok : `@${item.tiktok.replace('https://tiktok.com/@', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.youtube && (
+                                  <a
+                                    href={item.youtube.startsWith('http') ? item.youtube : `https://youtube.com/@${item.youtube.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-bold hover:bg-red-500/25"
+                                  >
+                                    <Youtube className="w-3 h-3" />
+                                    <span>{item.youtube.startsWith('@') ? item.youtube : item.youtube.replace('https://youtube.com/@', '')}</span>
+                                  </a>
+                                )}
+                              </div>
                             </div>
                             <div className="space-y-1">
                               <span className="text-[10px] uppercase font-bold text-gray-400 block font-mono">Link do Conteúdo:</span>
@@ -3415,9 +3469,66 @@ export default function AdminPanel({
                       <div className="grid grid-cols-1 gap-3.5">
                         {appsShorts.map((item) => (
                           <div key={item.id} className="bg-black/40 border border-zinc-850 p-4 rounded-xl space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                              <span className="font-bold text-gray-200">Canal: <strong className="text-cyan-300">{item.creator}</strong></span>
-                              <span className="text-xs font-semibold text-white">Título: "{item.title}"</span>
+                            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/5 pb-2.5">
+                              <div className="flex items-center gap-3">
+                                {item.creatorPhoto ? (
+                                  <img 
+                                    src={item.creatorPhoto} 
+                                    alt={item.creator} 
+                                    className="w-11 h-11 rounded-xl object-cover border border-cyan-500/40 shadow-sm bg-zinc-900 flex-shrink-0"
+                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <div className="w-11 h-11 rounded-xl bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-bold text-xs flex-shrink-0">
+                                    {item.creator?.charAt(0)?.toUpperCase() || '📱'}
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-[9px] text-cyan-400 font-bold uppercase block font-mono">CANAL / CRIADOR</span>
+                                  <span className="font-bold text-white text-sm">{item.creator}</span>
+                                </div>
+                              </div>
+
+                              {/* Social badges */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {item.instagram && (
+                                  <a
+                                    href={item.instagram.startsWith('http') ? item.instagram : `https://instagram.com/${item.instagram.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-bold hover:bg-pink-500/25"
+                                  >
+                                    <Instagram className="w-3 h-3" />
+                                    <span>{item.instagram.startsWith('@') ? item.instagram : `@${item.instagram.replace('https://instagram.com/', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.tiktok && (
+                                  <a
+                                    href={item.tiktok.startsWith('http') ? item.tiktok : `https://tiktok.com/@${item.tiktok.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold hover:bg-cyan-500/25"
+                                  >
+                                    <span className="font-black text-[9px]">TikTok:</span>
+                                    <span>{item.tiktok.startsWith('@') ? item.tiktok : `@${item.tiktok.replace('https://tiktok.com/@', '')}`}</span>
+                                  </a>
+                                )}
+                                {item.youtube && (
+                                  <a
+                                    href={item.youtube.startsWith('http') ? item.youtube : `https://youtube.com/@${item.youtube.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] font-bold hover:bg-red-500/25"
+                                  >
+                                    <Youtube className="w-3 h-3" />
+                                    <span>{item.youtube.startsWith('@') ? item.youtube : item.youtube.replace('https://youtube.com/@', '')}</span>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="text-xs font-semibold text-gray-200">
+                              Título do Short: <strong className="text-cyan-300">"{item.title}"</strong>
                             </div>
                             <div className="space-y-1">
                               <span className="text-[10px] uppercase font-bold text-gray-400 block font-mono">Link do Shorts:</span>
