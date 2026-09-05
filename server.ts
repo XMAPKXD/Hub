@@ -398,6 +398,159 @@ ${textToAnalyze}
   }
 });
 
+// Helper to parse YouTube subscriber strings like "512 mil inscritos", "1.5 mi", "10.5K subscribers"
+function parseSubscribersString(text?: string): number {
+  if (!text) return 0;
+  const numMatch = text.match(/([\d,\.]+)\s*(mil|mi|k|m)?/i);
+  if (!numMatch) return 0;
+  let n = parseFloat(numMatch[1].replace(",", "."));
+  const unit = (numMatch[2] || "").toLowerCase();
+  if (unit === "mil" || unit === "k") {
+    n *= 1000;
+  } else if (unit === "mi" || unit === "m") {
+    n *= 1000000;
+  }
+  return Math.round(n);
+}
+
+// Robust YouTube Channel endpoint (works for any handle, URL, or channel name without quota restrictions)
+app.all("/api/youtube-channel", async (req, res) => {
+  const query = (req.query.q || req.query.handle || req.body?.q || req.body?.handle || "").toString().trim();
+  if (!query) {
+    res.status(400).json({ error: "Informe o @ ou link do canal do YouTube." });
+    return;
+  }
+
+  // Extract clean handle if URL was passed
+  let targetHandle = query;
+  const urlMatch = targetHandle.match(/youtube\.com\/(@[a-zA-Z0-9_\-\.]+)/i) || targetHandle.match(/(@[a-zA-Z0-9_\-\.]+)/);
+  if (urlMatch) {
+    targetHandle = urlMatch[1];
+  }
+  targetHandle = targetHandle.replace(/^@/, "").trim();
+
+  const fetchHeaders = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+  };
+
+  try {
+    // 1. Try direct handle URL first: https://www.youtube.com/@handle
+    const directUrl = `https://www.youtube.com/@${targetHandle}`;
+    let response = await fetch(directUrl, { headers: fetchHeaders });
+    let html = "";
+
+    // 2. If direct handle wasn't 200, try channel search as fallback
+    if (!response.ok) {
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAg%253D%253D`;
+      const searchRes = await fetch(searchUrl, { headers: fetchHeaders });
+      if (searchRes.ok) {
+        const searchHtml = await searchRes.text();
+        const searchMatch = searchHtml.match(/var ytInitialData = ({.*?});<\/script>/) || searchHtml.match(/ytInitialData = ({.*?});/);
+        if (searchMatch) {
+          try {
+            const searchData = JSON.parse(searchMatch[1]);
+            const contents = searchData.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents || [];
+            for (const item of contents) {
+              if (item.channelRenderer) {
+                const cr = item.channelRenderer;
+                const crTitle = cr.title?.simpleText || targetHandle;
+                const crSubs = cr.subscriberCountText?.simpleText || "";
+                const crAvatar = cr.thumbnail?.thumbnails?.[0]?.url?.startsWith("//") 
+                  ? "https:" + cr.thumbnail.thumbnails[0].url 
+                  : cr.thumbnail?.thumbnails?.[0]?.url || "";
+                const crHandle = cr.subscriberCountText?.simpleText?.startsWith("@") 
+                  ? cr.subscriberCountText.simpleText 
+                  : `@${targetHandle}`;
+
+                res.json({
+                  success: true,
+                  channel: {
+                    title: crTitle,
+                    handle: crHandle,
+                    avatar: crAvatar,
+                    subscribers: parseSubscribersString(crSubs),
+                    subscribersText: crSubs,
+                    totalVideos: 0,
+                    videosText: "—",
+                    description: cr.descriptionSnippet?.runs?.[0]?.text || "",
+                    channelUrl: `https://www.youtube.com/channel/${cr.channelId}`
+                  }
+                });
+                return;
+              }
+            }
+          } catch (e) {}
+        }
+      }
+      res.status(404).json({ error: `Canal "${query}" não foi encontrado no YouTube. Verifique o @ digitado.` });
+      return;
+    }
+
+    html = await response.text();
+    const match = html.match(/var ytInitialData = ({.*?});<\/script>/) || html.match(/ytInitialData = ({.*?});/);
+    if (!match) {
+      res.status(500).json({ error: "Não foi possível extrair os dados estruturados do canal no YouTube." });
+      return;
+    }
+
+    const data = JSON.parse(match[1]);
+    const header = data.header?.pageHeaderRenderer?.content?.pageHeaderViewModel;
+    const metadata = data.metadata?.channelMetadataRenderer;
+
+    const title = header?.title?.dynamicTextViewModel?.text?.content || metadata?.title || targetHandle;
+    let avatar = header?.image?.decoratedAvatarViewModel?.avatar?.avatarViewModel?.image?.sources?.[0]?.url ||
+                 metadata?.avatar?.thumbnails?.[0]?.url || "";
+    if (avatar.startsWith("//")) {
+      avatar = "https:" + avatar;
+    }
+
+    let handleText = `@${targetHandle}`;
+    let subsText = "";
+    let vidsText = "";
+    let subsCount = 0;
+    let vidsCount = 0;
+
+    const rows = header?.metadata?.contentMetadataViewModel?.metadataRows || [];
+    for (const row of rows) {
+      for (const part of row.metadataParts || []) {
+        const text = part.text?.content || "";
+        if (text.startsWith("@")) {
+          handleText = text;
+        } else if (text.toLowerCase().includes("inscrito") || text.toLowerCase().includes("subscriber")) {
+          subsText = text;
+          subsCount = parseSubscribersString(text);
+        } else if (text.toLowerCase().includes("vídeo") || text.toLowerCase().includes("video")) {
+          vidsText = text;
+          const numMatch = text.match(/([\d,\.]+)/);
+          if (numMatch) {
+            vidsCount = parseInt(numMatch[1].replace(/\./g, ""), 10);
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      channel: {
+        title,
+        handle: handleText,
+        avatar,
+        subscribers: subsCount,
+        subscribersText: subsText,
+        totalVideos: vidsCount,
+        videosText: vidsText,
+        description: metadata?.description || "",
+        channelUrl: `https://www.youtube.com/${handleText}`
+      }
+    });
+  } catch (err: any) {
+    console.error("Erro ao buscar dados do canal do YouTube:", err);
+    res.status(500).json({ error: err.message || "Falha ao consultar canal do YouTube." });
+  }
+});
+
 // Vite & Static file handler setup
 async function startServer() {
   // Robust rewrite for SPA client-side routing (especially for non-ASCII routes like /Inscrições/)

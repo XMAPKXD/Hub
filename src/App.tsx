@@ -2397,39 +2397,39 @@ export default function App() {
   const unreadCount = unreadNotifications.length;
 
   return (
-    <div id="pkxd-app-root" className="theme-light min-h-screen bg-[#f7f5fc] text-slate-900 font-sans selection:bg-purple-200 selection:text-purple-900 pb-20 relative overflow-x-hidden">
+    <div id="pkxd-app-root" className="theme-dark min-h-screen bg-[#070414] text-white font-sans selection:bg-purple-600 selection:text-white pb-20 relative overflow-x-hidden">
       
-      {/* Ambient soft purple backdrop glows */}
-      <div className="absolute top-1/4 right-[10%] w-[500px] h-[500px] pointer-events-none select-none rounded-full bg-purple-200/20 blur-3xl" />
-      <div className="absolute bottom-1/3 left-[5%] w-[450px] h-[450px] pointer-events-none select-none rounded-full bg-violet-200/20 blur-3xl" />
-      <div className="absolute top-[80%] right-[5%] w-[400px] h-[400px] pointer-events-none select-none rounded-full bg-indigo-200/15 blur-3xl" />
+      {/* Ambient soft cosmic purple & indigo backdrop glows */}
+      <div className="absolute top-1/4 right-[10%] w-[550px] h-[550px] pointer-events-none select-none rounded-full bg-purple-600/10 blur-[130px]" />
+      <div className="absolute bottom-1/3 left-[5%] w-[500px] h-[500px] pointer-events-none select-none rounded-full bg-fuchsia-600/10 blur-[140px]" />
+      <div className="absolute top-[80%] right-[15%] w-[450px] h-[450px] pointer-events-none select-none rounded-full bg-indigo-600/10 blur-[120px]" />
 
-      {/* Upper Micro banner for System Alerts/Gamer Levels - Refined Light HUD Bar */}
-      <div className="bg-white/95 border-b border-purple-100/90 backdrop-blur-md py-2 px-4 text-slate-700 text-xs select-none relative z-30 shadow-xs">
+      {/* Upper Micro banner for System Alerts/Gamer Levels - Refined Dark Cosmic HUD Bar */}
+      <div className="bg-[#0b061d]/90 border-b border-purple-500/20 backdrop-blur-md py-2 px-4 text-zinc-300 text-xs select-none relative z-30 shadow-md">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 font-sans font-bold text-[11px] uppercase tracking-wider">
-              <Trophy className="w-3.5 h-3.5 text-purple-600" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/30 text-purple-300 font-sans font-bold text-[11px] uppercase tracking-wider">
+              <Trophy className="w-3.5 h-3.5 text-yellow-400" />
               <span>FÃ LVL {fanLevel}</span>
             </span>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-mono">
-              <span className="w-16 sm:w-24 h-2 rounded-full bg-purple-100 overflow-hidden relative inline-block">
+            <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 font-mono">
+              <span className="w-16 sm:w-24 h-2 rounded-full bg-purple-950/80 overflow-hidden relative inline-block border border-purple-500/20">
                 <span 
-                  className="absolute inset-y-0 left-0 bg-purple-600 rounded-full transition-all duration-300"
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(236,72,153,0.5)]"
                   style={{ width: `${Math.min(100, Math.max(5, fanXP))}%` }}
                 />
               </span>
-              <span className="text-purple-700 font-bold">{fanXP}% XP</span>
+              <span className="text-pink-400 font-bold">{fanXP}% XP</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-[10.5px] font-sans font-semibold text-slate-500">
+          <div className="flex items-center gap-3 text-[10.5px] font-sans font-semibold text-zinc-400">
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
-              <span className="text-emerald-700 font-mono uppercase tracking-widest text-[9.5px]">SISTEMA AO VIVO</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
+              <span className="text-emerald-400 font-mono uppercase tracking-widest text-[9.5px]">SISTEMA AO VIVO</span>
             </span>
             <span className="opacity-30 hidden sm:inline">•</span>
-            <span className="hidden sm:inline text-slate-500">
+            <span className="hidden sm:inline text-zinc-400">
               Notícias, spoilers & eventos sincronizados em tempo real
             </span>
           </div>
@@ -2491,8 +2491,8 @@ export default function App() {
         </button>
       </div>
 
-      {/* Navigation Header - Sleek Clean White/Purple Navbar */}
-      <nav id="nav-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-2xl border-b border-purple-100/90 select-none py-2.5 px-3 sm:px-6 shadow-xs">
+      {/* Navigation Header - Sleek Dark Cosmic Navbar */}
+      <nav id="nav-header" className="sticky top-0 z-40 bg-[#090518]/90 backdrop-blur-2xl border-b border-purple-500/20 select-none py-2.5 px-3 sm:px-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full">
           
           {/* Brand Name & Logo with Click to Home */}
@@ -2505,20 +2505,20 @@ export default function App() {
             className="text-left flex items-center gap-2 sm:gap-3 group cursor-pointer focus:outline-none shrink-0"
             title="Ir para o Início do PKXD Central"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-sm group-hover:scale-105 transition-transform shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-[0_0_20px_rgba(168,85,247,0.4)] group-hover:scale-105 transition-transform shrink-0 border border-white/20">
               ⚡
             </div>
             <div className="flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
-                <h1 className="font-sans font-black text-base sm:text-xl tracking-tight text-slate-900 uppercase flex items-center gap-1 leading-none">
+                <h1 className="font-sans font-black text-base sm:text-xl tracking-tight text-white uppercase flex items-center gap-1 leading-none">
                   <span>PKXD</span>
-                  <span className="text-purple-600">Central</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">Central</span>
                 </h1>
-                <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 hidden sm:inline-block">
+                <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded-md bg-purple-900/50 text-purple-300 border border-purple-500/30 hidden sm:inline-block">
                   HUB
                 </span>
               </div>
-              <p className="font-sans text-[8px] sm:text-[9.5px] text-slate-500 font-semibold uppercase tracking-wider leading-tight hidden md:block mt-0.5">
+              <p className="font-sans text-[8px] sm:text-[9.5px] text-zinc-400 font-semibold uppercase tracking-wider leading-tight hidden md:block mt-0.5">
                 Portal Oficial da Comunidade de Fãs
               </p>
             </div>
@@ -2546,12 +2546,12 @@ export default function App() {
                   });
                 }
               }}
-              className="h-9 w-9 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 transition-colors cursor-pointer relative flex items-center justify-center text-xs font-bold shadow-xs active:scale-95 shrink-0"
+              className="h-9 w-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-zinc-300 transition-colors cursor-pointer relative flex items-center justify-center text-xs font-bold shadow-md active:scale-95 shrink-0"
               title="Central de Notificações"
             >
               <BellRing className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="bg-purple-600 text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full absolute -top-1 -right-1 shadow-sm">
+                <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full absolute -top-1 -right-1 shadow-[0_0_8px_rgba(236,72,153,0.6)]">
                   {unreadCount}
                 </span>
               )}
@@ -2568,14 +2568,14 @@ export default function App() {
                   navigateTo('/inscricoes');
                 }
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 isApplicationsRoute
-                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
-                  : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.4)]'
+                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border-white/10'
               }`}
               title={isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições Oficiais'}
             >
-              <Compass className="w-3.5 h-3.5 shrink-0" />
+              <Compass className="w-3.5 h-3.5 shrink-0 text-pink-400" />
               <span className="hidden xs:inline">{isApplicationsRoute ? 'Voltar' : 'Inscrições'}</span>
               <span className="xs:hidden text-[10px] font-bold">{isApplicationsRoute ? 'Hub' : 'Inscr.'}</span>
             </button>
@@ -2587,14 +2587,14 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/creators');
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 activeTab === 'creator-metas'
-                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
-                  : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border-white/10'
               }`}
               title="Programa de Creators PK XD e Metas"
             >
-              <Crown className="w-3.5 h-3.5 shrink-0 text-purple-500" />
+              <Crown className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
               <span className="hidden sm:inline">Metas Creator</span>
             </button>
 
@@ -2605,14 +2605,14 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/pkxd-id');
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 activeTab === 'passaporte'
-                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
-                  : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border-white/10'
               }`}
               title="Acessar PKXD ID e Perfil"
             >
-              <Sparkles className="w-3.5 h-3.5 shrink-0 text-purple-500" />
+              <Sparkles className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
               <span className="hidden sm:inline">PKXD ID</span>
               <span className="bg-black/40 text-yellow-300 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-yellow-400/20">
                 Lv.{fanLevel}
@@ -3078,8 +3078,8 @@ export default function App() {
               <PWAInstaller onAddXP={handleAddFanXP} triggerAudio={triggerAudio} />
             </div>
 
-            {/* Visual Navigation Tab Bar - Formal Clean Light Dock */}
-            <div className="max-w-4xl mx-auto mb-8 bg-white/95 backdrop-blur-2xl p-2 rounded-2xl sm:rounded-3xl border border-purple-200/80 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 shadow-sm select-none sticky top-14 sm:top-16 z-20">
+            {/* Visual Navigation Tab Bar - Refined Cyber Obsidian Dock */}
+            <div className="max-w-4xl mx-auto mb-8 bg-[#0c0722]/90 backdrop-blur-2xl p-2 rounded-2xl sm:rounded-3xl border border-purple-500/25 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.7)] select-none sticky top-14 sm:top-16 z-20">
               <button
                 onClick={() => {
                   triggerAudio('tap');
@@ -3087,8 +3087,8 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'inicio'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 <Home className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3102,8 +3102,8 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'eventos'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3117,8 +3117,8 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center relative ${
                   activeTab === 'passaporte'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3132,8 +3132,8 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'comunidade'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 <Users className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3147,8 +3147,8 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'missoes'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 <Target className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3162,8 +3162,8 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'artes'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 <Palette className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3177,11 +3177,11 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer active:scale-95 text-center ${
                   activeTab === 'creator-metas'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
-                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" />
+                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-yellow-400" />
                 <span className="truncate">Metas</span>
               </button>
             </div>

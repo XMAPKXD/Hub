@@ -12,10 +12,12 @@ import {
   Play,
   ShieldCheck,
   RefreshCw,
-  Lock,
   ExternalLink,
   ThumbsUp,
-  Users
+  Users,
+  Search,
+  Sparkles,
+  Lock
 } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -35,6 +37,7 @@ export interface CreatorStats {
   channelName: string;
   channelHandle: string;
   channelAvatar?: string;
+  channelUrl?: string;
   subscribers: number;
   totalLifetimeVideos: number;
   longVideosCount: number;
@@ -47,17 +50,6 @@ export interface CreatorStats {
   compliantRules: boolean;
   lastSyncedAt?: number;
   syncMethod?: 'youtube_api' | 'manual';
-}
-
-// Helper to parse ISO 8601 YouTube video duration into seconds (e.g. PT5M30S -> 330s)
-function parseDurationToSeconds(duration?: string): number {
-  if (!duration) return 0;
-  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!match) return 0;
-  const hours = parseInt(match[1] || '0', 10);
-  const minutes = parseInt(match[2] || '0', 10);
-  const seconds = parseInt(match[3] || '0', 10);
-  return hours * 3600 + minutes * 60 + seconds;
 }
 
 export default function CreatorMetasTracker({
@@ -73,6 +65,7 @@ export default function CreatorMetasTracker({
       channelName: '',
       channelHandle: '',
       channelAvatar: '',
+      channelUrl: '',
       subscribers: 0,
       totalLifetimeVideos: 0,
       longVideosCount: 0,
@@ -94,17 +87,11 @@ export default function CreatorMetasTracker({
     return defaultStats;
   });
 
+  const [handleInput, setHandleInput] = useState('');
   const [isLoggingInYT, setIsLoggingInYT] = useState(false);
-  const [isSyncingAPI, setIsSyncingAPI] = useState(false);
+  const [isSearchingChannel, setIsSearchingChannel] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
-  const [cachedAccessToken, setCachedAccessToken] = useState<string | null>(() => {
-    try {
-      return sessionStorage.getItem('pkxd_yt_access_token') || null;
-    } catch (e) {
-      return null;
-    }
-  });
 
   // Sync from Firestore if user is logged in
   useEffect(() => {
@@ -155,160 +142,37 @@ export default function CreatorMetasTracker({
     }
   };
 
-  // Process YouTube Data API with an access token
-  const queryYouTubeAPI = async (accessToken: string, authUser?: any) => {
-    setIsSyncingAPI(true);
+  // Dedicated direct YouTube Channel Lookup & Sync
+  const fetchAndSyncYouTubeChannel = async (query: string) => {
+    const cleanQuery = query.trim();
+    if (!cleanQuery) {
+      setSyncFeedback({
+        type: 'error',
+        message: 'Por favor, digite o @ do seu canal (ex: @kawanyuri).'
+      });
+      return;
+    }
+
+    setIsSearchingChannel(true);
     setSyncFeedback(null);
 
-    const fallbackUserName = authUser?.displayName || user?.displayName || stats.channelName || 'Criador PK XD';
-    const fallbackAvatar = authUser?.photoURL || user?.photoURL || stats.channelAvatar || '';
-    const fallbackHandle = stats.channelHandle || ('@' + fallbackUserName.toLowerCase().replace(/[^a-z0-9]/g, ''));
-
     try {
-      // 1. Fetch channel metadata & statistics
-      const channelRes = await fetch(
-        'https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails,statistics&mine=true',
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: 'application/json'
-          }
-        }
-      );
+      const res = await fetch(`/api/youtube-channel?q=${encodeURIComponent(cleanQuery)}`);
+      const data = await res.json();
 
-      // Gracefully handle if YouTube API is not enabled on this GCP project
-      if (!channelRes.ok) {
-        updateStats({
-          channelName: fallbackUserName,
-          channelAvatar: fallbackAvatar,
-          channelHandle: fallbackHandle,
-          lastSyncedAt: Date.now()
-        });
-
-        setSyncFeedback({
-          type: 'success',
-          message: `Conta de ${fallbackUserName} conectada! Ajuste suas estatísticas abaixo para calcular exatamente quanto falta para suas metas.`
-        });
-        setIsSyncingAPI(false);
-        return;
+      if (!res.ok || !data.success || !data.channel) {
+        throw new Error(data.error || `Canal "${cleanQuery}" não encontrado no YouTube.`);
       }
 
-      const channelData = await channelRes.json();
-
-      if (!channelData.items || channelData.items.length === 0) {
-        updateStats({
-          channelName: fallbackUserName,
-          channelAvatar: fallbackAvatar,
-          channelHandle: fallbackHandle,
-          lastSyncedAt: Date.now()
-        });
-
-        setSyncFeedback({
-          type: 'info',
-          message: `Conta Google conectada (${fallbackUserName}). Nenhum canal público foi retornado automaticamente; você pode preencher suas métricas abaixo.`
-        });
-        setIsSyncingAPI(false);
-        return;
-      }
-
-      const channel = channelData.items[0];
-      const channelTitle = channel.snippet?.title || fallbackUserName;
-      const channelHandle = channel.snippet?.customUrl || ('@' + channelTitle.toLowerCase().replace(/[^a-z0-9]/g, ''));
-      const channelAvatar = channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url || fallbackAvatar;
-      const subscriberCount = parseInt(channel.statistics?.subscriberCount || '0', 10);
-      const totalLifetimeVideos = parseInt(channel.statistics?.videoCount || '0', 10);
-      const totalLifetimeViews = parseInt(channel.statistics?.viewCount || '0', 10);
-      const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
-
-      let viewsLast3Months = 0;
-      let longVideosCount = 0;
-      let shortsCount = 0;
-      let totalLikes = 0;
-      let countedVideos = 0;
-
-      // 2. If uploads playlist is available, fetch recent uploads to inspect duration & views
-      if (uploadsPlaylistId) {
-        try {
-          const playlistRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                Accept: 'application/json'
-              }
-            }
-          );
-
-          if (playlistRes.ok) {
-            const playlistData = await playlistRes.json();
-            const videoIds = (playlistData.items || [])
-              .map((item: any) => item.contentDetails?.videoId)
-              .filter(Boolean);
-
-            if (videoIds.length > 0) {
-              // 3. Batch fetch video statistics & durations
-              const videosRes = await fetch(
-                `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoIds.join(',')}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    Accept: 'application/json'
-                  }
-                }
-              );
-
-              if (videosRes.ok) {
-                const videosData = await videosRes.json();
-                const now = Date.now();
-                const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
-
-                for (const video of videosData.items || []) {
-                  const publishedAt = new Date(video.snippet?.publishedAt || 0).getTime();
-                  const isWithin3Months = (now - publishedAt) <= ninetyDaysMs;
-                  const durationSeconds = parseDurationToSeconds(video.contentDetails?.duration);
-                  const views = parseInt(video.statistics?.viewCount || '0', 10);
-                  const likes = parseInt(video.statistics?.likeCount || '0', 10);
-
-                  totalLikes += likes;
-                  countedVideos++;
-
-                  if (durationSeconds >= 300) {
-                    longVideosCount++;
-                  } else {
-                    shortsCount++;
-                  }
-
-                  if (isWithin3Months) {
-                    viewsLast3Months += views;
-                  }
-                }
-              }
-            }
-          }
-        } catch (subErr) {
-          console.warn('Sub-query error:', subErr);
-        }
-      }
-
-      if (viewsLast3Months === 0 && totalLifetimeViews > 0 && countedVideos > 0) {
-        viewsLast3Months = totalLifetimeViews;
-      }
-
-      const averageViews = countedVideos > 0 ? Math.round((viewsLast3Months || totalLifetimeViews) / countedVideos) : 0;
-
+      const ch = data.channel;
       const updatedStats: CreatorStats = {
         ...stats,
-        channelName: channelTitle,
-        channelHandle: channelHandle,
-        channelAvatar: channelAvatar,
-        subscribers: subscriberCount,
-        totalLifetimeVideos: totalLifetimeVideos,
-        longVideosCount: Math.max(stats.longVideosCount, longVideosCount),
-        shortsCount: Math.max(stats.shortsCount, shortsCount),
-        viewsLast3Months: Math.max(stats.viewsLast3Months, viewsLast3Months),
-        totalLifetimeViews: totalLifetimeViews,
-        totalLikes: totalLikes,
-        averageViews: averageViews,
+        channelName: ch.title || cleanQuery,
+        channelHandle: ch.handle || (cleanQuery.startsWith('@') ? cleanQuery : `@${cleanQuery}`),
+        channelAvatar: ch.avatar || stats.channelAvatar,
+        channelUrl: ch.channelUrl || `https://www.youtube.com/${ch.handle}`,
+        subscribers: ch.subscribers || stats.subscribers,
+        totalLifetimeVideos: ch.totalVideos || stats.totalLifetimeVideos,
         lastSyncedAt: Date.now(),
         syncMethod: 'youtube_api'
       };
@@ -324,29 +188,23 @@ export default function CreatorMetasTracker({
 
       setSyncFeedback({
         type: 'success',
-        message: `Canal "${channelTitle}" sincronizado com sucesso! ${totalLifetimeVideos} vídeos e ${viewsLast3Months.toLocaleString('pt-BR')} visualizações computadas.`
+        message: `Canal "${ch.title}" (${ch.handle}) sincronizado com sucesso! ${ch.subscribers ? ch.subscribers.toLocaleString('pt-BR') + ' inscritos' : ''} ${ch.totalVideos ? '• ' + ch.totalVideos + ' vídeos no YouTube' : ''}`
       });
 
       onAddXP(200, 'Canal do YouTube Sincronizado ⚡');
       triggerAudio('levelUp');
     } catch (err: any) {
-      console.warn('Erro na consulta YouTube:', err);
-      updateStats({
-        channelName: fallbackUserName,
-        channelAvatar: fallbackAvatar,
-        channelHandle: fallbackHandle,
-        lastSyncedAt: Date.now()
-      });
+      console.warn('Erro ao sincronizar canal:', err);
       setSyncFeedback({
-        type: 'success',
-        message: `Conta de ${fallbackUserName} conectada! Ajuste suas estatísticas abaixo para calcular suas metas.`
+        type: 'error',
+        message: err.message || 'Falha ao buscar canal no YouTube. Verifique o @ digitado.'
       });
     } finally {
-      setIsSyncingAPI(false);
+      setIsSearchingChannel(false);
     }
   };
 
-  // Google Login requesting YouTube Read-Only scope
+  // Connect Google account and auto-discover the YouTube channel
   const handleConnectYouTube = async () => {
     triggerAudio('tap');
     setIsLoggingInYT(true);
@@ -358,51 +216,90 @@ export default function CreatorMetasTracker({
       provider.setCustomParameters({ prompt: 'select_account' });
 
       const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const accessToken = credential?.accessToken;
+      const googleUser = result.user;
+      
+      const displayName = googleUser?.displayName || '';
+      const email = googleUser?.email || '';
+      const photoURL = googleUser?.photoURL || '';
 
-      if (result.user) {
-        const name = result.user.displayName || 'Criador PK XD';
-        const photo = result.user.photoURL || '';
-        const handle = '@' + name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        updateStats({
-          channelName: stats.channelName || name,
-          channelHandle: stats.channelHandle || handle,
-          channelAvatar: photo || stats.channelAvatar
-        });
+      const emailPrefix = email.split('@')[0] || '';
+      const cleanEmailPrefixNoDigits = emailPrefix.replace(/\d+$/, '');
+      const cleanDisplayName = displayName.replace(/\s+/g, '');
+
+      // Candidates to automatically test
+      const candidatesToTry = [
+        stats.channelHandle,
+        cleanEmailPrefixNoDigits ? `@${cleanEmailPrefixNoDigits}` : '',
+        emailPrefix ? `@${emailPrefix}` : '',
+        cleanDisplayName ? `@${cleanDisplayName}` : ''
+      ].filter(Boolean);
+
+      let channelDetected = false;
+
+      for (const candidate of candidatesToTry) {
+        if (!candidate) continue;
+        try {
+          const checkRes = await fetch(`/api/youtube-channel?q=${encodeURIComponent(candidate)}`);
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.success && checkData.channel) {
+              const ch = checkData.channel;
+              const updatedStats: CreatorStats = {
+                ...stats,
+                channelName: ch.title,
+                channelHandle: ch.handle,
+                channelAvatar: ch.avatar || photoURL,
+                channelUrl: ch.channelUrl || `https://www.youtube.com/${ch.handle}`,
+                subscribers: ch.subscribers || stats.subscribers,
+                totalLifetimeVideos: ch.totalVideos || stats.totalLifetimeVideos,
+                lastSyncedAt: Date.now(),
+                syncMethod: 'youtube_api'
+              };
+              setStats(updatedStats);
+              try {
+                localStorage.setItem('pkxd_creator_stats', JSON.stringify(updatedStats));
+                if (user?.uid) {
+                  const docRef = doc(db, 'creator_goals', user.uid);
+                  setDoc(docRef, { ...updatedStats, userId: user.uid, updatedAt: Date.now() }, { merge: true });
+                }
+              } catch (e) {}
+
+              setSyncFeedback({
+                type: 'success',
+                message: `Conta conectada e canal ${ch.title} (${ch.handle}) detectado com sucesso!`
+              });
+              channelDetected = true;
+              onAddXP(200, 'Canal do YouTube Sincronizado ⚡');
+              triggerAudio('levelUp');
+              break;
+            }
+          }
+        } catch (e) {}
       }
 
-      if (accessToken) {
-        setCachedAccessToken(accessToken);
-        try {
-          sessionStorage.setItem('pkxd_yt_access_token', accessToken);
-        } catch (e) {}
-        await queryYouTubeAPI(accessToken, result.user);
-      } else {
+      if (!channelDetected) {
+        const suggestedHandle = `@${cleanEmailPrefixNoDigits || emailPrefix || 'seucanal'}`;
+        updateStats({
+          channelName: displayName || 'Criador PK XD',
+          channelAvatar: photoURL || stats.channelAvatar,
+          channelHandle: stats.channelHandle || suggestedHandle
+        });
+        setHandleInput(suggestedHandle);
         setSyncFeedback({
-          type: 'success',
-          message: 'Conta Google conectada com sucesso! Você pode conferir suas metas e progresso abaixo.'
+          type: 'info',
+          message: `Conta Google de ${displayName || email} conectada! Se o @ do seu canal for diferente de "${stats.channelHandle || suggestedHandle}", digite-o no campo abaixo e clique em Sincronizar.`
         });
       }
     } catch (err: any) {
-      console.warn('Erro ou cancelamento do popup:', err);
+      console.warn('Erro ao conectar Google:', err);
       if (err.code !== 'auth/popup-closed-by-user') {
         setSyncFeedback({
           type: 'info',
-          message: 'Conexão manual ativada. Você pode editar suas estatísticas e metas diretamente nos campos abaixo.'
+          message: 'Você pode digitar diretamente o @ ou link do seu canal no campo abaixo para sincronizar suas métricas!'
         });
       }
     } finally {
       setIsLoggingInYT(false);
-    }
-  };
-
-  const handleRefreshMetrics = () => {
-    if (cachedAccessToken) {
-      triggerAudio('tap');
-      queryYouTubeAPI(cachedAccessToken);
-    } else {
-      handleConnectYouTube();
     }
   };
 
@@ -433,146 +330,213 @@ export default function CreatorMetasTracker({
   return (
     <div id="creator-metas-tracker-root" className="space-y-6 animate-fade-in select-none text-left font-sans">
       
-      {/* Header Banner - Formal, Clean White & Soft Purple */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-purple-200/80 p-6 sm:p-8 shadow-xs">
-        <div className="relative z-10 space-y-4">
+      {/* Header Banner - Sleek Dark Cosmic Card */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0e0a24]/90 border border-purple-500/25 p-6 sm:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 space-y-5">
           
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100/70 border border-purple-200 text-purple-800 text-xs font-semibold">
-              <Crown className="w-3.5 h-3.5 text-purple-600" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300 text-xs font-bold shadow-sm">
+              <Crown className="w-3.5 h-3.5 text-yellow-400" />
               <span>Afterverse Creators • Metas de Qualificação</span>
             </div>
 
             {stats.lastSyncedAt && (
-              <span className="text-[11px] font-mono text-slate-500 bg-purple-50/60 px-2.5 py-1 rounded-md border border-purple-100">
+              <span className="text-[11px] font-mono text-zinc-400 bg-purple-950/60 px-3 py-1 rounded-lg border border-purple-500/20">
                 Última sincronização: {new Date(stats.lastSyncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
           </div>
 
           <div className="max-w-3xl space-y-2">
-            <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Acompanhamento de Metas para Creators PK XD
+            <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5 flex-wrap">
+              <span>Metas para o Programa de Creators PK XD</span>
+              <span className="text-xs font-mono font-bold bg-gradient-to-r from-yellow-400 to-amber-500 text-purple-950 px-2.5 py-0.5 rounded-md shadow-sm">
+                OFICIAL
+              </span>
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
-              Conecte seu canal para verificar em tempo real suas visualizações, vídeos publicados e saber exatamente quanto falta para atingir os critérios de inscrição.
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-2xl">
+              Conecte seu canal ou busque diretamente pelo <strong className="text-purple-300">@ do YouTube</strong> para acompanhar seus vídeos, inscritos e calcular exatamente quanto falta para atingir todos os critérios de inscrição.
             </p>
           </div>
 
-          {/* Quick Connect YouTube / Status Bar */}
-          <div className="pt-2 flex flex-wrap items-center gap-3">
+          {/* Direct Search & Sync Bar */}
+          <div className="pt-1 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+            
+            {/* Google / YouTube OAuth Login Button */}
             <button
               onClick={handleConnectYouTube}
-              disabled={isLoggingInYT || isSyncingAPI}
-              className="inline-flex items-center gap-2 bg-[#cc0000] hover:bg-[#b00000] active:scale-95 text-white text-xs sm:text-sm font-semibold py-2.5 px-4 rounded-xl transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              disabled={isLoggingInYT || isSearchingChannel}
+              className="inline-flex items-center justify-center gap-2 bg-[#cc0000] hover:bg-[#b00000] active:scale-95 text-white text-xs sm:text-sm font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-[0_0_15px_rgba(204,0,0,0.35)] disabled:opacity-50 shrink-0"
             >
               <Youtube className="w-4 h-4 fill-white" />
               <span>
-                {isLoggingInYT ? 'Conectando ao Google...' : isSyncingAPI ? 'Lendo dados do YouTube...' : stats.channelHandle ? 'Reconectar YouTube' : 'Conectar Canal do YouTube'}
+                {isLoggingInYT ? 'Conectando ao Google...' : stats.channelHandle ? 'Reconectar Google' : 'Conectar Conta Google'}
               </span>
             </button>
 
-            {stats.channelHandle && (
-              <button
-                onClick={handleRefreshMetrics}
-                disabled={isSyncingAPI}
-                className="inline-flex items-center gap-2 bg-purple-50 hover:bg-purple-100/80 text-purple-800 text-xs font-semibold py-2.5 px-3.5 rounded-xl border border-purple-200 transition-colors cursor-pointer disabled:opacity-50"
-                title="Atualizar dados do canal via YouTube API"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAPI ? 'animate-spin text-purple-600' : 'text-purple-600'}`} />
-                <span>{isSyncingAPI ? 'Sincronizando...' : 'Atualizar Dados'}</span>
-              </button>
-            )}
+            {/* Direct Handle Search & Sync Form */}
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                fetchAndSyncYouTubeChannel(handleInput || stats.channelHandle);
+              }}
+              className="flex-1 flex items-center gap-2"
+            >
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+                <input
+                  type="text"
+                  value={handleInput}
+                  onChange={(e) => setHandleInput(e.target.value)}
+                  placeholder={stats.channelHandle || "Digite o @ ou link do canal (ex: @kawanyuri)"}
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/35 text-white placeholder:text-zinc-500 text-xs sm:text-sm font-medium focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-colors"
+                />
+              </div>
 
-            {stats.channelHandle && (
-              <div className="inline-flex items-center gap-2 bg-purple-50/70 border border-purple-200/70 px-3 py-2 rounded-xl text-xs text-slate-700">
+              <button
+                type="submit"
+                disabled={isSearchingChannel}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:brightness-110 active:scale-95 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.4)] disabled:opacity-50 cursor-pointer shrink-0 border border-white/20 transition-all"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSearchingChannel ? 'animate-spin' : ''}`} />
+                <span>{isSearchingChannel ? 'Buscando...' : 'Sincronizar Canal'}</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Active Identified Channel Card */}
+          {stats.channelHandle && (
+            <div className="p-3.5 rounded-2xl bg-purple-950/70 border border-purple-500/40 flex flex-wrap items-center justify-between gap-3 shadow-inner">
+              <div className="flex items-center gap-3">
                 {stats.channelAvatar ? (
                   <img 
                     src={stats.channelAvatar} 
                     alt={stats.channelName} 
-                    className="w-5 h-5 rounded-full object-cover border border-purple-300"
+                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-400 shadow-md"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+                    {stats.channelName?.charAt(0) || 'YT'}
+                  </div>
                 )}
-                <span>Canal: <strong className="text-slate-900">{stats.channelName || stats.channelHandle}</strong> ({stats.channelHandle})</span>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <strong className="text-white text-sm font-bold">
+                      {stats.channelName || stats.channelHandle}
+                    </strong>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Canal Reconhecido
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400 pt-0.5">
+                    <span className="text-purple-300 font-mono font-semibold">{stats.channelHandle}</span>
+                    <span>•</span>
+                    <a 
+                      href={stats.channelUrl || `https://www.youtube.com/${stats.channelHandle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-pink-400 hover:text-pink-300 flex items-center gap-1 hover:underline"
+                    >
+                      <span>Abrir no YouTube</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Sync Feedback message */}
+              <div className="flex items-center gap-3 text-xs text-zinc-300">
+                {stats.subscribers > 0 && (
+                  <span className="px-3 py-1 rounded-xl bg-black/40 border border-white/10 font-mono">
+                    <strong className="text-white">{stats.subscribers.toLocaleString('pt-BR')}</strong> inscritos
+                  </span>
+                )}
+                {stats.totalLifetimeVideos > 0 && (
+                  <span className="px-3 py-1 rounded-xl bg-black/40 border border-white/10 font-mono">
+                    <strong className="text-white">{stats.totalLifetimeVideos}</strong> vídeos
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Feedback Message */}
           {syncFeedback && (
-            <div className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
+            <div className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 animate-slide-up ${
               syncFeedback.type === 'success' 
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200' 
                 : syncFeedback.type === 'error'
-                ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-purple-50 border-purple-200 text-purple-900'
+                ? 'bg-red-950/60 border-red-500/40 text-red-200'
+                : 'bg-purple-950/70 border-purple-500/40 text-purple-200'
             }`}>
               {syncFeedback.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-purple-600" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-purple-400 mt-0.5" />
               )}
-              <span>{syncFeedback.message}</span>
+              <span className="leading-relaxed">{syncFeedback.message}</span>
             </div>
           )}
 
         </div>
       </div>
 
-      {/* Security and Read-Only Guarantee Box */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-purple-200/80 text-xs text-slate-700 space-y-2 shadow-xs">
-        <div className="flex items-center gap-2 text-slate-900 font-semibold">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+      {/* Security & Read-Only Guarantee Box */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#0e0a24]/90 border border-emerald-500/30 text-xs text-zinc-300 space-y-2 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center gap-2 text-emerald-400 font-bold">
+          <ShieldCheck className="w-4 h-4 shrink-0" />
           <span>Segurança & Acesso Somente Leitura (Read-Only)</span>
         </div>
-        <p className="text-slate-600 leading-relaxed text-[11.5px]">
-          O acesso concedido é estritamente de leitura através da autenticação oficial do Google/YouTube. 
-          <strong> Não publicamos nada</strong>, <strong>não alteramos seu canal</strong> e <strong>não temos acesso a senhas ou dados privados</strong>. 
-          Consultamos apenas dados estatísticos públicos (nome do canal, vídeos publicados, inscritos e visualizações) para você acompanhar com total precisão o que falta para cada meta.
+        <p className="text-zinc-300 leading-relaxed text-[11.5px]">
+          O acesso é 100% oficial e seguro. 
+          <strong className="text-white"> NÃO publicamos nada</strong>, 
+          <strong className="text-white"> NÃO alteramos seu canal</strong> e 
+          <strong className="text-white"> NÃO temos acesso a senhas ou dados privados</strong>. 
+          Consultamos apenas dados estatísticos públicos (nome do canal, vídeos publicados, inscritos e visualizações) para você acompanhar com total precisão o que falta para suas metas de Creator Afterverse.
         </p>
       </div>
 
       {/* Channel Key Metrics Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-2xl bg-white border border-purple-200/80 space-y-1 shadow-xs">
-          <span className="text-[11px] text-slate-500 block flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-purple-600" />
+        <div className="p-4 rounded-2xl bg-[#0e0a24]/90 border border-purple-500/25 space-y-1 shadow-md">
+          <span className="text-[11px] text-zinc-400 block flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 text-purple-400" />
             <span>Inscritos</span>
           </span>
-          <strong className="text-base sm:text-lg text-slate-900 font-bold block">
-            {stats.subscribers.toLocaleString('pt-BR')}
+          <strong className="text-base sm:text-xl text-white font-black block">
+            {stats.subscribers > 0 ? stats.subscribers.toLocaleString('pt-BR') : '—'}
           </strong>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-purple-200/80 space-y-1 shadow-xs">
-          <span className="text-[11px] text-slate-500 block flex items-center gap-1.5">
-            <Play className="w-3.5 h-3.5 text-purple-600" />
+        <div className="p-4 rounded-2xl bg-[#0e0a24]/90 border border-purple-500/25 space-y-1 shadow-md">
+          <span className="text-[11px] text-zinc-400 block flex items-center gap-1.5">
+            <Play className="w-3.5 h-3.5 text-purple-400" />
             <span>Vídeos no Canal</span>
           </span>
-          <strong className="text-base sm:text-lg text-slate-900 font-bold block">
-            {stats.totalLifetimeVideos || currentVideosCount}
+          <strong className="text-base sm:text-xl text-white font-black block">
+            {stats.totalLifetimeVideos > 0 ? stats.totalLifetimeVideos : (currentVideosCount || '—')}
           </strong>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-purple-200/80 space-y-1 shadow-xs">
-          <span className="text-[11px] text-slate-500 block flex items-center gap-1.5">
-            <Eye className="w-3.5 h-3.5 text-purple-600" />
+        <div className="p-4 rounded-2xl bg-[#0e0a24]/90 border border-purple-500/25 space-y-1 shadow-md">
+          <span className="text-[11px] text-zinc-400 block flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5 text-purple-400" />
             <span>Views (3 Meses)</span>
           </span>
-          <strong className="text-base sm:text-lg text-slate-900 font-bold block">
+          <strong className="text-base sm:text-xl text-white font-black block">
             {stats.viewsLast3Months.toLocaleString('pt-BR')}
           </strong>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-purple-200/80 space-y-1 shadow-xs">
-          <span className="text-[11px] text-slate-500 block flex items-center gap-1.5">
-            <ThumbsUp className="w-3.5 h-3.5 text-purple-600" />
+        <div className="p-4 rounded-2xl bg-[#0e0a24]/90 border border-purple-500/25 space-y-1 shadow-md">
+          <span className="text-[11px] text-zinc-400 block flex items-center gap-1.5">
+            <ThumbsUp className="w-3.5 h-3.5 text-purple-400" />
             <span>Curtidas Computadas</span>
           </span>
-          <strong className="text-base sm:text-lg text-slate-900 font-bold block">
+          <strong className="text-base sm:text-xl text-white font-black block">
             {stats.totalLikes > 0 ? stats.totalLikes.toLocaleString('pt-BR') : '—'}
           </strong>
         </div>
@@ -584,33 +548,33 @@ export default function CreatorMetasTracker({
         {/* Left 2 Cols: Requirements and Progress Bars */}
         <div className="lg:col-span-2 space-y-5">
           
-          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-purple-200/80 space-y-5 shadow-xs">
+          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0e0a24]/90 border border-purple-500/25 space-y-5 shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
             
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-100 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-500/20 pb-4">
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-purple-600" />
+                <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-pink-400" />
                   <span>Critérios Mínimos de Inscrição</span>
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Parâmetros de qualificação exigidos pela Afterverse
+                <p className="text-xs text-zinc-400">
+                  Parâmetros oficiais de qualificação exigidos pela Afterverse
                 </p>
               </div>
 
               {/* Status Badge */}
-              <div className={`px-3 py-1 rounded-full border text-xs font-semibold flex items-center gap-1.5 ${
+              <div className={`px-3 py-1 rounded-full border text-xs font-bold flex items-center gap-1.5 ${
                 isFullyEligibleToApply 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-purple-50 text-purple-800 border-purple-200'
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                  : 'bg-purple-950/80 text-purple-300 border-purple-500/40'
               }`}>
                 {isFullyEligibleToApply ? (
                   <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Qualificado para Inscrição</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Qualificado para Inscrição!</span>
                   </>
                 ) : (
                   <>
-                    <AlertCircle className="w-3.5 h-3.5 text-purple-600" />
+                    <AlertCircle className="w-3.5 h-3.5 text-yellow-400" />
                     <span>Progresso Geral: {readinessPercent}%</span>
                   </>
                 )}
@@ -619,7 +583,7 @@ export default function CreatorMetasTracker({
 
             {/* Selector: Choose Primary Content Format */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-700 block">
+              <label className="text-xs font-bold text-zinc-300 block uppercase tracking-wider">
                 Formato Principal de Conteúdo:
               </label>
 
@@ -630,18 +594,18 @@ export default function CreatorMetasTracker({
                     triggerAudio('tap');
                     updateStats({ format: 'youtube_long' });
                   }}
-                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-colors cursor-pointer ${
+                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
                     stats.format === 'youtube_long'
-                      ? 'bg-purple-50 border-purple-500 text-purple-950 shadow-xs'
-                      : 'bg-white border-purple-100 text-slate-600 hover:bg-purple-50/50'
+                      ? 'bg-purple-950/80 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                      : 'bg-[#0a051c]/60 border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-red-600/20 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
                     <Video className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="block text-xs text-slate-900 font-semibold">YouTube Longo</strong>
-                    <span className="text-[11px] text-slate-500">Meta: 10 vídeos (+5m)</span>
+                    <strong className="block text-xs font-bold text-white">YouTube Longo</strong>
+                    <span className="text-[11px] text-zinc-400">Meta: 10 vídeos (+5m)</span>
                   </div>
                 </button>
 
@@ -651,18 +615,18 @@ export default function CreatorMetasTracker({
                     triggerAudio('tap');
                     updateStats({ format: 'youtube_shorts' });
                   }}
-                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-colors cursor-pointer ${
+                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
                     stats.format === 'youtube_shorts'
-                      ? 'bg-purple-50 border-purple-500 text-purple-950 shadow-xs'
-                      : 'bg-white border-purple-100 text-slate-600 hover:bg-purple-50/50'
+                      ? 'bg-purple-950/80 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                      : 'bg-[#0a051c]/60 border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-pink-600/20 border border-pink-500/30 text-pink-400 flex items-center justify-center shrink-0">
                     <Zap className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="block text-xs text-slate-900 font-semibold">YouTube Shorts</strong>
-                    <span className="text-[11px] text-slate-500">Meta: 30 Shorts</span>
+                    <strong className="block text-xs font-bold text-white">YouTube Shorts</strong>
+                    <span className="text-[11px] text-zinc-400">Meta: 30 Shorts</span>
                   </div>
                 </button>
 
@@ -672,55 +636,55 @@ export default function CreatorMetasTracker({
                     triggerAudio('tap');
                     updateStats({ format: 'tiktok' });
                   }}
-                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-colors cursor-pointer ${
+                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
                     stats.format === 'tiktok'
-                      ? 'bg-purple-50 border-purple-500 text-purple-950 shadow-xs'
-                      : 'bg-white border-purple-100 text-slate-600 hover:bg-purple-50/50'
+                      ? 'bg-purple-950/80 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                      : 'bg-[#0a051c]/60 border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center shrink-0">
                     <Smartphone className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="block text-xs text-slate-900 font-semibold">TikTok</strong>
-                    <span className="text-[11px] text-slate-500">Meta: 30 TikToks</span>
+                    <strong className="block text-xs font-bold text-white">TikTok</strong>
+                    <span className="text-[11px] text-zinc-400">Meta: 30 TikToks</span>
                   </div>
                 </button>
               </div>
             </div>
 
             {/* Requirement 1: Videos Progress */}
-            <div className="space-y-2.5 p-4 sm:p-5 rounded-2xl bg-purple-50/50 border border-purple-100">
+            <div className="space-y-2.5 p-4 sm:p-5 rounded-2xl bg-purple-950/40 border border-purple-500/20">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Play className="w-3.5 h-3.5 text-purple-600" />
+                <span className="font-bold text-zinc-200 flex items-center gap-1.5">
+                  <Play className="w-3.5 h-3.5 text-pink-400" />
                   <span>Vídeos Publicados de PK XD:</span>
                 </span>
-                <span className="font-mono text-xs font-semibold text-slate-700">
+                <span className="font-mono text-xs font-bold text-purple-300">
                   {currentVideosCount} / {reqVideosNeeded} ({videosProgress}%)
                 </span>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full h-2.5 rounded-full bg-purple-200/80 overflow-hidden relative">
+              <div className="w-full h-2.5 rounded-full bg-purple-950/80 overflow-hidden relative border border-purple-500/20">
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ${
                     currentVideosCount >= reqVideosNeeded 
-                      ? 'bg-emerald-500' 
-                      : 'bg-purple-600'
+                      ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' 
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]'
                   }`}
                   style={{ width: `${videosProgress}%` }}
                 />
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-zinc-300">
                   {currentVideosCount >= reqVideosNeeded ? (
-                    <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Meta de vídeos atingida!
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Meta de vídeos atingida!
                     </span>
                   ) : (
-                    <span>Faltam <strong>{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts'} de PK XD</span>
+                    <span>Faltam <strong className="text-yellow-300">{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts'} de PK XD</span>
                   )}
                 </p>
 
@@ -736,7 +700,7 @@ export default function CreatorMetasTracker({
                         updateStats({ shortsCount: Math.max(0, stats.shortsCount - 1) });
                       }
                     }}
-                    className="w-7 h-7 rounded-lg bg-white border border-purple-200 hover:bg-purple-100 text-slate-700 font-bold flex items-center justify-center cursor-pointer text-xs shadow-xs"
+                    className="w-7 h-7 rounded-lg bg-purple-950/80 border border-purple-500/40 hover:bg-purple-900 text-white font-bold flex items-center justify-center cursor-pointer text-xs transition-colors"
                     title="Diminuir"
                   >
                     -
@@ -754,7 +718,7 @@ export default function CreatorMetasTracker({
                         updateStats({ shortsCount: val });
                       }
                     }}
-                    className="w-14 text-center py-1 rounded-lg bg-white border border-purple-200 text-slate-900 font-mono text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    className="w-14 text-center py-1 rounded-lg bg-purple-950/90 border border-purple-500/40 text-white font-mono text-xs font-bold focus:outline-none focus:border-purple-400"
                   />
                   <button
                     type="button"
@@ -766,7 +730,7 @@ export default function CreatorMetasTracker({
                         updateStats({ shortsCount: stats.shortsCount + 1 });
                       }
                     }}
-                    className="w-7 h-7 rounded-lg bg-white border border-purple-200 hover:bg-purple-100 text-slate-700 font-bold flex items-center justify-center cursor-pointer text-xs shadow-xs"
+                    className="w-7 h-7 rounded-lg bg-purple-950/80 border border-purple-500/40 hover:bg-purple-900 text-white font-bold flex items-center justify-center cursor-pointer text-xs transition-colors"
                     title="Aumentar"
                   >
                     +
@@ -776,48 +740,48 @@ export default function CreatorMetasTracker({
             </div>
 
             {/* Requirement 2: Views Last 3 Months */}
-            <div className="space-y-2.5 p-4 sm:p-5 rounded-2xl bg-purple-50/50 border border-purple-100">
+            <div className="space-y-2.5 p-4 sm:p-5 rounded-2xl bg-purple-950/40 border border-purple-500/20">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-purple-600" />
+                <span className="font-bold text-zinc-200 flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-pink-400" />
                   <span>Visualizações nos Últimos 3 Meses:</span>
                 </span>
-                <span className="font-mono text-xs font-semibold text-slate-700">
+                <span className="font-mono text-xs font-bold text-purple-300">
                   {stats.viewsLast3Months.toLocaleString('pt-BR')} / 10.000 ({viewsProgress}%)
                 </span>
               </div>
 
-              <div className="w-full h-2.5 rounded-full bg-purple-200/80 overflow-hidden relative">
+              <div className="w-full h-2.5 rounded-full bg-purple-950/80 overflow-hidden relative border border-purple-500/20">
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ${
                     stats.viewsLast3Months >= reqViewsNeeded 
-                      ? 'bg-emerald-500' 
-                      : 'bg-purple-600'
+                      ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' 
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]'
                   }`}
                   style={{ width: `${viewsProgress}%` }}
                 />
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-zinc-300">
                   {stats.viewsLast3Months >= reqViewsNeeded ? (
-                    <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Meta de 10.000 views atingida!
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Meta de 10.000 views atingida!
                     </span>
                   ) : (
-                    <span>Faltam <strong>{viewsRemaining.toLocaleString('pt-BR')}</strong> visualizações</span>
+                    <span>Faltam <strong className="text-yellow-300">{viewsRemaining.toLocaleString('pt-BR')}</strong> visualizações</span>
                   )}
                 </p>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-500">Ajuste manual:</span>
+                  <span className="text-[11px] text-zinc-400">Ajustar views:</span>
                   <input
                     type="number"
                     min="0"
                     step="500"
                     value={stats.viewsLast3Months}
                     onChange={(e) => updateStats({ viewsLast3Months: Math.max(0, parseInt(e.target.value) || 0) })}
-                    className="w-28 text-right px-2.5 py-1 rounded-lg bg-white border border-purple-200 text-slate-900 font-mono text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-purple-400"
+                    className="w-28 text-right px-2.5 py-1 rounded-lg bg-purple-950/90 border border-purple-500/40 text-white font-mono text-xs font-bold focus:outline-none focus:border-purple-400"
                   />
                 </div>
               </div>
@@ -825,46 +789,46 @@ export default function CreatorMetasTracker({
 
             {/* Requirement 3 & 4: Compliance checkboxes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <label className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100 cursor-pointer hover:bg-purple-50 transition-colors">
+              <label className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/20 cursor-pointer hover:bg-purple-950/60 transition-colors">
                 <input
                   type="checkbox"
                   checked={stats.compliantRules}
                   onChange={(e) => updateStats({ compliantRules: e.target.checked })}
-                  className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-0 cursor-pointer"
+                  className="mt-0.5 rounded border-purple-400 text-purple-600 focus:ring-0 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-semibold text-slate-900 block">Diretrizes da Comunidade</span>
-                  <p className="text-[11px] text-slate-500 leading-snug">
-                    Conteúdo seguro para todas as idades, sem cheats ou conduta inadequada.
+                  <span className="text-xs font-bold text-white block">Diretrizes da Comunidade</span>
+                  <p className="text-[11px] text-zinc-400 leading-snug">
+                    Conteúdo seguro para todas as idades, sem mods ilegais, bugs abusivos ou cheats.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100 cursor-pointer hover:bg-purple-50 transition-colors">
+              <label className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/20 cursor-pointer hover:bg-purple-950/60 transition-colors">
                 <input
                   type="checkbox"
                   checked={stats.acceptedTerms}
                   onChange={(e) => updateStats({ acceptedTerms: e.target.checked })}
-                  className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-0 cursor-pointer"
+                  className="mt-0.5 rounded border-purple-400 text-purple-600 focus:ring-0 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-semibold text-slate-900 block">Termos do Creator Code</span>
-                  <p className="text-[11px] text-slate-500 leading-snug">
-                    Concordância com as regras e políticas de parceria Afterverse.
+                  <span className="text-xs font-bold text-white block">Termos do Creator Code</span>
+                  <p className="text-[11px] text-zinc-400 leading-snug">
+                    Concordância com as regras e diretrizes de parceria oficial da Afterverse.
                   </p>
                 </div>
               </label>
             </div>
 
             {/* Save Button */}
-            <div className="pt-3 flex items-center justify-between border-t border-purple-100">
-              <p className="text-[11px] text-slate-500">
+            <div className="pt-3 flex items-center justify-between border-t border-purple-500/20">
+              <p className="text-[11px] text-zinc-400">
                 {saveSuccessMsg ? '✅ Metas salvas com sucesso!' : 'Mantenha suas métricas sincronizadas para acompanhar seu progresso.'}
               </p>
               <button
                 type="button"
                 onClick={handleSaveToCloud}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors cursor-pointer active:scale-95 shadow-xs"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:brightness-110 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.35)] border border-white/20"
               >
                 Salvar Metas
               </button>
@@ -877,37 +841,37 @@ export default function CreatorMetasTracker({
         {/* Right 1 Col: Overall Score & Diagnostic Card */}
         <div className="space-y-5">
           
-          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-purple-200/80 space-y-4 text-center shadow-xs">
+          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0e0a24]/90 border border-purple-500/25 space-y-4 text-center shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
             
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-purple-100/70 border border-purple-200 flex items-center justify-center">
-              <Crown className="w-7 h-7 text-purple-600" />
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 border border-white/20 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.4)]">
+              <Crown className="w-7 h-7 text-white" />
             </div>
 
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold">
                 Índice de Qualificação
               </span>
-              <div className="text-3xl sm:text-4xl font-extrabold text-purple-700 pt-0.5">
+              <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-400 to-purple-400 pt-1">
                 {readinessPercent}%
               </div>
             </div>
 
             {/* Diagnostic Message */}
-            <div className="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-100 text-xs text-slate-700 leading-relaxed text-left space-y-1.5">
-              <span className="font-semibold text-slate-900 block">
+            <div className="p-3.5 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-xs text-zinc-200 leading-relaxed text-left space-y-1.5">
+              <span className="font-bold text-white block">
                 Diagnóstico de Elegibilidade:
               </span>
               {isFullyEligibleToApply ? (
-                <p className="text-emerald-700 font-semibold">
+                <p className="text-emerald-300 font-bold">
                   Parabéns! Seu canal atingiu todos os requisitos mínimos estabelecidos para a inscrição no programa de Creators PK XD.
                 </p>
               ) : (
-                <div className="space-y-1 text-slate-600">
+                <div className="space-y-1 text-zinc-300">
                   {videosRemaining > 0 && (
-                    <p>• Publique mais <strong>{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts'} de PK XD.</p>
+                    <p>• Publique mais <strong className="text-yellow-300">{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts'} de PK XD.</p>
                   )}
                   {viewsRemaining > 0 && (
-                    <p>• Acumule mais <strong>{viewsRemaining.toLocaleString('pt-BR')}</strong> visualizações nos últimos 3 meses.</p>
+                    <p>• Acumule mais <strong className="text-yellow-300">{viewsRemaining.toLocaleString('pt-BR')}</strong> visualizações nos últimos 3 meses.</p>
                   )}
                   {(!stats.compliantRules || !stats.acceptedTerms) && (
                     <p>• Marque a aceitação dos termos e diretrizes da comunidade.</p>
@@ -918,23 +882,23 @@ export default function CreatorMetasTracker({
 
             {/* Checklist */}
             <div className="space-y-2 pt-1 text-left text-xs">
-              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${currentVideosCount >= reqVideosNeeded ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                <CheckCircle2 className={`w-4 h-4 shrink-0 ${currentVideosCount >= reqVideosNeeded ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${currentVideosCount >= reqVideosNeeded ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300' : 'bg-purple-950/30 border-purple-500/20 text-zinc-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${currentVideosCount >= reqVideosNeeded ? 'text-emerald-400' : 'text-zinc-500'}`} />
                 <span>Mínimo de vídeos ({currentVideosCount}/{reqVideosNeeded})</span>
               </div>
 
-              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${stats.viewsLast3Months >= reqViewsNeeded ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.viewsLast3Months >= reqViewsNeeded ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${stats.viewsLast3Months >= reqViewsNeeded ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300' : 'bg-purple-950/30 border-purple-500/20 text-zinc-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.viewsLast3Months >= reqViewsNeeded ? 'text-emerald-400' : 'text-zinc-500'}`} />
                 <span>10.000 views em 3 meses ({stats.viewsLast3Months.toLocaleString('pt-BR')}/10.000)</span>
               </div>
 
-              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${stats.compliantRules ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.compliantRules ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${stats.compliantRules ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300' : 'bg-purple-950/30 border-purple-500/20 text-zinc-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.compliantRules ? 'text-emerald-400' : 'text-zinc-500'}`} />
                 <span>Diretrizes da comunidade</span>
               </div>
 
-              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${stats.acceptedTerms ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.acceptedTerms ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${stats.acceptedTerms ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300' : 'bg-purple-950/30 border-purple-500/20 text-zinc-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.acceptedTerms ? 'text-emerald-400' : 'text-zinc-500'}`} />
                 <span>Termos de parceria</span>
               </div>
             </div>
