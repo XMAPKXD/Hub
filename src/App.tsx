@@ -22,6 +22,7 @@ import EventsSection from './components/EventsSection';
 import PassportSection from './components/PassportSection';
 import PWAInstaller from './components/PWAInstaller';
 import AuthModal, { AuthMode } from './components/AuthModal';
+import CreatorMetasTracker from './components/CreatorMetasTracker';
 import { 
   Sparkles, 
   Settings, 
@@ -64,6 +65,7 @@ import {
   FileText,
   Radio,
   Check,
+  Crown,
   X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -204,7 +206,7 @@ export default function App() {
     } catch (e) {}
     return false;
   });
-  const [activeTab, setActiveTab] = useState<'inicio' | 'eventos' | 'comunidade' | 'missoes' | 'artes'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'eventos' | 'passaporte' | 'comunidade' | 'missoes' | 'artes' | 'creator-metas'>('inicio');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [continuedAsGuest, setContinuedAsGuest] = useState(false);
@@ -327,13 +329,15 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
+        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'creators', 'metas', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
         if (pLower.includes('admin')) {
           targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
         } else if (pLower.includes('inscric')) {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
+        } else if (pLower.includes('creator') || pLower.includes('metas')) {
+          targetPath = baseIsSpecial ? `/creators/${hashSuffix}` : (base ? `/${base}/creators/${hashSuffix}` : `/creators/${hashSuffix}`);
         } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
           targetPath = baseIsSpecial ? `/createaccount/${hashSuffix}` : (base ? `/${base}/createaccount/${hashSuffix}` : `/createaccount/${hashSuffix}`);
         } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
@@ -359,6 +363,8 @@ export default function App() {
           targetPath = `/admin${hashSuffix}`;
         } else if (pLower.includes('inscric')) {
           targetPath = `/inscricoes${hashSuffix}`;
+        } else if (pLower.includes('creator') || pLower.includes('metas')) {
+          targetPath = `/creators${hashSuffix}`;
         } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
           targetPath = `/createaccount${hashSuffix}`;
         } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
@@ -462,6 +468,8 @@ export default function App() {
       setActiveTab('comunidade');
     } else if (pLower.includes('missoes') || pLower.includes('missao')) {
       setActiveTab('missoes');
+    } else if (pLower.includes('creator') || pLower.includes('metas')) {
+      setActiveTab('creator-metas');
     } else if (!pLower.includes('admin') && !pLower.includes('inscric')) {
       setActiveTab('inicio');
     }
@@ -525,6 +533,8 @@ export default function App() {
   const isApplicationsRoute = currentPath.toLowerCase().includes('inscric') || 
                                currentPath.toLowerCase().includes('inscriç') || 
                                currentPath.toLowerCase().includes('inscricao');
+  const isCreatorRoute = currentPath.toLowerCase().includes('creator') || 
+                         currentPath.toLowerCase().includes('metas');
 
   useEffect(() => {
     try {
@@ -532,13 +542,15 @@ export default function App() {
         document.title = "PKXD Central - Painel Admin";
       } else if (isApplicationsRoute) {
         document.title = "PKXD Central - Inscrições";
+      } else if (isCreatorRoute || activeTab === 'creator-metas') {
+        document.title = "PKXD Central - Metas Creator";
       } else {
         document.title = "PKXD Central";
       }
     } catch (e) {
       console.warn(e);
     }
-  }, [isAdminRoute, isApplicationsRoute]);
+  }, [isAdminRoute, isApplicationsRoute, isCreatorRoute, activeTab]);
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -2570,6 +2582,27 @@ export default function App() {
               <span className="xs:hidden text-[10px] font-bold">{isApplicationsRoute ? 'Hub' : 'Inscr.'}</span>
             </button>
 
+            {/* Metas Creator Quick Tab */}
+            <button
+              id="nav-creator-metas-btn"
+              onClick={() => {
+                triggerAudio('tap');
+                navigateTo('/creators');
+              }}
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+                activeTab === 'creator-metas'
+                  ? 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white border-yellow-200 shadow-[0_0_18px_rgba(236,72,153,0.4)]'
+                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-purple-200 border-white/10 hover:text-white'
+              }`}
+              title="Programa de Creators PK XD e Metas"
+            >
+              <Crown className="w-3.5 h-3.5 shrink-0 text-yellow-300 fill-yellow-300" />
+              <span className="hidden sm:inline">Metas Creator</span>
+              <span className="text-[9px] bg-pink-500/90 text-white font-mono font-black px-1.5 py-0.5 rounded-md">
+                NOVO
+              </span>
+            </button>
+
             {/* 3. Quick Passport / PKXD ID Tab */}
             <button
               id="nav-pkxd-id-btn"
@@ -3125,7 +3158,7 @@ export default function App() {
             </div>
 
             {/* Visual Navigation Tab Bar - Modern Cyber Gaming Dock */}
-            <div className="max-w-4xl mx-auto mb-8 bg-[#0b061e]/90 backdrop-blur-2xl p-2 rounded-2xl sm:rounded-3xl border border-white/[0.08] grid grid-cols-3 sm:grid-cols-6 gap-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] select-none sticky top-14 sm:top-16 z-20">
+            <div className="max-w-4xl mx-auto mb-8 bg-[#0b061e]/90 backdrop-blur-2xl p-2 rounded-2xl sm:rounded-3xl border border-white/[0.08] grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] select-none sticky top-14 sm:top-16 z-20">
               <button
                 onClick={() => {
                   triggerAudio('tap');
@@ -3215,6 +3248,24 @@ export default function App() {
                 <Palette className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">Artes</span>
               </button>
+
+              <button
+                onClick={() => {
+                  triggerAudio('tap');
+                  navigateTo('/creators');
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center relative ${
+                  activeTab === 'creator-metas'
+                    ? 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white font-black shadow-[0_4px_20px_rgba(236,72,153,0.4)] border border-yellow-200'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-yellow-300 fill-yellow-300" />
+                <span className="truncate">Metas Creator</span>
+                <span className="hidden sm:inline-block absolute -top-1.5 -right-1 px-1.5 py-0.2 rounded-full bg-pink-500 text-[8px] font-black text-white uppercase tracking-tighter">
+                  Novo
+                </span>
+              </button>
             </div>
 
             {activeTab === 'inicio' && (
@@ -3303,6 +3354,36 @@ export default function App() {
                           onAddXP={handleAddFanXP}
                           onNavigate={navigateTo}
                         />
+                      </div>
+
+                      {/* METAS CREATOR BANNER - PROGRAMA OFICIAL AFTERVERSE */}
+                      <div className="max-w-4xl mx-auto mt-8 mb-4 px-4 sm:px-0" id="creator-goals-banner-home">
+                        <div className="bg-gradient-to-r from-yellow-500/20 via-purple-900/60 to-pink-900/40 border-2 border-yellow-500/30 rounded-2xl p-6 shadow-[0_4px_25px_rgba(234,179,8,0.15)] hover:shadow-[0_4px_35px_rgba(234,179,8,0.25)] hover:border-yellow-400/50 transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                          <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-yellow-400 to-pink-500" />
+                          
+                          <div className="space-y-2 text-center md:text-left">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 text-[10px] font-mono font-bold uppercase tracking-wider">
+                              <Crown className="w-3 h-3 text-yellow-300 fill-yellow-300" />
+                              <span>NOVO • Programa de Creators Afterverse</span>
+                            </div>
+                            <h4 className="font-sans font-black text-lg text-white uppercase tracking-tight flex items-center gap-2 justify-center md:justify-start">
+                              <span>Quer ser um Creator Oficial do PK XD? ⭐</span>
+                            </h4>
+                            <p className="font-sans text-xs text-gray-300 max-w-xl leading-relaxed">
+                              Faça login com seu canal do YouTube, veja exatamente quanto falta para bater a meta de 10 vídeos e 10.000 visualizações, simule ganhos com Creator Code e conheça os novos Tiers oficiais!
+                            </p>
+                          </div>
+
+                          <button 
+                            onClick={() => {
+                              triggerAudio('levelUp');
+                              navigateTo('/creators');
+                            }}
+                            className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 hover:brightness-110 active:scale-[0.98] text-purple-950 font-sans font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border border-yellow-200 cursor-pointer flex items-center justify-center gap-2 transition-all flex-shrink-0"
+                          >
+                            <span>🚀 Ver Minhas Metas</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* CANDIDATAR-SE A ADMIN BANNER - Placed exactly below the spoiler and featured videos section */}
@@ -3470,6 +3551,17 @@ export default function App() {
                   isAdmin={isAdmin}
                   soundEnabled={soundEnabled}
                   triggerAudio={triggerAudio}
+                />
+              </div>
+            )}
+
+            {activeTab === 'creator-metas' && (
+              <div className="max-w-4xl mx-auto animate-fade-in" id="creator-metas-section-wrapper">
+                <CreatorMetasTracker 
+                  user={user}
+                  onAddXP={handleAddFanXP}
+                  triggerAudio={triggerAudio}
+                  soundEnabled={soundEnabled}
                 />
               </div>
             )}
