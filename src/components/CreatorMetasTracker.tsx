@@ -4,36 +4,21 @@ import {
   Video, 
   Smartphone, 
   Eye, 
-  Trophy, 
   CheckCircle2, 
   AlertCircle, 
-  Sparkles, 
-  Clock, 
-  Coins, 
-  Share2, 
-  ExternalLink, 
-  ShieldCheck, 
-  Star, 
-  Flame, 
   TrendingUp, 
-  Mail, 
-  MessageSquare, 
-  Calculator, 
   Zap, 
-  ChevronDown, 
-  ChevronUp, 
-  Lock, 
-  Unlock, 
-  Copy, 
-  Check,
-  UserCheck,
-  Crown,
+  Crown, 
   Play,
-  ArrowRight,
-  Gift
+  ShieldCheck,
+  RefreshCw,
+  Lock,
+  ExternalLink,
+  ThumbsUp,
+  Users
 } from 'lucide-react';
-import { db, auth, googleProvider } from '../firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { db, auth } from '../firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface CreatorMetasTrackerProps {
@@ -49,15 +34,30 @@ export interface CreatorStats {
   format: CreatorFormat;
   channelName: string;
   channelHandle: string;
+  channelAvatar?: string;
   subscribers: number;
+  totalLifetimeVideos: number;
   longVideosCount: number;
   shortsCount: number;
   viewsLast3Months: number;
+  totalLifetimeViews: number;
+  totalLikes: number;
   averageViews: number;
-  monthlyUploads: number;
   acceptedTerms: boolean;
   compliantRules: boolean;
-  revenueShare3Months: number;
+  lastSyncedAt?: number;
+  syncMethod?: 'youtube_api' | 'manual';
+}
+
+// Helper to parse ISO 8601 YouTube video duration into seconds (e.g. PT5M30S -> 330s)
+function parseDurationToSeconds(duration?: string): number {
+  if (!duration) return 0;
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const hours = parseInt(match[1] || '0', 10);
+  const minutes = parseInt(match[2] || '0', 10);
+  const seconds = parseInt(match[3] || '0', 10);
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 export default function CreatorMetasTracker({
@@ -72,15 +72,18 @@ export default function CreatorMetasTracker({
       format: 'youtube_long',
       channelName: '',
       channelHandle: '',
+      channelAvatar: '',
       subscribers: 0,
+      totalLifetimeVideos: 0,
       longVideosCount: 0,
       shortsCount: 0,
       viewsLast3Months: 0,
+      totalLifetimeViews: 0,
+      totalLikes: 0,
       averageViews: 0,
-      monthlyUploads: 0,
       acceptedTerms: true,
       compliantRules: true,
-      revenueShare3Months: 0
+      syncMethod: 'manual'
     };
     try {
       const saved = localStorage.getItem('pkxd_creator_stats');
@@ -91,14 +94,19 @@ export default function CreatorMetasTracker({
     return defaultStats;
   });
 
-  const [activeTierTab, setActiveTierTab] = useState<'stardust' | 'rising_star' | 'supernova' | 'galaxy'>('stardust');
-  const [showZetaLetter, setShowZetaLetter] = useState(false);
-  const [copiedEmail, setCopiedEmail] = useState(false);
-  const [copiedTemplate, setCopiedTemplate] = useState(false);
   const [isLoggingInYT, setIsLoggingInYT] = useState(false);
+  const [isSyncingAPI, setIsSyncingAPI] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
+  const [cachedAccessToken, setCachedAccessToken] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('pkxd_yt_access_token') || null;
+    } catch (e) {
+      return null;
+    }
+  });
 
-  // Sync from Firestore if user logged in
+  // Sync from Firestore if user is logged in
   useEffect(() => {
     if (!user?.uid) return;
     const loadCloudStats = async () => {
@@ -139,7 +147,7 @@ export default function CreatorMetasTracker({
           updatedAt: Date.now()
         }, { merge: true });
       }
-      onAddXP(100, 'Atualização de Metas Creator 🌟');
+      onAddXP(100, 'Metas de Creator Salvas 🎯');
       setSaveSuccessMsg(true);
       setTimeout(() => setSaveSuccessMsg(false), 3500);
     } catch (err) {
@@ -147,37 +155,230 @@ export default function CreatorMetasTracker({
     }
   };
 
-  // Login with Google / YouTube
-  const handleLoginWithYouTube = async () => {
+  // Process YouTube Data API with an access token
+  const queryYouTubeAPI = async (accessToken: string) => {
+    setIsSyncingAPI(true);
+    setSyncFeedback(null);
+
+    try {
+      // 1. Fetch channel metadata & statistics
+      const channelRes = await fetch(
+        'https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails,statistics&mine=true',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/json'
+          }
+        }
+      );
+
+      if (!channelRes.ok) {
+        const errData = await channelRes.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `Erro na API do YouTube (${channelRes.status})`);
+      }
+
+      const channelData = await channelRes.json();
+
+      if (!channelData.items || channelData.items.length === 0) {
+        setSyncFeedback({
+          type: 'info',
+          message: 'Nenhum canal do YouTube foi encontrado nesta conta Google. Você pode inserir suas métricas manualmente ou conectar uma conta com canal ativo.'
+        });
+        setIsSyncingAPI(false);
+        return;
+      }
+
+      const channel = channelData.items[0];
+      const channelTitle = channel.snippet?.title || 'Canal Sem Nome';
+      const channelHandle = channel.snippet?.customUrl || ('@' + channelTitle.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const channelAvatar = channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url || '';
+      const subscriberCount = parseInt(channel.statistics?.subscriberCount || '0', 10);
+      const totalLifetimeVideos = parseInt(channel.statistics?.videoCount || '0', 10);
+      const totalLifetimeViews = parseInt(channel.statistics?.viewCount || '0', 10);
+      const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
+
+      let viewsLast3Months = 0;
+      let longVideosCount = 0;
+      let shortsCount = 0;
+      let totalLikes = 0;
+      let countedVideos = 0;
+
+      // 2. If uploads playlist is available, fetch recent uploads to inspect duration & views
+      if (uploadsPlaylistId) {
+        const playlistRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/json'
+            }
+          }
+        );
+
+        if (playlistRes.ok) {
+          const playlistData = await playlistRes.json();
+          const videoIds = (playlistData.items || [])
+            .map((item: any) => item.contentDetails?.videoId)
+            .filter(Boolean);
+
+          if (videoIds.length > 0) {
+            // 3. Batch fetch video statistics & durations
+            const videosRes = await fetch(
+              `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoIds.join(',')}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  Accept: 'application/json'
+                }
+              }
+            );
+
+            if (videosRes.ok) {
+              const videosData = await videosRes.json();
+              const now = Date.now();
+              const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+
+              for (const video of videosData.items || []) {
+                const publishedAt = new Date(video.snippet?.publishedAt || 0).getTime();
+                const isWithin3Months = (now - publishedAt) <= ninetyDaysMs;
+                const durationSeconds = parseDurationToSeconds(video.contentDetails?.duration);
+                const views = parseInt(video.statistics?.viewCount || '0', 10);
+                const likes = parseInt(video.statistics?.likeCount || '0', 10);
+
+                totalLikes += likes;
+                countedVideos++;
+
+                // A video >= 5 minutes (300 seconds) is classified as long-form by Afterverse
+                if (durationSeconds >= 300) {
+                  longVideosCount++;
+                } else {
+                  shortsCount++;
+                }
+
+                if (isWithin3Months) {
+                  viewsLast3Months += views;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // If views in the last 3 months returned 0 but the channel has lifetime views and recent videos,
+      // fall back gracefully so users aren't left with an artificially empty zero if they just started
+      if (viewsLast3Months === 0 && totalLifetimeViews > 0 && countedVideos > 0) {
+        viewsLast3Months = totalLifetimeViews;
+      }
+
+      const averageViews = countedVideos > 0 ? Math.round((viewsLast3Months || totalLifetimeViews) / countedVideos) : 0;
+
+      const updatedStats: CreatorStats = {
+        ...stats,
+        channelName: channelTitle,
+        channelHandle: channelHandle,
+        channelAvatar: channelAvatar,
+        subscribers: subscriberCount,
+        totalLifetimeVideos: totalLifetimeVideos,
+        longVideosCount: Math.max(stats.longVideosCount, longVideosCount),
+        shortsCount: Math.max(stats.shortsCount, shortsCount),
+        viewsLast3Months: Math.max(stats.viewsLast3Months, viewsLast3Months),
+        totalLifetimeViews: totalLifetimeViews,
+        totalLikes: totalLikes,
+        averageViews: averageViews,
+        lastSyncedAt: Date.now(),
+        syncMethod: 'youtube_api'
+      };
+
+      setStats(updatedStats);
+      try {
+        localStorage.setItem('pkxd_creator_stats', JSON.stringify(updatedStats));
+        if (user?.uid) {
+          const docRef = doc(db, 'creator_goals', user.uid);
+          setDoc(docRef, { ...updatedStats, userId: user.uid, updatedAt: Date.now() }, { merge: true });
+        }
+      } catch (e) {}
+
+      setSyncFeedback({
+        type: 'success',
+        message: `Canal "${channelTitle}" sincronizado com sucesso! ${totalLifetimeVideos} vídeos e ${viewsLast3Months.toLocaleString('pt-BR')} views computadas.`
+      });
+
+      onAddXP(200, 'Canal do YouTube Sincronizado ⚡');
+      triggerAudio('levelUp');
+    } catch (err: any) {
+      console.error('Falha ao consultar YouTube API:', err);
+      setSyncFeedback({
+        type: 'error',
+        message: err.message || 'Não foi possível ler os dados do canal. Você pode ajustar suas métricas manualmente.'
+      });
+    } finally {
+      setIsSyncingAPI(false);
+    }
+  };
+
+  // Google Login requesting YouTube Read-Only scope
+  const handleConnectYouTube = async () => {
     triggerAudio('tap');
     setIsLoggingInYT(true);
+    setSyncFeedback(null);
+
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      if (result.user) {
-        const name = result.user.displayName || 'Criador PK XD';
-        const email = result.user.email || '';
-        const suggestedHandle = '@' + (name.toLowerCase().replace(/[^a-z0-9]/g, ''));
-        
-        updateStats({
-          channelName: name,
-          channelHandle: suggestedHandle
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
+      // Prompt user to select account if needed
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken;
+
+      if (accessToken) {
+        setCachedAccessToken(accessToken);
+        try {
+          sessionStorage.setItem('pkxd_yt_access_token', accessToken);
+        } catch (e) {}
+        await queryYouTubeAPI(accessToken);
+      } else {
+        // Basic user info fallback
+        if (result.user) {
+          const name = result.user.displayName || 'Criador PK XD';
+          updateStats({
+            channelName: name,
+            channelHandle: '@' + name.toLowerCase().replace(/[^a-z0-9]/g, '')
+          });
+        }
+        setSyncFeedback({
+          type: 'info',
+          message: 'Autenticado com a conta Google. Se o canal não carregar automaticamente, clique em "Atualizar Métricas".'
         });
-        onAddXP(150, 'Canal do YouTube Vinculado ⚡');
-        triggerAudio('levelUp');
       }
     } catch (err: any) {
-      console.warn('YouTube login popup dismissed or failed:', err);
+      console.warn('Erro ou cancelamento do popup:', err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setSyncFeedback({
+          type: 'error',
+          message: 'Falha ao conectar conta Google/YouTube. Verifique sua conexão e tente novamente.'
+        });
+      }
     } finally {
       setIsLoggingInYT(false);
     }
   };
 
-  // Requisitos Mínimos Oficiais para Inscrição (Afterverse Creators / Zeta)
-  // 1. Ter pelo menos 10 vídeos longos (+5 minutos) de PK XD já publicados OU 30 Shorts/TikToks
-  // 2. Ter acumulado ao menos 10.000 views de PK XD nos últimos 3 meses.
-  // 3. Estar em conformidade com as regras da comunidade e do programa.
-  // 4. Aceitar os Termos do Creator Code.
+  const handleRefreshMetrics = () => {
+    if (cachedAccessToken) {
+      triggerAudio('tap');
+      queryYouTubeAPI(cachedAccessToken);
+    } else {
+      handleConnectYouTube();
+    }
+  };
 
+  // Official Requirements
+  // 1. 10 long-form videos (+5 min) OR 30 Shorts/TikToks
+  // 2. 10,000 views in the last 3 months
+  // 3. Community guidelines compliance
+  // 4. Terms acceptance
   const reqVideosNeeded = stats.format === 'youtube_long' ? 10 : 30;
   const currentVideosCount = stats.format === 'youtube_long' ? stats.longVideosCount : stats.shortsCount;
   const videosProgress = Math.min(100, Math.round((currentVideosCount / reqVideosNeeded) * 100));
@@ -197,196 +398,188 @@ export default function CreatorMetasTracker({
   const readinessPercent = Math.round((checksPassedCount / 4) * 100);
   const isFullyEligibleToApply = readinessPercent === 100;
 
-  // Simulator values for Creator Code revenue
-  const [simBuyers1st, setSimBuyers1st] = useState(25);
-  const [simBuyersRec, setSimBuyersRec] = useState(60);
-  const [simAvgOrder, setSimAvgOrder] = useState(30); // R$ 30 média por pacote
-
-  // Commission table per tier (From Zeta's letter)
-  const tierCommissions = {
-    stardust: { first: 0.05, recurring: 0.007, name: 'Stardust', coins: '30.000', gems: 150 },
-    rising_star: { first: 0.05, recurring: 0.01, name: 'Rising Star', coins: '150.000', gems: 1500 },
-    supernova: { first: 0.08, recurring: 0.015, name: 'Supernova', coins: '200.000', gems: 2000 },
-    galaxy: { first: 0.10, recurring: 0.03, name: 'Galaxy', coins: '300.000', gems: 3000 }
-  };
-
-  const simRev1st = simBuyers1st * simAvgOrder * tierCommissions[activeTierTab].first;
-  const simRevRec = simBuyersRec * simAvgOrder * tierCommissions[activeTierTab].recurring;
-  const simRevTotal = simRev1st + simRevRec;
-
-  const emailApplicationTemplate = `Olá equipe Afterverse Creators e Zeta!
-
-Gostaria de me candidatar ao Programa Oficial de Creators do PK XD.
-
-Dados do meu Canal:
-- Nome do Canal: ${stats.channelName || '[Nome do seu Canal]'}
-- Link / Handle: ${stats.channelHandle || 'youtube.com/@seucanal'}
-- Formato Principal: ${stats.format === 'youtube_long' ? 'Vídeos Longos (+5 min)' : stats.format === 'youtube_shorts' ? 'YouTube Shorts' : 'TikTok'}
-- Quantidade de Vídeos/Shorts de PK XD publicados: ${currentVideosCount}
-- Visualizações totais nos últimos 3 meses: ${stats.viewsLast3Months.toLocaleString('pt-BR')} views
-- Seguidores/Inscritos Atuais: ${stats.subscribers.toLocaleString('pt-BR')}
-- Média de views por vídeo: ${stats.averageViews}
-- Aceito os Termos do Creator Code e estou em conformidade com as diretrizes da comunidade.
-
-Aguardo ansiosamente a avaliação de vocês para receber meu Creator Code e fazer parte do time!
-
-Atenciosamente,
-${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
-
-  const copyToClipboard = (text: string, isTemplate = false) => {
-    triggerAudio('tap');
-    navigator.clipboard.writeText(text);
-    if (isTemplate) {
-      setCopiedTemplate(true);
-      setTimeout(() => setCopiedTemplate(false), 2500);
-    } else {
-      setCopiedEmail(true);
-      setTimeout(() => setCopiedEmail(false), 2500);
-    }
-  };
-
   return (
-    <div id="creator-metas-tracker-root" className="space-y-8 animate-fade-in select-none text-left">
+    <div id="creator-metas-tracker-root" className="space-y-6 animate-fade-in select-none text-left font-sans">
       
-      {/* Header Banner - Program of Creators PK XD with Zeta Branding */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1b0a38] via-[#0d061f] to-[#070314] border border-purple-500/30 p-6 sm:p-8 shadow-[0_16px_50px_rgba(124,58,237,0.25)]">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-pink-500/20 via-purple-600/15 to-transparent rounded-full filter blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 rounded-full filter blur-3xl pointer-events-none" />
-
+      {/* Header Banner - Formal & Sleek */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#0e0a24] border border-white/[0.08] p-6 sm:p-7 shadow-lg">
         <div className="relative z-10 space-y-4">
+          
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-200 font-mono text-xs font-bold uppercase tracking-wider">
-              <Crown className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-              <span>Afterverse Creators • Programa Oficial 2026</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-200 text-xs font-semibold">
+              <Crown className="w-3.5 h-3.5 text-purple-300" />
+              <span>Afterverse Creators • Metas de Qualificação</span>
             </div>
 
-            <button
-              onClick={() => {
-                triggerAudio('tap');
-                setShowZetaLetter(!showZetaLetter);
-              }}
-              className="inline-flex items-center gap-2 text-xs font-sans font-bold text-pink-300 hover:text-white bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-            >
-              <Mail className="w-3.5 h-3.5 text-pink-400" />
-              <span>{showZetaLetter ? 'Ocultar Carta da Zeta' : 'Ler Comunicado da Zeta (Afterverse)'}</span>
-              {showZetaLetter ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
+            {stats.lastSyncedAt && (
+              <span className="text-[11px] font-mono text-gray-400 bg-white/[0.04] px-2.5 py-1 rounded-md border border-white/[0.06]">
+                Última sincronização: {new Date(stats.lastSyncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
           </div>
 
           <div className="max-w-3xl space-y-2">
-            <h2 className="font-sans font-black text-2xl sm:text-4xl text-white uppercase tracking-tight leading-tight">
-              Quanto Falta Para Você Ser <br />
-              <span className="bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-                Creator Oficial do PK XD?
-              </span>
+            <h2 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Acompanhamento de Metas para Creators PK XD
             </h2>
-            <p className="font-sans text-xs sm:text-sm text-gray-300 leading-relaxed max-w-2xl">
-              Acompanhe suas métricas em tempo real, descubra quantos vídeos e visualizações faltam para você se inscrever, simule suas comissões de Creator Code e prepare sua candidatura com base nas novas regras da Afterverse!
+            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-2xl">
+              Conecte seu canal para verificar em tempo real suas visualizações, vídeos publicados e saber exatamente quanto falta para atingir os critérios mínimos de inscrição.
             </p>
           </div>
 
-          {/* Quick Connect YouTube / Channel Banner */}
+          {/* Quick Connect YouTube / Status Bar */}
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <button
-              onClick={handleLoginWithYouTube}
-              disabled={isLoggingInYT}
-              className="inline-flex items-center gap-2.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-sans font-black text-xs sm:text-sm py-2.5 px-5 rounded-2xl transition-all shadow-[0_4px_20px_rgba(220,38,38,0.4)] cursor-pointer"
+              onClick={handleConnectYouTube}
+              disabled={isLoggingInYT || isSyncingAPI}
+              className="inline-flex items-center gap-2 bg-[#cc0000] hover:bg-[#b00000] active:scale-95 text-white text-xs sm:text-sm font-semibold py-2.5 px-4 rounded-xl transition-colors cursor-pointer shadow-md disabled:opacity-50"
             >
               <Youtube className="w-4 h-4 fill-white" />
-              <span>{isLoggingInYT ? 'Conectando...' : user ? 'Reconectar YouTube' : 'Fazer Login com YouTube'}</span>
+              <span>
+                {isLoggingInYT ? 'Conectando ao Google...' : isSyncingAPI ? 'Lendo dados do YouTube...' : stats.channelHandle ? 'Reconectar YouTube' : 'Conectar Canal do YouTube'}
+              </span>
             </button>
 
             {stats.channelHandle && (
-              <div className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/10 px-3.5 py-2 rounded-xl text-xs font-mono text-gray-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Canal: <strong className="text-yellow-300">{stats.channelHandle}</strong></span>
+              <button
+                onClick={handleRefreshMetrics}
+                disabled={isSyncingAPI}
+                className="inline-flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 text-xs font-semibold py-2.5 px-3.5 rounded-xl border border-white/10 transition-colors cursor-pointer disabled:opacity-50"
+                title="Atualizar dados do canal via YouTube API"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAPI ? 'animate-spin text-purple-400' : 'text-gray-300'}`} />
+                <span>{isSyncingAPI ? 'Sincronizando...' : 'Atualizar Dados'}</span>
+              </button>
+            )}
+
+            {stats.channelHandle && (
+              <div className="inline-flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] px-3 py-2 rounded-xl text-xs text-gray-300">
+                {stats.channelAvatar ? (
+                  <img 
+                    src={stats.channelAvatar} 
+                    alt={stats.channelName} 
+                    className="w-5 h-5 rounded-full object-cover border border-white/20"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                )}
+                <span>Canal: <strong className="text-white">{stats.channelName || stats.channelHandle}</strong> ({stats.channelHandle})</span>
               </div>
             )}
           </div>
+
+          {/* Sync Feedback message */}
+          {syncFeedback && (
+            <div className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
+              syncFeedback.type === 'success' 
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+                : syncFeedback.type === 'error'
+                ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+            }`}>
+              {syncFeedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              )}
+              <span>{syncFeedback.message}</span>
+            </div>
+          )}
+
         </div>
       </div>
 
-      {/* Accordion: Carta Oficial da Zeta (Afterverse Creators Influencer Relations Manager) */}
-      {showZetaLetter && (
-        <div className="p-6 rounded-3xl bg-[#12082b]/95 border border-purple-500/40 backdrop-blur-xl shadow-2xl space-y-4 text-xs sm:text-sm text-gray-200 leading-relaxed font-sans">
-          <div className="flex items-center justify-between border-b border-white/10 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-md">
-                Z
-              </div>
-              <div>
-                <h4 className="font-bold text-white text-base">Zeta da Afterverse Creators</h4>
-                <p className="text-[11px] text-pink-300 font-mono">Influencer Relations Manager • Afterverse</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-mono text-gray-400 bg-white/[0.05] px-2.5 py-1 rounded-md border border-white/10">
-              COMUNICADO OFICIAL
-            </span>
-          </div>
-
-          <div className="space-y-3 bg-black/30 p-4 rounded-2xl border border-white/5 max-h-96 overflow-y-auto custom-scrollbar text-gray-300">
-            <p className="font-semibold text-white">
-              Olá, Creators! Sou Zeta, da Afterverse Creators!
-            </p>
-            <p>
-              Estou escrevendo para compartilhar uma novidade muito importante sobre o <strong>Programa de Creators PK XD</strong>. Com o compromisso de valorizar o impacto de vocês na comunidade, implementamos melhorias significativas nas porcentagens do <strong>Creator Code</strong>.
-            </p>
-            <p>
-              <strong className="text-yellow-300">O que mudou?</strong> A partir de agora, <strong>todos os Creators monetizam tanto na primeira compra quanto em compras recorrentes</strong> — ninguém terá 0% de comissão! As comissões na primeira compra começam em <strong>5%</strong> e podem chegar até <strong>10%</strong> no tier Galaxy.
-            </p>
-            <div className="p-3 bg-purple-900/30 rounded-xl border border-purple-500/30 space-y-1 text-xs">
-              <p className="font-bold text-purple-200 uppercase tracking-wider">Critérios Mínimos para se Inscrever:</p>
-              <ul className="list-disc list-inside space-y-1 text-gray-300">
-                <li>Ter pelo menos 10 vídeos longos (+5 minutos) de PK XD publicados OU 30 Shorts/TikToks</li>
-                <li>Ter acumulado ao menos 10.000 views de PK XD nos últimos 3 meses</li>
-                <li>Estar em conformidade com as regras da comunidade e do programa</li>
-                <li>Aceitar os Termos do Creator Code</li>
-              </ul>
-            </div>
-            <p>
-              Os criadores serão categorizados como: <strong>Criador de Shorts</strong>, <strong>Criador de YouTube Longo</strong> ou <strong>Criador de TikTok</strong>.
-            </p>
-            <p className="text-gray-400 text-xs">
-              Contato oficial de dúvidas e inscrições: <strong className="text-pink-300">creators@playpkxd.com</strong> ou pelo Discord via ModMail.
-            </p>
-          </div>
+      {/* Security and Read-Only Guarantee Box */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#0a0718] border border-white/[0.08] text-xs text-gray-300 space-y-2.5">
+        <div className="flex items-center gap-2 text-white font-semibold">
+          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>Segurança & Acesso Somente Leitura (Read-Only)</span>
         </div>
-      )}
+        <p className="text-gray-400 leading-relaxed text-[11.5px]">
+          O acesso concedido é estritamente de leitura através da API oficial do YouTube (Google). 
+          <strong> Não publicamos absolutamente nada</strong>, <strong>não alteramos seu canal</strong> e <strong>não temos acesso a senhas ou dados privados</strong>. 
+          Consultamos apenas dados estatísticos públicos (nome, vídeos publicados, inscritos, curtidas e visualizações) para você acompanhar com precisão o que falta para suas metas.
+        </p>
+      </div>
 
-      {/* Main Readiness Gauge & Diagnosis Card */}
+      {/* Channel Key Metrics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl bg-[#0e0a24] border border-white/[0.08] space-y-1">
+          <span className="text-[11px] text-gray-400 block flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 text-purple-400" />
+            <span>Inscritos</span>
+          </span>
+          <strong className="text-base sm:text-lg text-white font-semibold block">
+            {stats.subscribers.toLocaleString('pt-BR')}
+          </strong>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#0e0a24] border border-white/[0.08] space-y-1">
+          <span className="text-[11px] text-gray-400 block flex items-center gap-1.5">
+            <Play className="w-3.5 h-3.5 text-purple-400" />
+            <span>Vídeos no Canal</span>
+          </span>
+          <strong className="text-base sm:text-lg text-white font-semibold block">
+            {stats.totalLifetimeVideos || currentVideosCount}
+          </strong>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#0e0a24] border border-white/[0.08] space-y-1">
+          <span className="text-[11px] text-gray-400 block flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5 text-purple-400" />
+            <span>Views (3 Meses)</span>
+          </span>
+          <strong className="text-base sm:text-lg text-white font-semibold block">
+            {stats.viewsLast3Months.toLocaleString('pt-BR')}
+          </strong>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#0e0a24] border border-white/[0.08] space-y-1">
+          <span className="text-[11px] text-gray-400 block flex items-center gap-1.5">
+            <ThumbsUp className="w-3.5 h-3.5 text-purple-400" />
+            <span>Curtidas Computadas</span>
+          </span>
+          <strong className="text-base sm:text-lg text-white font-semibold block">
+            {stats.totalLikes > 0 ? stats.totalLikes.toLocaleString('pt-BR') : '—'}
+          </strong>
+        </div>
+      </div>
+
+      {/* Main Requirements & Live Goals Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left 2 Cols: Eligibility Checklist & Live Progress Bars */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Left 2 Cols: Requirements and Progress Bars */}
+        <div className="lg:col-span-2 space-y-5">
           
-          <div className="p-6 rounded-3xl bg-[#0e0724]/90 border border-white/[0.08] backdrop-blur-xl shadow-xl space-y-6">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#0e0a24] border border-white/[0.08] space-y-5">
             
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
               <div>
-                <h3 className="font-sans font-black text-lg sm:text-xl text-white uppercase flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-yellow-300" />
-                  <span>Seu Progresso de Inscrição</span>
+                <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-purple-400" />
+                  <span>Critérios Mínimos de Inscrição</span>
                 </h3>
-                <p className="text-xs text-gray-400 font-sans">
-                  Atingimento dos critérios mínimos estabelecidos pela Afterverse
+                <p className="text-xs text-gray-400">
+                  Parâmetros de qualificação exigidos pela Afterverse
                 </p>
               </div>
 
               {/* Status Badge */}
-              <div className={`px-3.5 py-1.5 rounded-xl border font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+              <div className={`px-3 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 ${
                 isFullyEligibleToApply 
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                  : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  : 'bg-white/[0.04] text-gray-300 border-white/10'
               }`}>
                 {isFullyEligibleToApply ? (
                   <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Elegível para Inscrição!</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Qualificado para Inscrição</span>
                   </>
                 ) : (
                   <>
-                    <AlertCircle className="w-4 h-4 text-amber-400" />
-                    <span>Em Progresso ({readinessPercent}%)</span>
+                    <AlertCircle className="w-3.5 h-3.5 text-yellow-400" />
+                    <span>Progresso: {readinessPercent}%</span>
                   </>
                 )}
               </div>
@@ -394,9 +587,8 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
 
             {/* Selector: Choose Primary Content Format */}
             <div className="space-y-2">
-              <label className="text-xs font-mono font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                <span>1. Formato Principal do seu Canal:</span>
-                <span className="text-[10px] text-purple-300 font-normal">(Classificação Afterverse)</span>
+              <label className="text-xs font-semibold text-gray-300 block">
+                Formato Principal de Conteúdo:
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -406,18 +598,18 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
                     triggerAudio('tap');
                     updateStats({ format: 'youtube_long' });
                   }}
-                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer active:scale-95 ${
+                  className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-colors cursor-pointer ${
                     stats.format === 'youtube_long'
-                      ? 'bg-purple-600/25 border-purple-400 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-                      : 'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                      ? 'bg-purple-600/20 border-purple-500 text-white'
+                      : 'bg-white/[0.02] border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-red-600/20 text-red-400 flex items-center justify-center shrink-0">
                     <Video className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="block text-xs text-white">YouTube Longo</strong>
-                    <span className="text-[10px] text-gray-400">Meta: 10 vídeos (+5m)</span>
+                    <strong className="block text-xs text-white font-semibold">YouTube Longo</strong>
+                    <span className="text-[11px] text-gray-400">Meta: 10 vídeos (+5m)</span>
                   </div>
                 </button>
 
@@ -427,18 +619,18 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
                     triggerAudio('tap');
                     updateStats({ format: 'youtube_shorts' });
                   }}
-                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer active:scale-95 ${
+                  className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-colors cursor-pointer ${
                     stats.format === 'youtube_shorts'
-                      ? 'bg-purple-600/25 border-purple-400 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-                      : 'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                      ? 'bg-purple-600/20 border-purple-500 text-white'
+                      : 'bg-white/[0.02] border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-pink-600/20 text-pink-400 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-pink-600/20 text-pink-400 flex items-center justify-center shrink-0">
                     <Zap className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="block text-xs text-white">YouTube Shorts</strong>
-                    <span className="text-[10px] text-gray-400">Meta: 30 Shorts</span>
+                    <strong className="block text-xs text-white font-semibold">YouTube Shorts</strong>
+                    <span className="text-[11px] text-gray-400">Meta: 30 Shorts</span>
                   </div>
                 </button>
 
@@ -448,42 +640,42 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
                     triggerAudio('tap');
                     updateStats({ format: 'tiktok' });
                   }}
-                  className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer active:scale-95 ${
+                  className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-colors cursor-pointer ${
                     stats.format === 'tiktok'
-                      ? 'bg-purple-600/25 border-purple-400 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-                      : 'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                      ? 'bg-purple-600/20 border-purple-500 text-white'
+                      : 'bg-white/[0.02] border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center shrink-0">
                     <Smartphone className="w-4 h-4" />
                   </div>
                   <div>
-                    <strong className="block text-xs text-white">TikTok</strong>
-                    <span className="text-[10px] text-gray-400">Meta: 30 TikToks</span>
+                    <strong className="block text-xs text-white font-semibold">TikTok</strong>
+                    <span className="text-[11px] text-gray-400">Meta: 30 TikToks</span>
                   </div>
                 </button>
               </div>
             </div>
 
             {/* Requirement 1: Videos Progress */}
-            <div className="space-y-2 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-              <div className="flex items-center justify-between text-xs font-sans">
-                <span className="font-bold text-white flex items-center gap-1.5">
+            <div className="space-y-2 p-4 rounded-xl bg-black/20 border border-white/[0.06]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
                   <Play className="w-3.5 h-3.5 text-purple-400" />
                   <span>Vídeos Publicados de PK XD:</span>
                 </span>
-                <span className="font-mono text-xs font-bold text-yellow-300">
+                <span className="font-mono text-xs font-semibold text-gray-200">
                   {currentVideosCount} / {reqVideosNeeded} ({videosProgress}%)
                 </span>
               </div>
 
-              {/* Visual Progress Bar */}
-              <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden relative">
+              {/* Progress Bar */}
+              <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden relative">
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ${
                     currentVideosCount >= reqVideosNeeded 
-                      ? 'bg-gradient-to-r from-emerald-400 to-teal-400 shadow-[0_0_12px_#34d399]' 
-                      : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                      ? 'bg-emerald-500' 
+                      : 'bg-purple-600'
                   }`}
                   style={{ width: `${videosProgress}%` }}
                 />
@@ -492,15 +684,15 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
               <div className="flex items-center justify-between pt-1">
                 <p className="text-[11px] text-gray-400">
                   {currentVideosCount >= reqVideosNeeded ? (
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Meta de vídeos atingida!
+                    <span className="text-emerald-400 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Meta de vídeos atingida
                     </span>
                   ) : (
-                    <span>Faltam <strong>{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts/tiktoks'} de PK XD</span>
+                    <span>Faltam <strong>{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts'} de PK XD</span>
                   )}
                 </p>
 
-                {/* Counter buttons */}
+                {/* Manual adjuster */}
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
@@ -512,7 +704,8 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
                         updateStats({ shortsCount: Math.max(0, stats.shortsCount - 1) });
                       }
                     }}
-                    className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center cursor-pointer text-xs"
+                    className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center cursor-pointer text-xs"
+                    title="Diminuir"
                   >
                     -
                   </button>
@@ -529,7 +722,7 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
                         updateStats({ shortsCount: val });
                       }
                     }}
-                    className="w-14 text-center py-1 rounded-lg bg-black/40 border border-white/10 text-white font-mono text-xs font-bold"
+                    className="w-14 text-center py-0.5 rounded bg-black/40 border border-white/10 text-white font-mono text-xs"
                   />
                   <button
                     type="button"
@@ -541,7 +734,8 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
                         updateStats({ shortsCount: stats.shortsCount + 1 });
                       }
                     }}
-                    className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center cursor-pointer text-xs"
+                    className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center cursor-pointer text-xs"
+                    title="Aumentar"
                   >
                     +
                   </button>
@@ -550,23 +744,23 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
             </div>
 
             {/* Requirement 2: Views Last 3 Months */}
-            <div className="space-y-2 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-              <div className="flex items-center justify-between text-xs font-sans">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="space-y-2 p-4 rounded-xl bg-black/20 border border-white/[0.06]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-purple-400" />
                   <span>Visualizações nos Últimos 3 Meses:</span>
                 </span>
-                <span className="font-mono text-xs font-bold text-cyan-300">
+                <span className="font-mono text-xs font-semibold text-gray-200">
                   {stats.viewsLast3Months.toLocaleString('pt-BR')} / 10.000 ({viewsProgress}%)
                 </span>
               </div>
 
-              <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden relative">
+              <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden relative">
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ${
                     stats.viewsLast3Months >= reqViewsNeeded 
-                      ? 'bg-gradient-to-r from-emerald-400 to-teal-400 shadow-[0_0_12px_#34d399]' 
-                      : 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                      ? 'bg-emerald-500' 
+                      : 'bg-purple-600'
                   }`}
                   style={{ width: `${viewsProgress}%` }}
                 />
@@ -575,8 +769,8 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <p className="text-[11px] text-gray-400">
                   {stats.viewsLast3Months >= reqViewsNeeded ? (
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Meta de 10.000 views atingida!
+                    <span className="text-emerald-400 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Meta de 10.000 views atingida
                     </span>
                   ) : (
                     <span>Faltam <strong>{viewsRemaining.toLocaleString('pt-BR')}</strong> visualizações de PK XD</span>
@@ -584,63 +778,63 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
                 </p>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-400 font-mono">Suas views:</span>
+                  <span className="text-[11px] text-gray-400">Ajuste manual:</span>
                   <input
                     type="number"
                     min="0"
-                    step="500"
+                    step="100"
                     value={stats.viewsLast3Months}
                     onChange={(e) => updateStats({ viewsLast3Months: Math.max(0, parseInt(e.target.value) || 0) })}
-                    className="w-24 text-right px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-white font-mono text-xs font-bold"
+                    className="w-24 text-right px-2 py-0.5 rounded bg-black/40 border border-white/10 text-white font-mono text-xs"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Requirement 3 & 4: Legal & Community Compliance */}
+            {/* Requirement 3 & 4: Compliance checkboxes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] cursor-pointer hover:bg-white/[0.04] transition-all">
+              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-black/20 border border-white/[0.06] cursor-pointer hover:bg-black/30 transition-colors">
                 <input
                   type="checkbox"
                   checked={stats.compliantRules}
                   onChange={(e) => updateStats({ compliantRules: e.target.checked })}
-                  className="mt-0.5 rounded text-purple-600 focus:ring-0 cursor-pointer"
+                  className="mt-0.5 rounded border-white/20 text-purple-600 focus:ring-0 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-bold text-white block">Regras da Comunidade</span>
-                  <p className="text-[10.5px] text-gray-400 leading-snug">
-                    Canal seguro, sem hacks, cheats ou conteúdo ofensivo.
+                  <span className="text-xs font-semibold text-white block">Diretrizes da Comunidade</span>
+                  <p className="text-[11px] text-gray-400 leading-snug">
+                    Conteúdo seguro para todas as idades, sem cheats ou conduta inadequada.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] cursor-pointer hover:bg-white/[0.04] transition-all">
+              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-black/20 border border-white/[0.06] cursor-pointer hover:bg-black/30 transition-colors">
                 <input
                   type="checkbox"
                   checked={stats.acceptedTerms}
                   onChange={(e) => updateStats({ acceptedTerms: e.target.checked })}
-                  className="mt-0.5 rounded text-purple-600 focus:ring-0 cursor-pointer"
+                  className="mt-0.5 rounded border-white/20 text-purple-600 focus:ring-0 cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-bold text-white block">Termos do Creator Code</span>
-                  <p className="text-[10.5px] text-gray-400 leading-snug">
-                    Aceito os termos de comissão e política de parcerias.
+                  <span className="text-xs font-semibold text-white block">Termos do Creator Code</span>
+                  <p className="text-[11px] text-gray-400 leading-snug">
+                    Concordância com as regras e políticas de parceria Afterverse.
                   </p>
                 </div>
               </label>
             </div>
 
             {/* Save Button */}
-            <div className="pt-2 flex items-center justify-between border-t border-white/[0.08]">
-              <p className="text-[11px] text-gray-400 font-mono">
-                {saveSuccessMsg ? '✅ Metas salvas na nuvem com sucesso!' : 'Mantenha suas métricas atualizadas semanalmente.'}
+            <div className="pt-3 flex items-center justify-between border-t border-white/[0.08]">
+              <p className="text-[11px] text-gray-400">
+                {saveSuccessMsg ? '✅ Metas salvas com sucesso!' : 'Mantenha suas métricas sincronizadas para acompanhar seu progresso.'}
               </p>
               <button
                 type="button"
                 onClick={handleSaveToCloud}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-sans font-bold text-xs shadow-md transition-all cursor-pointer active:scale-95"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-colors cursor-pointer active:scale-95"
               >
-                Salvar Minhas Metas (+100 XP)
+                Salvar Metas
               </button>
             </div>
 
@@ -648,413 +842,73 @@ ${stats.channelName || user?.displayName || 'Criador da Comunidade PK XD'}`;
 
         </div>
 
-        {/* Right 1 Col: Overall Score & Direct Application Card */}
-        <div className="space-y-6">
+        {/* Right 1 Col: Overall Score & Diagnostic Card */}
+        <div className="space-y-5">
           
-          <div className="p-6 rounded-3xl bg-gradient-to-b from-[#160b33] to-[#0a0518] border border-purple-500/30 backdrop-blur-xl shadow-2xl space-y-5 text-center">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#0e0a24] border border-white/[0.08] space-y-4 text-center">
             
-            <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-0.5 shadow-[0_0_30px_rgba(251,191,36,0.3)]">
-              <div className="w-full h-full bg-[#0a0518] rounded-[22px] flex items-center justify-center">
-                <Trophy className="w-8 h-8 text-yellow-300" />
-              </div>
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+              <Crown className="w-7 h-7 text-purple-300" />
             </div>
 
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-widest text-purple-300 font-bold">
-                Índice de Prontidão
+              <span className="text-[11px] font-mono uppercase tracking-wider text-gray-400 font-semibold">
+                Índice de Qualificação
               </span>
-              <div className="font-sans font-black text-4xl text-white pt-1">
+              <div className="text-3xl sm:text-4xl font-extrabold text-white pt-0.5">
                 {readinessPercent}%
               </div>
             </div>
 
             {/* Diagnostic Message */}
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-xs text-gray-300 leading-relaxed text-left space-y-1.5">
-              <span className="font-bold text-white block flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                Diagnóstico Oficial:
+            <div className="p-3.5 rounded-xl bg-black/30 border border-white/[0.06] text-xs text-gray-300 leading-relaxed text-left space-y-1.5">
+              <span className="font-semibold text-white block">
+                Diagnóstico de Elegibilidade:
               </span>
               {isFullyEligibleToApply ? (
                 <p className="text-emerald-300 font-medium">
-                  🎉 <strong>Parabéns!</strong> Você atende a todos os critérios mínimos para se candidatar ao Programa de Creators do PK XD! Copie o modelo abaixo e envie seu e-mail para a equipe.
+                  Parabéns! Seu canal atingiu todos os requisitos mínimos estabelecidos para a inscrição no programa de Creators PK XD.
                 </p>
               ) : (
-                <p>
+                <div className="space-y-1 text-gray-300">
                   {videosRemaining > 0 && (
-                    <span>• Publique mais <strong>{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts'} de PK XD.<br /></span>
+                    <p>• Publique mais <strong>{videosRemaining}</strong> {stats.format === 'youtube_long' ? 'vídeos longos (+5min)' : 'shorts'} de PK XD.</p>
                   )}
                   {viewsRemaining > 0 && (
-                    <span>• Alcance mais <strong>{viewsRemaining.toLocaleString('pt-BR')}</strong> visualizações.<br /></span>
+                    <p>• Acumule mais <strong>{viewsRemaining.toLocaleString('pt-BR')}</strong> visualizações nos últimos 3 meses.</p>
                   )}
-                  <span className="text-yellow-300/90 block pt-1">Mantenha a constância e divulgue seus vídeos!</span>
-                </p>
+                  {(!stats.compliantRules || !stats.acceptedTerms) && (
+                    <p>• Marque a aceitação dos termos e diretrizes da comunidade.</p>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Send Application CTA */}
-            <div className="space-y-2 pt-1">
-              <button
-                type="button"
-                onClick={() => copyToClipboard(emailApplicationTemplate, true)}
-                className={`w-full py-3 px-4 rounded-2xl font-sans font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95 ${
-                  isFullyEligibleToApply 
-                    ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-purple-950 shadow-[0_0_20px_rgba(251,191,36,0.4)]'
-                    : 'bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/10'
-                }`}
-              >
-                {copiedTemplate ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedTemplate ? 'Modelo Copiado!' : 'Copiar E-mail de Inscrição'}</span>
-              </button>
-
-              <a
-                href={`mailto:creators@playpkxd.com?subject=Inscrição%20Programa%20de%20Creators%20PK%20XD%20-%20${encodeURIComponent(stats.channelName || 'Canal')}&body=${encodeURIComponent(emailApplicationTemplate)}`}
-                className="w-full py-2.5 px-4 rounded-2xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/30 text-purple-200 font-sans font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <Mail className="w-3.5 h-3.5 text-pink-300" />
-                <span>Enviar para creators@playpkxd.com</span>
-              </a>
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* Official Tiers Breakdown by Zeta (Stardust, Rising Star, Supernova, Galaxy) */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-[#0e0724]/90 border border-white/[0.08] backdrop-blur-xl shadow-xl space-y-6">
-        
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
-          <div>
-            <h3 className="font-sans font-black text-xl sm:text-2xl text-white uppercase flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-300 fill-yellow-300" />
-              <span>Tiers, Benefícios e Comissões Oficiais</span>
-            </h3>
-            <p className="text-xs text-gray-400 font-sans">
-              Estrutura atualizada pela Zeta em 01/12/2025: Ninguém recebe 0% de comissão!
-            </p>
-          </div>
-
-          {/* Tier Selector Pills */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/10">
-            <button
-              onClick={() => { triggerAudio('tap'); setActiveTierTab('stardust'); }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold font-sans uppercase transition-all cursor-pointer ${
-                activeTierTab === 'stardust' 
-                  ? 'bg-purple-600 text-white shadow-md' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              ⭐ Stardust
-            </button>
-            <button
-              onClick={() => { triggerAudio('tap'); setActiveTierTab('rising_star'); }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold font-sans uppercase transition-all cursor-pointer ${
-                activeTierTab === 'rising_star' 
-                  ? 'bg-pink-600 text-white shadow-md' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              🌟 Rising Star
-            </button>
-            <button
-              onClick={() => { triggerAudio('tap'); setActiveTierTab('supernova'); }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold font-sans uppercase transition-all cursor-pointer ${
-                activeTierTab === 'supernova' 
-                  ? 'bg-amber-500 text-purple-950 font-black shadow-md' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              💥 Supernova
-            </button>
-            <button
-              onClick={() => { triggerAudio('tap'); setActiveTierTab('galaxy'); }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold font-sans uppercase transition-all cursor-pointer ${
-                activeTierTab === 'galaxy' 
-                  ? 'bg-cyan-500 text-slate-950 font-black shadow-md' 
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              🌌 Galaxy
-            </button>
-          </div>
-        </div>
-
-        {/* Tier Details Card */}
-        {activeTierTab === 'stardust' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-purple-900/15 border border-purple-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-purple-300 font-mono text-xs font-bold uppercase">
-                <ShieldCheck className="w-4 h-4 text-purple-400" />
-                <span>Critérios para Entrar no Tier Stardust</span>
+            {/* Checklist */}
+            <div className="space-y-2 pt-1 text-left text-xs">
+              <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${currentVideosCount >= reqVideosNeeded ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-white/[0.02] border-white/[0.06] text-gray-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${currentVideosCount >= reqVideosNeeded ? 'text-emerald-400' : 'text-gray-500'}`} />
+                <span>Mínimo de vídeos ({currentVideosCount}/{reqVideosNeeded})</span>
               </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span>Mínimo de <strong>1.000 seguidores</strong> no canal.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span><strong>YouTube Shorts:</strong> 16 Shorts por mês + Média de 1.000 views/vídeo.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span><strong>YouTube Longo:</strong> 8 vídeos por mês + Média de 700 views.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span><strong>TikTok:</strong> 16 TikToks por mês + Média de 1.000 views/vídeo.</span>
-                </li>
-              </ul>
-            </div>
 
-            <div className="p-5 rounded-2xl bg-purple-900/15 border border-purple-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-yellow-300 font-mono text-xs font-bold uppercase">
-                <Gift className="w-4 h-4 text-yellow-400" />
-                <span>Benefícios & Recompensas Stardust</span>
+              <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${stats.viewsLast3Months >= reqViewsNeeded ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-white/[0.02] border-white/[0.06] text-gray-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.viewsLast3Months >= reqViewsNeeded ? 'text-emerald-400' : 'text-gray-500'}`} />
+                <span>10.000 views em 3 meses ({stats.viewsLast3Months.toLocaleString('pt-BR')}/10.000)</span>
               </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>5% de comissão</strong> sobre a 1ª compra de cada jogador.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>0,7% de comissão recorrente</strong> sobre compras subsequentes.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Mesada mensal:</strong> 30.000 moedas + 150 gemas no PK XD!</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span>E-mails exclusivos (Gossip Girl & Jenny Content), Discord VIP e área de destaques.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        )}
 
-        {activeTierTab === 'rising_star' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-pink-900/15 border border-pink-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-pink-300 font-mono text-xs font-bold uppercase">
-                <ShieldCheck className="w-4 h-4 text-pink-400" />
-                <span>Critérios para o Tier Rising Star</span>
+              <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${stats.compliantRules ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-white/[0.02] border-white/[0.06] text-gray-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.compliantRules ? 'text-emerald-400' : 'text-gray-500'}`} />
+                <span>Diretrizes da comunidade</span>
               </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span><strong>Shorts:</strong> 10.000 seguidores + 16 Shorts/mês + Média 10.000 views.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span><strong>YouTube Longo:</strong> 5.000 seguidores + 8 vídeos/mês + Média 1.000 views.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span><strong>TikTok:</strong> 10.000 seguidores + 16 TikToks/mês + Média 10.000 views.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-pink-300 font-bold">OU:</span>
-                  <span>Creators que atingiram pelo menos <strong>$10 de revenue share</strong> nos últimos 3 meses.</span>
-                </li>
-              </ul>
-            </div>
 
-            <div className="p-5 rounded-2xl bg-pink-900/15 border border-pink-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-yellow-300 font-mono text-xs font-bold uppercase">
-                <Gift className="w-4 h-4 text-yellow-400" />
-                <span>Benefícios & Recompensas Rising Star</span>
+              <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${stats.acceptedTerms ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-white/[0.02] border-white/[0.06] text-gray-400'}`}>
+                <CheckCircle2 className={`w-4 h-4 shrink-0 ${stats.acceptedTerms ? 'text-emerald-400' : 'text-gray-500'}`} />
+                <span>Termos de parceria</span>
               </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>5% 1ª compra</strong> + <strong>1% de comissão recorrente</strong>.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Mesada mensal:</strong> 150.000 moedas + 1.500 gemas!</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Código de 30 gemas</strong> com até 50 resgates mensalmente!</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Fake purchase habilitada:</strong> Comprar pacotes de dinheiro real 1x sem custo.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span>[Em breve] Nova identificação in-game de Creator Oficial!</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {activeTierTab === 'supernova' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-amber-900/15 border border-amber-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-amber-300 font-mono text-xs font-bold uppercase">
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>Critérios para o Tier Supernova</span>
-              </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span>Atingir pelo menos <strong>$50 de revenue share</strong> somado nos últimos 3 meses.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span>Estar ativo no último trimestre em total conformidade com os termos.</span>
-                </li>
-              </ul>
             </div>
 
-            <div className="p-5 rounded-2xl bg-amber-900/15 border border-amber-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-yellow-300 font-mono text-xs font-bold uppercase">
-                <Gift className="w-4 h-4 text-yellow-400" />
-                <span>Benefícios & Recompensas Supernova</span>
-              </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>8% 1ª compra</strong> + <strong>1,5% de comissão recorrente</strong>.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Mesada mensal:</strong> 200.000 moedas + 2.000 gemas!</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Código de 30 gemas</strong> com 150 resgates mensais.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Criação de <strong>UMA conta secundária/parceiro</strong> com benefícios de creator.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {activeTierTab === 'galaxy' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-cyan-900/15 border border-cyan-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-cyan-300 font-mono text-xs font-bold uppercase">
-                <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                <span>Critérios para o Tier Máximo: Galaxy</span>
-              </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span>Atingir pelo menos <strong>$300 de revenue share</strong> somado nos últimos 3 meses.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-300 font-bold">•</span>
-                  <span>Constância comprovada e impacto estelar na comunidade do PK XD.</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-cyan-900/15 border border-cyan-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-yellow-300 font-mono text-xs font-bold uppercase">
-                <Gift className="w-4 h-4 text-yellow-400" />
-                <span>Benefícios Exclusivos Galaxy (Nível Supremo)</span>
-              </div>
-              <ul className="space-y-2 text-xs text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>10% 1ª compra</strong> + <strong>3% de comissão recorrente</strong>.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Mesada máxima:</strong> 300.000 moedas + 3.000 gemas mensais!</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Código de 30 gemas</strong> com 350 resgates para seus seguidores!</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Fake purchase irrestrita:</strong> Comprar múltiplos pacotes de móveis e pet pods sem custo.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong>Acesso antecipado</strong> em atualizações + <strong>Lives no canal oficial do PK XD</strong>!</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {/* Interactive Creator Code Revenue Simulator */}
-        <div className="p-6 rounded-2xl bg-black/40 border border-white/10 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="font-sans font-bold text-sm text-white flex items-center gap-2">
-              <Calculator className="w-4 h-4 text-emerald-400" />
-              <span>Simulador de Ganhos no Tier {tierCommissions[activeTierTab].name}</span>
-            </h4>
-            <span className="text-[11px] font-mono text-gray-400">
-              Comissão 1ª Compra: {(tierCommissions[activeTierTab].first * 100)}% • Recorrente: {(tierCommissions[activeTierTab].recurring * 100).toFixed(1)}%
-            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="text-[11px] font-mono text-gray-400 block mb-1">
-                1ª Compras usando seu código:
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={simBuyers1st}
-                onChange={(e) => setSimBuyers1st(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-mono text-gray-400 block mb-1">
-                Compras Recorrentes:
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={simBuyersRec}
-                onChange={(e) => setSimBuyersRec(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-mono text-gray-400 block mb-1">
-                Valor Médio do Pacote (R$):
-              </label>
-              <input
-                type="number"
-                min="5"
-                value={simAvgOrder}
-                onChange={(e) => setSimAvgOrder(Math.max(5, parseInt(e.target.value) || 30))}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs font-bold"
-              />
-            </div>
-          </div>
-
-          {/* Revenue Result Pill */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30">
-            <div>
-              <span className="text-[11px] text-gray-300 font-sans block">Estimativa de Rendimento com Creator Code:</span>
-              <strong className="text-xl sm:text-2xl text-emerald-400 font-mono font-black">
-                R$ {simRevTotal.toFixed(2)}
-              </strong>
-            </div>
-            <div className="text-right text-xs text-gray-300 font-mono">
-              <div>1ª Compra: <span className="text-emerald-300 font-bold">R$ {simRev1st.toFixed(2)}</span></div>
-              <div>Recorrente: <span className="text-emerald-300 font-bold">R$ {simRevRec.toFixed(2)}</span></div>
-            </div>
-          </div>
         </div>
 
       </div>

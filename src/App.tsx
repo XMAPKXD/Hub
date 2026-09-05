@@ -2589,18 +2589,15 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/creators');
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap ${
                 activeTab === 'creator-metas'
-                  ? 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white border-yellow-200 shadow-[0_0_18px_rgba(236,72,153,0.4)]'
+                  ? 'bg-purple-600 text-white border-purple-400/40 shadow-sm'
                   : 'bg-white/[0.05] hover:bg-white/[0.1] text-purple-200 border-white/10 hover:text-white'
               }`}
               title="Programa de Creators PK XD e Metas"
             >
-              <Crown className="w-3.5 h-3.5 shrink-0 text-yellow-300 fill-yellow-300" />
+              <Crown className="w-3.5 h-3.5 shrink-0 text-purple-300" />
               <span className="hidden sm:inline">Metas Creator</span>
-              <span className="text-[9px] bg-pink-500/90 text-white font-mono font-black px-1.5 py-0.5 rounded-md">
-                NOVO
-              </span>
             </button>
 
             {/* 3. Quick Passport / PKXD ID Tab */}
@@ -3254,17 +3251,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/creators');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center relative ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer active:scale-95 text-center ${
                   activeTab === 'creator-metas'
-                    ? 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white font-black shadow-[0_4px_20px_rgba(236,72,153,0.4)] border border-yellow-200'
+                    ? 'bg-purple-600 text-white border border-purple-400/40 shadow-sm'
                     : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
                 }`}
               >
-                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-yellow-300 fill-yellow-300" />
+                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-purple-300" />
                 <span className="truncate">Metas Creator</span>
-                <span className="hidden sm:inline-block absolute -top-1.5 -right-1 px-1.5 py-0.2 rounded-full bg-pink-500 text-[8px] font-black text-white uppercase tracking-tighter">
-                  Novo
-                </span>
               </button>
             </div>
 
@@ -3358,30 +3352,29 @@ export default function App() {
 
                       {/* METAS CREATOR BANNER - PROGRAMA OFICIAL AFTERVERSE */}
                       <div className="max-w-4xl mx-auto mt-8 mb-4 px-4 sm:px-0" id="creator-goals-banner-home">
-                        <div className="bg-gradient-to-r from-yellow-500/20 via-purple-900/60 to-pink-900/40 border-2 border-yellow-500/30 rounded-2xl p-6 shadow-[0_4px_25px_rgba(234,179,8,0.15)] hover:shadow-[0_4px_35px_rgba(234,179,8,0.25)] hover:border-yellow-400/50 transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-                          <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-yellow-400 to-pink-500" />
+                        <div className="bg-[#0e0a24] border border-white/[0.08] rounded-2xl p-6 shadow-md hover:border-purple-500/30 transition-colors flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
                           
                           <div className="space-y-2 text-center md:text-left">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 text-[10px] font-mono font-bold uppercase tracking-wider">
-                              <Crown className="w-3 h-3 text-yellow-300 fill-yellow-300" />
-                              <span>NOVO • Programa de Creators Afterverse</span>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-purple-500/10 text-purple-200 border border-purple-500/20 text-xs font-semibold">
+                              <Crown className="w-3.5 h-3.5 text-purple-300" />
+                              <span>Programa Oficial de Creators PK XD</span>
                             </div>
-                            <h4 className="font-sans font-black text-lg text-white uppercase tracking-tight flex items-center gap-2 justify-center md:justify-start">
-                              <span>Quer ser um Creator Oficial do PK XD? ⭐</span>
+                            <h4 className="font-sans font-bold text-lg text-white tracking-tight flex items-center gap-2 justify-center md:justify-start">
+                              <span>Quer se tornar um Creator Oficial?</span>
                             </h4>
                             <p className="font-sans text-xs text-gray-300 max-w-xl leading-relaxed">
-                              Faça login com seu canal do YouTube, veja exatamente quanto falta para bater a meta de 10 vídeos e 10.000 visualizações, simule ganhos com Creator Code e conheça os novos Tiers oficiais!
+                              Conecte sua conta com acesso 100% seguro e somente leitura para acompanhar em tempo real seus vídeos publicados, visualizações e o que falta para se qualificar.
                             </p>
                           </div>
 
                           <button 
                             onClick={() => {
-                              triggerAudio('levelUp');
+                              triggerAudio('tap');
                               navigateTo('/creators');
                             }}
-                            className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 hover:brightness-110 active:scale-[0.98] text-purple-950 font-sans font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border border-yellow-200 cursor-pointer flex items-center justify-center gap-2 transition-all flex-shrink-0"
+                            className="w-full md:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-500 active:scale-[0.98] text-white font-sans font-semibold text-xs rounded-xl shadow-sm cursor-pointer flex items-center justify-center gap-2 transition-colors flex-shrink-0"
                           >
-                            <span>🚀 Ver Minhas Metas</span>
+                            <span>Acompanhar Minhas Metas</span>
                           </button>
                         </div>
                       </div>

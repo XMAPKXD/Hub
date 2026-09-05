@@ -1028,18 +1028,17 @@ export default function ApplicationsSection({
           </div>
 
           {/* Special Creator Goals Banner */}
-          <div className="bg-gradient-to-r from-yellow-500/20 via-purple-900/60 to-pink-900/40 border-2 border-yellow-500/30 rounded-3xl p-6 sm:p-7 shadow-[0_4px_25px_rgba(234,179,8,0.15)] flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-            <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-yellow-400 to-pink-500" />
+          <div className="bg-[#0e0a24] border border-white/[0.08] rounded-2xl p-6 shadow-md hover:border-purple-500/30 transition-colors flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
             <div className="space-y-2 text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 text-[10px] font-mono font-bold uppercase tracking-wider">
-                <Crown className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
-                <span>NOVO • Programa de Creators Afterverse</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-purple-500/10 text-purple-200 border border-purple-500/20 text-xs font-semibold">
+                <Crown className="w-3.5 h-3.5 text-purple-300" />
+                <span>Programa de Creators PK XD</span>
               </div>
-              <h3 className="font-sans font-black text-lg sm:text-xl text-white uppercase tracking-tight">
-                QUER SE INSCREVER NO PROGRAMA OFICIAL DE CREATORS? ⭐
+              <h3 className="font-sans font-bold text-lg text-white tracking-tight">
+                Painel de Metas para Creators
               </h3>
               <p className="font-sans text-xs text-gray-300 max-w-xl leading-relaxed">
-                Acompanhe o progresso do seu canal do YouTube rumo às metas oficiais (10 vídeos + 10.000 visualizações), confira as novas porcentagens de comissão (Stardust, Rising Star, Supernova, Galaxy) e gere seu e-mail pronto para envio à Afterverse!
+                Conecte seu canal do YouTube com acesso seguro e somente leitura para checar suas visualizações, vídeos publicados e verificar sua elegibilidade aos critérios oficiais da Afterverse.
               </p>
             </div>
             <button
@@ -1048,9 +1047,9 @@ export default function ApplicationsSection({
                 window.history.pushState({}, '', '/creators');
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
-              className="w-full md:w-auto px-6 py-3.5 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 hover:brightness-110 active:scale-[0.98] text-purple-950 font-sans font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg border border-yellow-200 cursor-pointer flex items-center justify-center gap-2 transition-all flex-shrink-0"
+              className="w-full md:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-500 active:scale-[0.98] text-white font-sans font-semibold text-xs rounded-xl shadow-sm cursor-pointer flex items-center justify-center gap-2 transition-colors flex-shrink-0"
             >
-              <span>🚀 Abrir Metas Creator</span>
+              <span>Ver Minhas Metas</span>
             </button>
           </div>
 
