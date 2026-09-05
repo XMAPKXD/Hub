@@ -1,137 +1,236 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 @import "tailwindcss";
 
 :root {
-  --glow-1: rgba(139, 92, 246, 0.15);
-  --glow-2: rgba(236, 72, 153, 0.12);
-  --glow-3: rgba(6, 182, 212, 0.10);
-  --glow-accent: rgba(250, 204, 21, 0.15);
+  --glow-1: rgba(124, 18, 235, 0.08);
+  --glow-2: rgba(255, 0, 122, 0.05);
+  --glow-3: rgba(0, 240, 255, 0.04);
 }
 
-/* Base Body Style with Modern Clean Font Hierarchy */
+/* Base Body Style */
 body {
-  font-family: "Plus Jakarta Sans", "Fredoka", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Fredoka", "Space Grotesk", "Inter", sans-serif;
   margin: 0;
   padding: 0;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* ==========================================================================
-   1. REFINED WHITE & SOFT PURPLE THEME (MINIMALIST, FORMAL & CLEAN)
+   GLASSMORPHISM THEME SWITCHER (APPLE GLASS AESTHETIC)
    ========================================================================== */
-#pkxd-app-root,
-#pkxd-app-root.theme-light,
-#pkxd-app-root.theme-dark {
-  background-color: #f7f5fc !important;
+
+/* 1. LIGHT MODE GLASS */
+#pkxd-app-root.theme-light {
+  background-color: #f7f9fb !important;
   background-image: 
-    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(168, 85, 247, 0.12), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 95% 25%, rgba(192, 132, 252, 0.14), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 5% 65%, rgba(216, 180, 254, 0.16), transparent 60%),
-    radial-gradient(circle at 50% 100%, rgba(147, 51, 234, 0.08), transparent 70%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='0.6' fill='rgba(124, 58, 237, 0.035)'/%3E%3C/svg%3E") !important;
-  color: #1e1b4b !important;
+    radial-gradient(at 0% 0%, rgba(244, 219, 255, 0.5) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(219, 234, 254, 0.5) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(254, 215, 226, 0.4) 0px, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='1' fill='rgba(124, 58, 237, 0.02)'/%3E%3C/svg%3E") !important;
+  color: #1e293b !important;
 }
 
-/* Glass and Content Cards in Soft White/Purple Aesthetic */
-#pkxd-app-root main section,
-#pkxd-app-root .glass-panel,
-#pkxd-app-root .glass-card {
-  background: rgba(255, 255, 255, 0.96) !important;
-  backdrop-filter: blur(14px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
-  border: 1px solid rgba(226, 219, 243, 0.85) !important;
+/* Light mode Glass Containers */
+#pkxd-app-root.theme-light main section,
+#pkxd-app-root.theme-light .glass-panel,
+#pkxd-app-root.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(10px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  outline: 1px solid rgba(0, 0, 0, 0.04) !important;
   box-shadow: 
-    0 10px 25px -5px rgba(124, 58, 237, 0.05),
-    0 2px 4px rgba(0, 0, 0, 0.02) !important;
-  color: #1e1b4b !important;
-  border-radius: 1.25rem;
+    0 4px 30px rgba(0, 0, 0, 0.03), 
+    0 1px 3px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  color: #1e293b !important;
 }
 
-/* Formal Headings */
-#pkxd-app-root h1,
-#pkxd-app-root h2,
-#pkxd-app-root h3,
-#pkxd-app-root h4 {
-  color: #1e1b4b !important;
-  letter-spacing: -0.02em;
+/* Text overrides for Light mode */
+#pkxd-app-root.theme-light h1,
+#pkxd-app-root.theme-light h2,
+#pkxd-app-root.theme-light h3,
+#pkxd-app-root.theme-light h4,
+#pkxd-app-root.theme-light .text-white,
+#pkxd-app-root.theme-light .metal-text {
+  color: #0f172a !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  text-shadow: none !important;
 }
 
-#pkxd-app-root p,
-#pkxd-app-root li,
-#pkxd-app-root label {
-  color: #475569 !important;
+#pkxd-app-root.theme-light p,
+#pkxd-app-root.theme-light li,
+#pkxd-app-root.theme-light label {
+  color: #334155;
 }
 
-/* Clean Form inputs in Soft Theme */
-#pkxd-app-root input,
-#pkxd-app-root textarea,
-#pkxd-app-root select {
-  background: #ffffff !important;
-  border: 1px solid rgba(216, 204, 236, 0.9) !important;
-  color: #1e1b4b !important;
-  transition: all 0.2s ease;
+/* Clean Form inputs in Light mode */
+#pkxd-app-root.theme-light input,
+#pkxd-app-root.theme-light textarea,
+#pkxd-app-root.theme-light select {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }
 
-#pkxd-app-root input:focus,
-#pkxd-app-root textarea:focus,
-#pkxd-app-root select:focus {
-  border-color: #9333ea !important;
-  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15) !important;
-}
-
-#pkxd-app-root input::placeholder,
-#pkxd-app-root textarea::placeholder {
+#pkxd-app-root.theme-light input::placeholder,
+#pkxd-app-root.theme-light textarea::placeholder {
   color: #94a3b8 !important;
 }
 
+/* Buttons in Light Mode - Apple Style */
+#pkxd-app-root.theme-light .button-primary {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: #6d28d9;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.04);
+}
+
+#pkxd-app-root.theme-light .button-primary:hover {
+  background: rgba(124, 58, 237, 0.15);
+  color: #5b21b6;
+  transform: translateY(-1px);
+}
+
+/* Special High-contrast / Action Buttons in Light Mode */
+#pkxd-app-root.theme-light .btn-dark-apple {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+#pkxd-app-root.theme-light button.bg-purple-600:hover,
+#pkxd-app-root.theme-light button.bg-neutral-900:hover {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+
+#pkxd-app-root.theme-light button.bg-emerald-500 {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(16, 185, 129, 0.1) !important;
+}
+
+/* Countdown blocks in Light Mode */
+#pkxd-app-root.theme-light .grid-cols-4 > div,
+#pkxd-app-root.theme-light #gift-countdown-timer-clocks > div {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(124, 58, 237, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.05) !important;
+}
+
+#pkxd-app-root.theme-light .grid-cols-4 span,
+#pkxd-app-root.theme-light #gift-countdown-timer-clocks span {
+  color: #4c1d95 !important;
+}
+
+#pkxd-app-root.theme-light .grid-cols-4 .text-neutral-400,
+#pkxd-app-root.theme-light .grid-cols-4 .text-neutral-500 {
+  color: #6d28d9 !important;
+}
+
 /* ==========================================================================
-   3. MODERN INTERACTIVE UTILITIES & HOVER EFFECTS
+   2. DARK MODE GLASS
    ========================================================================== */
-.glow-spot {
-  position: absolute;
-  pointer-events: none;
-  border-radius: 9999px;
-  filter: blur(90px);
-  z-index: 0;
-  opacity: 0.6;
+#pkxd-app-root.theme-dark {
+  background-color: #070210 !important;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.28) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.18) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(219, 39, 119, 0.12) 0px, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='1' fill='rgba(168, 85, 247, 0.02)'/%3E%3C/svg%3E") !important;
+  color: #f1f5f9 !important;
 }
 
-/* Modern Card Hover Micro-Lift */
-.hover-card-lift {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+/* Dark mode Glass Containers */
+#pkxd-app-root.theme-dark main section,
+#pkxd-app-root.theme-dark .glass-panel,
+#pkxd-app-root.theme-dark .glass-card {
+  background: rgba(16, 8, 32, 0.92) !important;
+  backdrop-filter: blur(10px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.18) !important;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.35),
+    0 0 20px rgba(124, 58, 237, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
 }
 
-.hover-card-lift:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 36px -10px rgba(124, 58, 237, 0.25);
-  border-color: rgba(168, 85, 247, 0.35);
+/* Text overrides for Dark mode */
+#pkxd-app-root.theme-dark h1,
+#pkxd-app-root.theme-dark h2,
+#pkxd-app-root.theme-dark h3,
+#pkxd-app-root.theme-dark h4,
+#pkxd-app-root.theme-dark .metal-text {
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
 }
 
-/* Clean Custom Scrollbars */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(168, 85, 247, 0.35);
-  border-radius: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(168, 85, 247, 0.6);
+#pkxd-app-root.theme-dark p,
+#pkxd-app-root.theme-dark li,
+#pkxd-app-root.theme-dark label {
+  color: #cbd5e1;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* Clean Form inputs in Dark mode */
+#pkxd-app-root.theme-dark input,
+#pkxd-app-root.theme-dark textarea,
+#pkxd-app-root.theme-dark select {
+  background: rgba(10, 5, 20, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+#pkxd-app-root.theme-dark input::placeholder,
+#pkxd-app-root.theme-dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Buttons in Dark Mode - Apple Style */
+#pkxd-app-root.theme-dark .button-primary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+#pkxd-app-root.theme-dark .button-primary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Special high contrast buttons in Dark Mode */
+#pkxd-app-root.theme-dark .btn-dark-apple {
+  background: #9333ea;
+  color: #ffffff;
+  border: 1px solid rgba(147, 51, 234, 0.2);
+  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.3);
+}
+
+/* Countdown blocks in Dark Mode */
+#pkxd-app-root.theme-dark .grid-cols-4 > div,
+#pkxd-app-root.theme-dark #gift-countdown-timer-clocks > div {
+  background: rgba(10, 5, 20, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+#pkxd-app-root.theme-dark .grid-cols-4 span,
+#pkxd-app-root.theme-dark #gift-countdown-timer-clocks span {
+  color: #ffffff !important;
+}
+
+#pkxd-app-root.theme-dark .grid-cols-4 .text-neutral-450,
+#pkxd-app-root.theme-dark .grid-cols-4 .text-neutral-400 {
+  color: #cbd5e1 !important;
 }
 
 /* Ensure images always look pristine */
@@ -140,8 +239,43 @@ img {
   height: auto;
 }
 
+/* ==========================================================================
+   UTILITIES & DECORATIVE PILLS
+   ========================================================================== */
+.glow-spot {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(80px);
+  z-index: 0;
+  opacity: 0.6;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 @theme {
-  --font-sans: "Plus Jakarta Sans", "Fredoka", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Fredoka", "Plus Jakarta Sans", sans-serif;
+  --font-sans: "Fredoka", "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }

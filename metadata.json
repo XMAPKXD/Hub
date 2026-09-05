@@ -1,6 +1,6 @@
 {
   "name": "PKXD Central",
-  "description": "O portal oficial de notícias, contagem regressiva de spoilers, metas para Creators PK XD com métricas do YouTube e agenda de eventos protegidos por PIN!",
+  "description": "O portal oficial de noticias, novidades e contagem regressiva para spoilers de PK XD no PKXD Central!",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

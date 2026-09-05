@@ -22,7 +22,6 @@ import EventsSection from './components/EventsSection';
 import PassportSection from './components/PassportSection';
 import PWAInstaller from './components/PWAInstaller';
 import AuthModal, { AuthMode } from './components/AuthModal';
-import CreatorMetasTracker from './components/CreatorMetasTracker';
 import { 
   Sparkles, 
   Settings, 
@@ -65,7 +64,6 @@ import {
   FileText,
   Radio,
   Check,
-  Crown,
   X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -206,7 +204,7 @@ export default function App() {
     } catch (e) {}
     return false;
   });
-  const [activeTab, setActiveTab] = useState<'inicio' | 'eventos' | 'passaporte' | 'comunidade' | 'missoes' | 'artes' | 'creator-metas'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'eventos' | 'comunidade' | 'missoes' | 'artes'>('inicio');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [continuedAsGuest, setContinuedAsGuest] = useState(false);
@@ -329,15 +327,13 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'creators', 'metas', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
+        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
         if (pLower.includes('admin')) {
           targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
         } else if (pLower.includes('inscric')) {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
-        } else if (pLower.includes('creator') || pLower.includes('metas')) {
-          targetPath = baseIsSpecial ? `/creators/${hashSuffix}` : (base ? `/${base}/creators/${hashSuffix}` : `/creators/${hashSuffix}`);
         } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
           targetPath = baseIsSpecial ? `/createaccount/${hashSuffix}` : (base ? `/${base}/createaccount/${hashSuffix}` : `/createaccount/${hashSuffix}`);
         } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
@@ -363,8 +359,6 @@ export default function App() {
           targetPath = `/admin${hashSuffix}`;
         } else if (pLower.includes('inscric')) {
           targetPath = `/inscricoes${hashSuffix}`;
-        } else if (pLower.includes('creator') || pLower.includes('metas')) {
-          targetPath = `/creators${hashSuffix}`;
         } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
           targetPath = `/createaccount${hashSuffix}`;
         } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
@@ -468,8 +462,6 @@ export default function App() {
       setActiveTab('comunidade');
     } else if (pLower.includes('missoes') || pLower.includes('missao')) {
       setActiveTab('missoes');
-    } else if (pLower.includes('creator') || pLower.includes('metas')) {
-      setActiveTab('creator-metas');
     } else if (!pLower.includes('admin') && !pLower.includes('inscric')) {
       setActiveTab('inicio');
     }
@@ -533,8 +525,6 @@ export default function App() {
   const isApplicationsRoute = currentPath.toLowerCase().includes('inscric') || 
                                currentPath.toLowerCase().includes('inscriç') || 
                                currentPath.toLowerCase().includes('inscricao');
-  const isCreatorRoute = currentPath.toLowerCase().includes('creator') || 
-                         currentPath.toLowerCase().includes('metas');
 
   useEffect(() => {
     try {
@@ -542,15 +532,13 @@ export default function App() {
         document.title = "PKXD Central - Painel Admin";
       } else if (isApplicationsRoute) {
         document.title = "PKXD Central - Inscrições";
-      } else if (isCreatorRoute || activeTab === 'creator-metas') {
-        document.title = "PKXD Central - Metas Creator";
       } else {
         document.title = "PKXD Central";
       }
     } catch (e) {
       console.warn(e);
     }
-  }, [isAdminRoute, isApplicationsRoute, isCreatorRoute, activeTab]);
+  }, [isAdminRoute, isApplicationsRoute]);
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -2397,66 +2385,52 @@ export default function App() {
   const unreadCount = unreadNotifications.length;
 
   return (
-    <div id="pkxd-app-root" className="theme-dark min-h-screen bg-[#070414] text-white font-sans selection:bg-purple-600 selection:text-white pb-20 relative overflow-x-hidden">
+    <div id="pkxd-app-root" className="theme-dark min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-yellow-400 selection:text-black pb-16 relative overflow-x-hidden bg-pkxd-texture">
       
-      {/* Ambient soft cosmic purple & indigo backdrop glows */}
-      <div className="absolute top-1/4 right-[10%] w-[550px] h-[550px] pointer-events-none select-none rounded-full bg-purple-600/10 blur-[130px]" />
-      <div className="absolute bottom-1/3 left-[5%] w-[500px] h-[500px] pointer-events-none select-none rounded-full bg-fuchsia-600/10 blur-[140px]" />
-      <div className="absolute top-[80%] right-[15%] w-[450px] h-[450px] pointer-events-none select-none rounded-full bg-indigo-600/10 blur-[120px]" />
+      {/* Ambient glows and background */}
+      
+      {/* Premium ambient space backdrop glows */}
+      <div className="absolute top-1/4 right-[10%] w-[500px] h-[500px] pointer-events-none select-none rounded-full" style={{ backgroundImage: 'radial-gradient(circle, var(--glow-1) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-1/3 left-[5%] w-[450px] h-[450px] pointer-events-none select-none rounded-full" style={{ backgroundImage: 'radial-gradient(circle, var(--glow-2) 0%, transparent 70%)' }} />
+      <div className="absolute top-[80%] right-[5%] w-[400px] h-[400px] pointer-events-none select-none rounded-full" style={{ backgroundImage: 'radial-gradient(circle, var(--glow-3) 0%, transparent 70%)' }} />
 
-      {/* Upper Micro banner for System Alerts/Gamer Levels - Refined Dark Cosmic HUD Bar */}
-      <div className="bg-[#0b061d]/90 border-b border-purple-500/20 backdrop-blur-md py-2 px-4 text-zinc-300 text-xs select-none relative z-30 shadow-md">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/30 text-purple-300 font-sans font-bold text-[11px] uppercase tracking-wider">
-              <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-              <span>FÃ LVL {fanLevel}</span>
-            </span>
-            <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 font-mono">
-              <span className="w-16 sm:w-24 h-2 rounded-full bg-purple-950/80 overflow-hidden relative inline-block border border-purple-500/20">
-                <span 
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(236,72,153,0.5)]"
-                  style={{ width: `${Math.min(100, Math.max(5, fanXP))}%` }}
-                />
-              </span>
-              <span className="text-pink-400 font-bold">{fanXP}% XP</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 text-[10.5px] font-sans font-semibold text-zinc-400">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
-              <span className="text-emerald-400 font-mono uppercase tracking-widest text-[9.5px]">SISTEMA AO VIVO</span>
-            </span>
-            <span className="opacity-30 hidden sm:inline">•</span>
-            <span className="hidden sm:inline text-zinc-400">
-              Notícias, spoilers & eventos sincronizados em tempo real
-            </span>
-          </div>
-        </div>
+      {/* Upper Micro banner for System Alerts/Gamer Levels */}
+      <div className="bg-gradient-to-r from-purple-800 via-pink-600 to-purple-900 py-2.5 px-4 text-center text-white text-xs font-bold leading-tight flex flex-wrap items-center justify-center gap-3 shadow-md relative z-30 select-none border-b-2 border-white/10">
+        <span className="flex items-center gap-1.5">
+          <Trophy className="w-4 h-4 text-yellow-300 fill-yellow-300" />
+          Nível de Explorador: <strong className="text-yellow-300">Fã Lvl {fanLevel}</strong>
+          <span className="text-zinc-300 px-1.5 py-0.5 rounded-md bg-black/30 font-mono text-[10px]">
+            {fanXP}% XP
+          </span>
+        </span>
+        <span className="opacity-40 font-mono hidden md:inline">|</span>
+        <span className="hidden md:inline text-[11px] font-mono text-pink-100">
+          Notícias atualizadas em tempo real para fãs do PK XD
+        </span>
       </div>
 
-      {/* Floating interactive alerts display */}
+      {/* Floating interactive alerts display (Positioned cleanly at bottom without scroll-dependent jumping bugs!) */}
       {notifMessage && (
         <div 
           id="floating-celebration" 
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 z-50 w-[92%] max-w-md bg-[#0e0724]/95 border border-purple-500/40 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl text-white p-4 rounded-2xl transition-all duration-300 text-left flex items-start gap-3 overflow-hidden animate-slide-up"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 z-50 w-[92%] max-w-md bg-zinc-950/95 border-2 border-pink-500/85 shadow-[0_8px_30px_rgba(236,72,153,0.3)] backdrop-blur-md text-white p-4 rounded-2xl transition-all duration-300 text-left flex items-start gap-3 overflow-hidden animate-slide-up animate-fade-in"
         >
-          <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-yellow-400 via-pink-500 to-purple-600" />
+          {/* Neon side indicator */}
+          <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-pink-500 via-rose-500 to-yellow-300" />
           
-          <div className="p-2 border rounded-xl flex-shrink-0 bg-purple-500/10 text-purple-300 border-purple-500/30 shadow-inner">
-            <BellRing className="w-4 h-4 animate-swing" />
+          <div className="p-1.5 border rounded-xl flex-shrink-0 animate-pulse bg-pink-500/10 text-pink-400 border-pink-500/20">
+            <BellRing className="w-5 h-5 animate-swing" />
           </div>
           <div className="flex-1 space-y-0.5 text-left pl-1">
-            <h5 className="text-[10px] font-mono tracking-widest font-extrabold uppercase flex items-center justify-between text-yellow-300">
+            <h5 className="text-[10px] sm:text-[11px] font-mono tracking-widest font-extrabold uppercase flex items-center justify-between text-pink-400">
               <span>ALERTA CENTRAL PK XD</span>
-              <span className="text-[9px] text-gray-400 font-normal font-mono">AGORA</span>
+              <span className="text-[9px] text-gray-500 font-normal">AGORA</span>
             </h5>
-            <p className="text-xs font-sans font-bold text-gray-200 leading-relaxed">{notifMessage}</p>
+            <p className="text-xs sm:text-xs font-sans font-black text-gray-150 leading-relaxed">{notifMessage}</p>
           </div>
           <button 
             onClick={() => setNotifMessage(null)}
-            className="text-gray-400 hover:text-white text-xs pl-1.5 cursor-pointer font-bold active:scale-95 flex-shrink-0 p-1"
+            className="text-gray-400 hover:text-white text-xs pl-1.5 cursor-pointer font-bold active:scale-95 flex-shrink-0"
             title="Fechar Notificação"
           >
             ✕
@@ -2470,6 +2444,7 @@ export default function App() {
           onClick={() => {
             setSoundEnabled(!soundEnabled);
             if (!soundEnabled) {
+              // Immediately test audio if turning on
               try {
                 const actx = new (window.AudioContext || (window as any).webkitAudioContext)();
                 const osc = actx.createOscillator();
@@ -2480,10 +2455,10 @@ export default function App() {
               } catch(e) {}
             }
           }}
-          className={`p-3 rounded-2xl hover:scale-105 active:scale-95 transition-all duration-200 shadow-2xl cursor-pointer border backdrop-blur-lg ${
+          className={`p-3 rounded-full hover:scale-105 active:scale-95 duration-100 transition-all shadow-xl cursor-pointer border-2 ${
             soundEnabled 
-              ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white border-purple-400/50 shadow-[0_0_20px_rgba(147,51,234,0.35)]' 
-              : 'bg-[#0a0518]/90 text-gray-400 border-white/10 hover:text-white'
+              ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-400' 
+              : 'bg-purple-900 hover:bg-purple-950 text-purple-400 border-purple-800'
           }`}
           title={soundEnabled ? "Desativar efeitos sonoros" : "Ativar efeitos sonoros"}
         >
@@ -2491,9 +2466,9 @@ export default function App() {
         </button>
       </div>
 
-      {/* Navigation Header - Sleek Dark Cosmic Navbar */}
-      <nav id="nav-header" className="sticky top-0 z-40 bg-[#090518]/90 backdrop-blur-2xl border-b border-purple-500/20 select-none py-2.5 px-3 sm:px-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full">
+      {/* Navigation Header - Fully responsive and accessible PK XD Central Header */}
+      <nav id="nav-header" className="sticky top-0 z-40 bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 border-b-2 border-purple-950 select-none py-2 px-2 sm:px-4 shadow-xl backdrop-blur-md">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-3 w-full">
           
           {/* Brand Name & Logo with Click to Home */}
           <button
@@ -2502,30 +2477,25 @@ export default function App() {
               triggerAudio('tap');
               navigateTo('/');
             }}
-            className="text-left flex items-center gap-2 sm:gap-3 group cursor-pointer focus:outline-none shrink-0"
+            className="text-left flex items-center gap-1.5 sm:gap-2 group cursor-pointer focus:outline-none shrink-0"
             title="Ir para o Início do PKXD Central"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-[0_0_20px_rgba(168,85,247,0.4)] group-hover:scale-105 transition-transform shrink-0 border border-white/20">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 text-purple-950 flex items-center justify-center font-black text-base sm:text-lg shadow-[0_2px_10px_rgba(251,191,36,0.35)] border border-yellow-300 group-hover:scale-105 transition-transform shrink-0">
               ⚡
             </div>
             <div className="flex flex-col justify-center">
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-sans font-black text-base sm:text-xl tracking-tight text-white uppercase flex items-center gap-1 leading-none">
-                  <span>PKXD</span>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">Central</span>
-                </h1>
-                <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded-md bg-purple-900/50 text-purple-300 border border-purple-500/30 hidden sm:inline-block">
-                  HUB
-                </span>
-              </div>
-              <p className="font-sans text-[8px] sm:text-[9.5px] text-zinc-400 font-semibold uppercase tracking-wider leading-tight hidden md:block mt-0.5">
-                Portal Oficial da Comunidade de Fãs
+              <h1 className="font-sans font-black text-sm xs:text-base sm:text-xl tracking-tight text-white uppercase drop-shadow-sm flex items-center gap-1 leading-none">
+                <span>PKXD</span>
+                <span className="text-yellow-300">Central</span>
+              </h1>
+              <p className="font-sans text-[7px] sm:text-[9px] text-purple-200 font-extrabold uppercase tracking-widest leading-tight hidden md:block">
+                Notícias, Spoilers e Códigos!
               </p>
             </div>
           </button>
 
-          {/* Action Links & Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 max-w-[calc(100%-110px)] sm:max-w-none overflow-x-auto no-scrollbar py-0.5">
+          {/* Action Links & Controls (Optimized for Mobile and Desktop) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0 max-w-[calc(100%-110px)] sm:max-w-none overflow-x-auto no-scrollbar py-0.5">
 
             {/* 1. Notification Center Bell */}
             <button 
@@ -2546,12 +2516,12 @@ export default function App() {
                   });
                 }
               }}
-              className="h-9 w-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-zinc-300 transition-colors cursor-pointer relative flex items-center justify-center text-xs font-bold shadow-md active:scale-95 shrink-0"
+              className="h-8 sm:h-9 w-8 sm:w-9 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-400/50 text-yellow-300 transition-all cursor-pointer relative flex items-center justify-center text-xs font-black shadow-md active:scale-95 shrink-0"
               title="Central de Notificações"
             >
-              <BellRing className="w-4 h-4" />
+              <BellRing className="w-4 h-4 animate-swing" />
               {unreadCount > 0 && (
-                <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full absolute -top-1 -right-1 shadow-[0_0_8px_rgba(236,72,153,0.6)]">
+                <span className="bg-pink-500 text-white text-[8px] font-black px-1 py-0.2 rounded-full border border-purple-950 absolute -top-1 -right-1 shadow animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -2568,34 +2538,16 @@ export default function App() {
                   navigateTo('/inscricoes');
                 }
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 isApplicationsRoute
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.4)]'
-                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border-white/10'
+                  ? 'bg-gradient-to-r from-cyan-400 to-teal-400 text-purple-950 border-cyan-300 hover:brightness-110'
+                  : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400/50 hover:brightness-110'
               }`}
               title={isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições Oficiais'}
             >
-              <Compass className="w-3.5 h-3.5 shrink-0 text-pink-400" />
+              <Compass className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden xs:inline">{isApplicationsRoute ? 'Voltar' : 'Inscrições'}</span>
               <span className="xs:hidden text-[10px] font-bold">{isApplicationsRoute ? 'Hub' : 'Inscr.'}</span>
-            </button>
-
-            {/* Metas Creator Quick Tab */}
-            <button
-              id="nav-creator-metas-btn"
-              onClick={() => {
-                triggerAudio('tap');
-                navigateTo('/creators');
-              }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
-                activeTab === 'creator-metas'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
-                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border-white/10'
-              }`}
-              title="Programa de Creators PK XD e Metas"
-            >
-              <Crown className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
-              <span className="hidden sm:inline">Metas Creator</span>
             </button>
 
             {/* 3. Quick Passport / PKXD ID Tab */}
@@ -2605,16 +2557,16 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/pkxd-id');
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 activeTab === 'passaporte'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
-                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border-white/10'
+                  ? 'bg-yellow-400 text-purple-950 border-yellow-300 shadow-yellow-400/20'
+                  : 'bg-purple-900/80 hover:bg-purple-800 text-white border-purple-400/40'
               }`}
               title="Acessar PKXD ID e Perfil"
             >
-              <Sparkles className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden sm:inline">PKXD ID</span>
-              <span className="bg-black/40 text-yellow-300 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-yellow-400/20">
+              <span className="bg-purple-950/60 text-yellow-300 text-[8px] sm:text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-yellow-400/30">
                 Lv.{fanLevel}
               </span>
             </button>
@@ -2627,10 +2579,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/pkxd-id');
                 }}
-                className="h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-300 active:scale-95 shrink-0 whitespace-nowrap"
+                className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/50 text-emerald-200 active:scale-95 shrink-0 whitespace-nowrap"
                 title={`Conectado como ${user.displayName || user.email}`}
               >
-                <div className="w-4 h-4 rounded-full bg-emerald-400/20 border border-emerald-400 flex items-center justify-center text-[9px] shrink-0">
+                <div className="w-4 h-4 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[9px] shrink-0">
                   👤
                 </div>
                 <span className="hidden sm:inline truncate max-w-[70px]">
@@ -2644,7 +2596,7 @@ export default function App() {
                   triggerAudio('tap');
                   setExplicitAuthModalOpen(true);
                 }}
-                className="h-9 px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 bg-gradient-to-r from-amber-400 to-yellow-400 hover:brightness-110 text-purple-950 border-yellow-200 shrink-0 whitespace-nowrap"
+                className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 text-purple-950 border-yellow-300 hover:brightness-110 shrink-0 whitespace-nowrap"
                 title="Fazer Login ou Criar Conta"
               >
                 <KeyRound className="w-3.5 h-3.5 shrink-0" />
@@ -2659,14 +2611,14 @@ export default function App() {
                 triggerAudio('tap');
                 setShowAdminPanel(!showAdminPanel);
               }}
-              className={`h-9 px-2.5 rounded-xl border font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
                 showAdminPanel 
-                ? 'bg-yellow-400 text-purple-950 border-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.3)]' 
-                : 'bg-white/[0.05] hover:bg-white/[0.1] text-gray-300 border-white/10 hover:text-white'
+                ? 'bg-yellow-400 text-purple-950 border-yellow-300' 
+                : 'bg-purple-950/80 text-gray-200 border-purple-500/50 hover:bg-purple-900'
               }`}
               title={showAdminPanel ? 'Fechar Painel Admin' : 'Painel de Administração'}
             >
-              <Settings className={`w-3.5 h-3.5 shrink-0 ${showAdminPanel ? 'animate-spin text-purple-950' : 'text-gray-300'}`} />
+              <Settings className={`w-3.5 h-3.5 shrink-0 ${showAdminPanel ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{showAdminPanel ? 'Fechar' : 'Admin'}</span>
             </button>
           </div>
@@ -2676,15 +2628,15 @@ export default function App() {
 
       {/* Banner de Notificação para Usuários que ainda não cadastraram Nome e # do PK XD */}
       {!isTagConfigured(currentPlayerTag) && !tagBannerDismissed && (
-        <div className="bg-[#12092a]/95 border-b border-pink-500/30 px-3 sm:px-6 py-2.5 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 text-left z-20 sticky top-[53px] sm:top-[61px] shadow-lg animate-fade-in">
+        <div className="bg-gradient-to-r from-amber-500/20 via-pink-600/25 to-purple-700/25 border-b border-pink-500/30 px-3 sm:px-6 py-2.5 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 text-left z-20 sticky top-[53px] sm:top-[61px] shadow-lg animate-fade-in">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-pink-500/10 border border-pink-400/30 rounded-xl text-pink-400 flex-shrink-0">
+            <div className="p-2 bg-pink-500/20 border border-pink-400/40 rounded-xl text-pink-300 flex-shrink-0 animate-bounce">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
+              <p className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
                 <span>🎮 Complete sua Identidade PK XD!</span>
-                <span className="text-[10px] bg-yellow-400 text-purple-950 font-mono px-2 py-0.5 rounded-full font-black shadow-sm">
+                <span className="text-[10px] bg-gradient-to-r from-yellow-400 to-amber-500 text-purple-950 font-mono px-2 py-0.5 rounded-full font-black shadow-sm">
                   +25 XP GRÁTIS
                 </span>
               </p>
@@ -2722,8 +2674,49 @@ export default function App() {
         </div>
       )}
 
+      {/* Hero Header Area */}
+      {!isApplicationsRoute && !isAdminRoute && activeTab !== 'artes' && (
+        <header id="masthead-hero" className="relative overflow-hidden py-12 md:py-16 px-4 bg-gradient-to-b from-purple-800/45 via-slate-950/80 to-slate-950 select-none">
+          
+          {/* Neon Glow spots */}
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 w-72 h-72 bg-purple-500/20 rounded-full filter blur-3xl pointer-events-none" />
+          
+          <div className="max-w-3xl mx-auto text-center space-y-4 relative z-10">
+            
+            {/* Logo badge / Floating decoration */}
+            <div className="inline-flex items-center gap-2 bg-pink-500/10 border-2 border-pink-500/40 px-4 py-1.5 rounded-full text-pink-400 font-mono text-[11px] font-extrabold uppercase tracking-widest animate-pulse">
+              <Gamepad2 className="w-4 h-4 fill-pink-400" />
+              Parceiro Fã Clube Oficial
+            </div>
+
+            {/* Headline Display */}
+            <h2 className="font-sans font-black text-3xl sm:text-5xl md:text-6xl tracking-tight text-white uppercase leading-[1.1] drop-shadow-[0_2px_10px_rgba(34,211,238,0.2)]">
+              O Universo de PK XD <br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-400 to-yellow-300">
+                Na Velocidade Máxima!
+              </span>
+            </h2>
+
+            {/* WhatsApp Direct CTA mini-badge */}
+            <div className="pt-2 flex flex-wrap justify-center gap-3">
+              <a 
+                href={WHATSAPP_CHANNEL_URL}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => triggerAudio('levelUp')}
+                className="inline-flex items-center gap-2 bg-[#25D366]/20 border-2 border-[#25D366]/60 text-[#25D366] font-sans font-black text-xs p-2.5 px-5 rounded-full hover:scale-[1.03] transition-all cursor-pointer shadow-lg"
+              >
+                <MessageCircle className="w-4 h-4 fill-[#25D366]" />
+                Acessar Canal no WhatsApp
+              </a>
+            </div>
+
+          </div>
+        </header>
+      )}
+
       {/* Main Grid Area */}
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6 pt-6">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8 pt-4">
         
         {/* Admin Panel / Google Login Area */}
         {showAdminPanel && (
@@ -3078,17 +3071,17 @@ export default function App() {
               <PWAInstaller onAddXP={handleAddFanXP} triggerAudio={triggerAudio} />
             </div>
 
-            {/* Visual Navigation Tab Bar - Refined Cyber Obsidian Dock */}
-            <div className="max-w-4xl mx-auto mb-8 bg-[#0c0722]/90 backdrop-blur-2xl p-2 rounded-2xl sm:rounded-3xl border border-purple-500/25 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.7)] select-none sticky top-14 sm:top-16 z-20">
+            {/* Visual Navigation Tab Bar - High-tier Responsive Navigation Dock */}
+            <div className="max-w-4xl mx-auto mb-8 bg-zinc-950/90 backdrop-blur-xl p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl border border-purple-500/30 grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2 shadow-[0_10px_35px_rgba(0,0,0,0.5)] select-none sticky top-14 sm:top-16 z-20">
               <button
                 onClick={() => {
                   triggerAudio('tap');
                   navigateTo('/');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'inicio'
-                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Home className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3100,10 +3093,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/eventos');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'eventos'
-                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3115,10 +3108,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/pkxd-id');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center relative ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center relative ${
                   activeTab === 'passaporte'
-                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-gradient-to-r from-yellow-500 via-pink-600 to-purple-600 text-white shadow-[0_4px_20px_rgba(234,179,8,0.4)] border border-yellow-300'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3130,10 +3123,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/comunidade');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'comunidade'
-                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Users className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3145,10 +3138,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/missoes');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'missoes'
-                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(147,51,234,0.4)] border border-purple-400'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Target className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3160,29 +3153,14 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/artes');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'artes'
-                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] border border-pink-400'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Palette className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">Artes</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  triggerAudio('tap');
-                  navigateTo('/creators');
-                }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer active:scale-95 text-center ${
-                  activeTab === 'creator-metas'
-                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.45)] border border-white/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
-                }`}
-              >
-                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-yellow-400" />
-                <span className="truncate">Metas</span>
               </button>
             </div>
 
@@ -3272,35 +3250,6 @@ export default function App() {
                           onAddXP={handleAddFanXP}
                           onNavigate={navigateTo}
                         />
-                      </div>
-
-                      {/* METAS CREATOR BANNER - PROGRAMA OFICIAL AFTERVERSE */}
-                      <div className="max-w-4xl mx-auto mt-8 mb-4 px-4 sm:px-0" id="creator-goals-banner-home">
-                        <div className="bg-[#0e0a24] border border-white/[0.08] rounded-2xl p-6 shadow-md hover:border-purple-500/30 transition-colors flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-                          
-                          <div className="space-y-2 text-center md:text-left">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-purple-500/10 text-purple-200 border border-purple-500/20 text-xs font-semibold">
-                              <Crown className="w-3.5 h-3.5 text-purple-300" />
-                              <span>Programa Oficial de Creators PK XD</span>
-                            </div>
-                            <h4 className="font-sans font-bold text-lg text-white tracking-tight flex items-center gap-2 justify-center md:justify-start">
-                              <span>Quer se tornar um Creator Oficial?</span>
-                            </h4>
-                            <p className="font-sans text-xs text-gray-300 max-w-xl leading-relaxed">
-                              Conecte sua conta com acesso 100% seguro e somente leitura para acompanhar em tempo real seus vídeos publicados, visualizações e o que falta para se qualificar.
-                            </p>
-                          </div>
-
-                          <button 
-                            onClick={() => {
-                              triggerAudio('tap');
-                              navigateTo('/creators');
-                            }}
-                            className="w-full md:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-500 active:scale-[0.98] text-white font-sans font-semibold text-xs rounded-xl shadow-sm cursor-pointer flex items-center justify-center gap-2 transition-colors flex-shrink-0"
-                          >
-                            <span>Acompanhar Minhas Metas</span>
-                          </button>
-                        </div>
                       </div>
 
                       {/* CANDIDATAR-SE A ADMIN BANNER - Placed exactly below the spoiler and featured videos section */}
@@ -3471,120 +3420,47 @@ export default function App() {
                 />
               </div>
             )}
-
-            {activeTab === 'creator-metas' && (
-              <div className="max-w-4xl mx-auto animate-fade-in" id="creator-metas-section-wrapper">
-                <CreatorMetasTracker 
-                  user={user}
-                  onAddXP={handleAddFanXP}
-                  triggerAudio={triggerAudio}
-                  soundEnabled={soundEnabled}
-                />
-              </div>
-            )}
           </>
         )}
 
       </main>
 
-      {/* Footer Area - Revamped Modern Gaming Studio Footer */}
-      <footer id="main-footer" className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-12 mt-12 select-none border-t border-white/[0.08] bg-gradient-to-b from-transparent to-[#070314]/80 rounded-t-3xl">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-white/[0.06]">
+      {/* Footer Area */}
+      <footer id="main-footer" className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 mt-8 select-none border-t border-white/10">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
           
-          {/* Column 1: Brand & Identity */}
-          <div className="md:col-span-2 space-y-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-purple-950 flex items-center justify-center font-black text-sm shadow-[0_0_15px_rgba(251,191,36,0.3)]">
-                ⚡
-              </div>
-              <strong className="font-sans text-base text-white uppercase tracking-wider font-black">
-                PKXD Central <span className="text-yellow-400">•</span> 2026
-              </strong>
-            </div>
-            <p className="font-sans text-xs text-gray-400 max-w-md leading-relaxed">
-              O portal e ponto de encontro definitivo da comunidade de fãs de PK XD. Spoilers semanais com contagem regressiva, códigos de gemas, agenda de eventos com senha PIN e ranking de exploradores.
-            </p>
-            <div className="flex items-center gap-2 pt-1 text-[11px] font-mono text-emerald-400 font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-              <span>Sistemas Multiverso 100% Operacionais</span>
-            </div>
+          {/* Logo brand - Removed site icon and updated title for PKXD Central */}
+          <div className="flex items-center gap-2">
+            <strong className="font-sans text-sm text-gray-300 uppercase tracking-wider">
+              PKXD Central • 2026
+            </strong>
           </div>
 
-          {/* Column 2: Quick Links */}
-          <div className="space-y-2.5">
-            <h4 className="font-mono text-xs font-bold text-gray-300 uppercase tracking-wider">
-              Navegação Rápida
-            </h4>
-            <ul className="space-y-1.5 text-xs text-gray-400 font-medium">
-              <li>
-                <button onClick={() => { triggerAudio('tap'); navigateTo('/'); }} className="hover:text-cyan-300 transition-colors cursor-pointer">
-                  ⚡ Início & Spoilers
-                </button>
-              </li>
-              <li>
-                <button onClick={() => { triggerAudio('tap'); navigateTo('/eventos'); }} className="hover:text-pink-300 transition-colors cursor-pointer">
-                  🎉 Festas & Eventos (com PIN)
-                </button>
-              </li>
-              <li>
-                <button onClick={() => { triggerAudio('tap'); navigateTo('/pkxd-id'); }} className="hover:text-yellow-300 transition-colors cursor-pointer">
-                  🏆 Passaporte PKXD ID
-                </button>
-              </li>
-              <li>
-                <button onClick={() => { triggerAudio('tap'); navigateTo('/inscricoes'); }} className="hover:text-purple-300 transition-colors cursor-pointer">
-                  📋 Inscrições da Comunidade
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Community & Official Links */}
-          <div className="space-y-2.5">
-            <h4 className="font-mono text-xs font-bold text-gray-300 uppercase tracking-wider">
-              Comunidade Oficial
-            </h4>
-            <a 
-              href={WHATSAPP_CHANNEL_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/20 transition-all cursor-pointer shadow-sm"
-            >
-              <MessageCircle className="w-3.5 h-3.5 fill-[#25D366]" />
-              <span>Canal WhatsApp Oficial</span>
-            </a>
-            <p className="text-[10.5px] text-gray-400 leading-snug pt-1">
-              Receba notificações instantâneas de novos códigos de gemas e novidades da atualização.
-            </p>
-          </div>
-
-        </div>
-
-        {/* Bottom Legal Disclaimer */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-gray-400">
-          <p className="max-w-2xl text-center sm:text-left leading-relaxed">
-            Este site é um portal independente mantido por fãs de PK XD para a comunidade. PK XD é uma marca registrada de suas respectivas publicadoras. Todas as imagens e mídias pertencem a seus legítimos detentores.
+          <p className="font-sans text-[11px] text-gray-500 max-w-sm sm:text-right">
+            Este site é um portal independente mantido por fãs de PK XD. PK XD é uma marca registrada de suas respectivas publicadoras. Todas as mídias pertencem a seus legítimos donos.
           </p>
-          <div className="text-center sm:text-right font-mono text-[10px] text-gray-400 shrink-0">
-            CRIADO POR E PARA FÃS • 2026
-          </div>
+
         </div>
       </footer>
 
-      {/* FLOATING SECTIONS MENU BUTTON - Modern Holographic Orb */}
+      {/* FLOATING SECTIONS MENU BUTTON - Redesigned to be delicate, small and beautiful as requested */}
       <div className="fixed bottom-6 right-6 z-45">
         <button 
           onClick={() => {
             setIsNavMenuOpen(!isNavMenuOpen);
             triggerAudio('tap');
           }}
-          className="w-12 h-12 bg-[#0a0518]/90 hover:bg-[#160b33] text-cyan-300 hover:text-yellow-300 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.7)] border border-cyan-400/40 hover:border-yellow-400/60 active:scale-90 transition-all duration-200 cursor-pointer flex items-center justify-center group relative backdrop-blur-xl"
+          className="w-12 h-12 bg-zinc-950/95 hover:bg-purple-950 text-cyan-300 hover:text-yellow-300 rounded-full shadow-[0_4px_15px_rgba(236,72,153,0.3)] hover:shadow-[0_4px_25px_rgba(34,211,238,0.55)] border-2 border-cyan-400/60 active:scale-90 transition-all duration-200 cursor-pointer flex items-center justify-center group relative"
           title="Navegar pelas Seções"
           id="floating-navigation-compass-trigger"
         >
+          {/* Subtle neon pulse background */}
+          <span className="absolute -inset-1 rounded-full bg-cyan-400/10 blur-sm pointer-events-none group-hover:bg-cyan-400/25 transition-all duration-300" />
+          <span className="absolute inset-0 rounded-full bg-cyan-500/10 animate-ping pointer-events-none" />
+          
           <Compass className="w-5 h-5 animate-spin-slow group-hover:rotate-45 duration-500 text-cyan-400 group-hover:text-yellow-300" />
           
-          <span className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-full shadow border border-white/20 uppercase tracking-wider">
+          <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow border border-white/20 uppercase tracking-widest">
             NAV
           </span>
         </button>

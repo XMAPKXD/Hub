@@ -25,7 +25,6 @@ import {
   Image as ImageIcon,
   Instagram,
   Youtube,
-  Crown,
   Link2,
   X
 } from 'lucide-react';
@@ -1025,32 +1024,6 @@ export default function ApplicationsSection({
                 Bem-vindo à central do site! Aqui você pode se inscrever para aparecer em destaque nas seções do site, enviar suas teorias exclusivas de PK XD ou se candidatar para fazer parte da nossa equipe oficial de administradores!
               </p>
             </div>
-          </div>
-
-          {/* Special Creator Goals Banner */}
-          <div className="bg-[#0e0a24] border border-white/[0.08] rounded-2xl p-6 shadow-md hover:border-purple-500/30 transition-colors flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-            <div className="space-y-2 text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-purple-500/10 text-purple-200 border border-purple-500/20 text-xs font-semibold">
-                <Crown className="w-3.5 h-3.5 text-purple-300" />
-                <span>Programa de Creators PK XD</span>
-              </div>
-              <h3 className="font-sans font-bold text-lg text-white tracking-tight">
-                Painel de Metas para Creators
-              </h3>
-              <p className="font-sans text-xs text-gray-300 max-w-xl leading-relaxed">
-                Conecte seu canal do YouTube com acesso seguro e somente leitura para checar suas visualizações, vídeos publicados e verificar sua elegibilidade aos critérios oficiais da Afterverse.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                if (soundEnabled) playTapSound();
-                window.history.pushState({}, '', '/creators');
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }}
-              className="w-full md:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-500 active:scale-[0.98] text-white font-sans font-semibold text-xs rounded-xl shadow-sm cursor-pointer flex items-center justify-center gap-2 transition-colors flex-shrink-0"
-            >
-              <span>Ver Minhas Metas</span>
-            </button>
           </div>
 
           {/* Tabs list (Beautiful solid visual blocks) */}
