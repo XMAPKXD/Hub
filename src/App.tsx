@@ -2397,41 +2397,39 @@ export default function App() {
   const unreadCount = unreadNotifications.length;
 
   return (
-    <div id="pkxd-app-root" className="theme-dark min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-yellow-400 selection:text-black pb-16 relative overflow-x-hidden bg-pkxd-texture">
+    <div id="pkxd-app-root" className="theme-light min-h-screen bg-[#f7f5fc] text-slate-900 font-sans selection:bg-purple-200 selection:text-purple-900 pb-20 relative overflow-x-hidden">
       
-      {/* Ambient glows and background */}
-      
-      {/* Premium ambient space backdrop glows */}
-      <div className="absolute top-1/4 right-[10%] w-[500px] h-[500px] pointer-events-none select-none rounded-full" style={{ backgroundImage: 'radial-gradient(circle, var(--glow-1) 0%, transparent 70%)' }} />
-      <div className="absolute bottom-1/3 left-[5%] w-[450px] h-[450px] pointer-events-none select-none rounded-full" style={{ backgroundImage: 'radial-gradient(circle, var(--glow-2) 0%, transparent 70%)' }} />
-      <div className="absolute top-[80%] right-[5%] w-[400px] h-[400px] pointer-events-none select-none rounded-full" style={{ backgroundImage: 'radial-gradient(circle, var(--glow-3) 0%, transparent 70%)' }} />
+      {/* Ambient soft purple backdrop glows */}
+      <div className="absolute top-1/4 right-[10%] w-[500px] h-[500px] pointer-events-none select-none rounded-full bg-purple-200/20 blur-3xl" />
+      <div className="absolute bottom-1/3 left-[5%] w-[450px] h-[450px] pointer-events-none select-none rounded-full bg-violet-200/20 blur-3xl" />
+      <div className="absolute top-[80%] right-[5%] w-[400px] h-[400px] pointer-events-none select-none rounded-full bg-indigo-200/15 blur-3xl" />
 
-      {/* Upper Micro banner for System Alerts/Gamer Levels - Modern HUD Bar */}
-      <div className="bg-[#090515]/95 border-b border-white/[0.08] backdrop-blur-md py-2 px-4 text-white text-xs select-none relative z-30 shadow-md">
+      {/* Upper Micro banner for System Alerts/Gamer Levels - Refined Light HUD Bar */}
+      <div className="bg-white/95 border-b border-purple-100/90 backdrop-blur-md py-2 px-4 text-slate-700 text-xs select-none relative z-30 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 font-sans font-black text-[11px] uppercase tracking-wider">
-              <Trophy className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 font-sans font-bold text-[11px] uppercase tracking-wider">
+              <Trophy className="w-3.5 h-3.5 text-purple-600" />
               <span>FÃ LVL {fanLevel}</span>
             </span>
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-300 font-mono">
-              <span className="w-16 sm:w-24 h-2 rounded-full bg-white/10 overflow-hidden relative inline-block">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-mono">
+              <span className="w-16 sm:w-24 h-2 rounded-full bg-purple-100 overflow-hidden relative inline-block">
                 <span 
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full transition-all duration-300"
+                  className="absolute inset-y-0 left-0 bg-purple-600 rounded-full transition-all duration-300"
                   style={{ width: `${Math.min(100, Math.max(5, fanXP))}%` }}
                 />
               </span>
-              <span className="text-yellow-300 font-bold">{fanXP}% XP</span>
+              <span className="text-purple-700 font-bold">{fanXP}% XP</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-[10.5px] font-sans font-bold text-gray-400">
+          <div className="flex items-center gap-3 text-[10.5px] font-sans font-semibold text-slate-500">
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-              <span className="text-emerald-300 font-mono uppercase tracking-widest text-[9.5px]">SISTEMA AO VIVO</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
+              <span className="text-emerald-700 font-mono uppercase tracking-widest text-[9.5px]">SISTEMA AO VIVO</span>
             </span>
-            <span className="opacity-20 hidden sm:inline">•</span>
-            <span className="hidden sm:inline text-purple-200/80">
+            <span className="opacity-30 hidden sm:inline">•</span>
+            <span className="hidden sm:inline text-slate-500">
               Notícias, spoilers & eventos sincronizados em tempo real
             </span>
           </div>
@@ -2493,8 +2491,8 @@ export default function App() {
         </button>
       </div>
 
-      {/* Navigation Header - Sleek Modern AAA Gaming Navbar */}
-      <nav id="nav-header" className="sticky top-0 z-40 bg-[#0a0518]/90 backdrop-blur-2xl border-b border-white/[0.08] select-none py-2.5 px-3 sm:px-6 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+      {/* Navigation Header - Sleek Clean White/Purple Navbar */}
+      <nav id="nav-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-2xl border-b border-purple-100/90 select-none py-2.5 px-3 sm:px-6 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full">
           
           {/* Brand Name & Logo with Click to Home */}
@@ -2507,20 +2505,20 @@ export default function App() {
             className="text-left flex items-center gap-2 sm:gap-3 group cursor-pointer focus:outline-none shrink-0"
             title="Ir para o Início do PKXD Central"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 text-purple-950 flex items-center justify-center font-black text-base sm:text-lg shadow-[0_0_20px_rgba(251,191,36,0.35)] border border-yellow-200/80 group-hover:scale-105 group-hover:rotate-3 transition-transform shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-sm group-hover:scale-105 transition-transform shrink-0">
               ⚡
             </div>
             <div className="flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
-                <h1 className="font-sans font-black text-base sm:text-xl tracking-tight text-white uppercase flex items-center gap-1 leading-none">
+                <h1 className="font-sans font-black text-base sm:text-xl tracking-tight text-slate-900 uppercase flex items-center gap-1 leading-none">
                   <span>PKXD</span>
-                  <span className="bg-gradient-to-r from-yellow-300 via-amber-300 to-yellow-400 bg-clip-text text-transparent">Central</span>
+                  <span className="text-purple-600">Central</span>
                 </h1>
-                <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded-md bg-white/[0.08] text-purple-200 border border-white/10 hidden sm:inline-block">
+                <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 hidden sm:inline-block">
                   HUB
                 </span>
               </div>
-              <p className="font-sans text-[8px] sm:text-[9.5px] text-purple-200/80 font-bold uppercase tracking-wider leading-tight hidden md:block mt-0.5">
+              <p className="font-sans text-[8px] sm:text-[9.5px] text-slate-500 font-semibold uppercase tracking-wider leading-tight hidden md:block mt-0.5">
                 Portal Oficial da Comunidade de Fãs
               </p>
             </div>
@@ -2548,12 +2546,12 @@ export default function App() {
                   });
                 }
               }}
-              className="h-9 w-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-yellow-300 transition-all cursor-pointer relative flex items-center justify-center text-xs font-black shadow-md active:scale-95 shrink-0"
+              className="h-9 w-9 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 transition-colors cursor-pointer relative flex items-center justify-center text-xs font-bold shadow-xs active:scale-95 shrink-0"
               title="Central de Notificações"
             >
-              <BellRing className="w-4 h-4 animate-swing" />
+              <BellRing className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="bg-pink-500 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full border border-purple-950 absolute -top-1 -right-1 shadow-md animate-pulse">
+                <span className="bg-purple-600 text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full absolute -top-1 -right-1 shadow-sm">
                   {unreadCount}
                 </span>
               )}
@@ -2570,14 +2568,14 @@ export default function App() {
                   navigateTo('/inscricoes');
                 }
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-95 shrink-0 whitespace-nowrap ${
                 isApplicationsRoute
-                  ? 'bg-cyan-500 text-slate-950 border-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
-                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-purple-200 border-white/10 hover:text-white'
+                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                  : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
               }`}
               title={isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições Oficiais'}
             >
-              <Compass className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+              <Compass className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden xs:inline">{isApplicationsRoute ? 'Voltar' : 'Inscrições'}</span>
               <span className="xs:hidden text-[10px] font-bold">{isApplicationsRoute ? 'Hub' : 'Inscr.'}</span>
             </button>
@@ -2589,14 +2587,14 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/creators');
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-95 shrink-0 whitespace-nowrap ${
                 activeTab === 'creator-metas'
-                  ? 'bg-purple-600 text-white border-purple-400/40 shadow-sm'
-                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-purple-200 border-white/10 hover:text-white'
+                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                  : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
               }`}
               title="Programa de Creators PK XD e Metas"
             >
-              <Crown className="w-3.5 h-3.5 shrink-0 text-purple-300" />
+              <Crown className="w-3.5 h-3.5 shrink-0 text-purple-500" />
               <span className="hidden sm:inline">Metas Creator</span>
             </button>
 
@@ -2607,14 +2605,14 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/pkxd-id');
               }}
-              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-9 px-2.5 sm:px-3 rounded-xl border font-sans text-[11px] sm:text-xs font-semibold tracking-wide uppercase transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-95 shrink-0 whitespace-nowrap ${
                 activeTab === 'passaporte'
-                  ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-purple-950 border-yellow-200 shadow-[0_0_18px_rgba(250,204,21,0.35)]'
-                  : 'bg-white/[0.05] hover:bg-white/[0.1] text-purple-200 border-white/10 hover:text-white'
+                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                  : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
               }`}
               title="Acessar PKXD ID e Perfil"
             >
-              <Sparkles className="w-3.5 h-3.5 shrink-0 text-yellow-300" />
+              <Sparkles className="w-3.5 h-3.5 shrink-0 text-purple-500" />
               <span className="hidden sm:inline">PKXD ID</span>
               <span className="bg-black/40 text-yellow-300 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-yellow-400/20">
                 Lv.{fanLevel}
@@ -2724,82 +2722,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Hero Header Area - Revamped Modern Gaming Masthead */}
-      {!isApplicationsRoute && !isAdminRoute && activeTab !== 'artes' && (
-        <header id="masthead-hero" className="relative overflow-hidden py-14 sm:py-20 px-4 select-none">
-          
-          {/* Multi-color Ambient Aurora Lights */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[550px] h-[320px] bg-gradient-to-tr from-purple-600/20 via-pink-600/15 to-cyan-500/15 rounded-full filter blur-[90px] pointer-events-none" />
-          <div className="absolute -top-10 left-10 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl pointer-events-none" />
-          <div className="absolute top-10 right-10 w-72 h-72 bg-cyan-500/10 rounded-full filter blur-3xl pointer-events-none" />
-          
-          <div className="max-w-4xl mx-auto text-center space-y-5 relative z-10">
-            
-            {/* Pill badge */}
-            <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/15 px-4 py-1.5 rounded-full text-purple-200 font-mono text-[11px] font-bold uppercase tracking-widest backdrop-blur-md shadow-sm">
-              <Gamepad2 className="w-3.5 h-3.5 text-pink-400" />
-              <span>Portal Oficial da Comunidade • Multiverso PK XD</span>
-            </div>
-
-            {/* Headline Display with High Contrast Typography */}
-            <h2 className="font-sans font-black text-3xl sm:text-5xl md:text-6xl tracking-tight text-white uppercase leading-[1.1] max-w-3xl mx-auto">
-              O Universo de PK XD <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-400">
-                Na Velocidade Máxima!
-              </span>
-            </h2>
-
-            <p className="font-sans text-sm sm:text-base text-gray-300 max-w-2xl mx-auto leading-relaxed">
-              Spoilers oficiais em contagem regressiva, agenda de festas e eventos com PIN, resgate de códigos de gemas e ranking de exploradores.
-            </p>
-
-            {/* Quick Community & Multiverse Action Bar */}
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-              <a 
-                href={WHATSAPP_CHANNEL_URL}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => triggerAudio('levelUp')}
-                className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-sans font-black text-xs sm:text-sm py-3 px-6 rounded-2xl transition-all cursor-pointer shadow-[0_4px_20px_rgba(37,211,102,0.35)] active:scale-95"
-              >
-                <MessageCircle className="w-4 h-4 fill-slate-950" />
-                <span>Canal Oficial WhatsApp</span>
-              </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerAudio('tap');
-                  document.getElementById('countdown-card-root')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="inline-flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/15 font-sans font-bold text-xs sm:text-sm py-3 px-5 rounded-2xl transition-all cursor-pointer backdrop-blur-md active:scale-95"
-              >
-                <span>⚡ Ver Spoilers Atuais</span>
-              </button>
-            </div>
-
-            {/* Multiverse Live Stat Pills */}
-            <div className="pt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-[11px] font-mono font-bold text-gray-300">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/[0.03] border border-white/10">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Nuvem Conectada</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/[0.03] border border-white/10">
-                <span className="text-yellow-400">🔒</span>
-                <span>Eventos com PIN</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/[0.03] border border-white/10">
-                <span className="text-pink-400">🎁</span>
-                <span>Cupons & Vídeos</span>
-              </div>
-            </div>
-
-          </div>
-        </header>
-      )}
-
       {/* Main Grid Area */}
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8 pt-4">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6 pt-6">
         
         {/* Admin Panel / Google Login Area */}
         {showAdminPanel && (
@@ -3154,17 +3078,17 @@ export default function App() {
               <PWAInstaller onAddXP={handleAddFanXP} triggerAudio={triggerAudio} />
             </div>
 
-            {/* Visual Navigation Tab Bar - Modern Cyber Gaming Dock */}
-            <div className="max-w-4xl mx-auto mb-8 bg-[#0b061e]/90 backdrop-blur-2xl p-2 rounded-2xl sm:rounded-3xl border border-white/[0.08] grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] select-none sticky top-14 sm:top-16 z-20">
+            {/* Visual Navigation Tab Bar - Formal Clean Light Dock */}
+            <div className="max-w-4xl mx-auto mb-8 bg-white/95 backdrop-blur-2xl p-2 rounded-2xl sm:rounded-3xl border border-purple-200/80 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 shadow-sm select-none sticky top-14 sm:top-16 z-20">
               <button
                 onClick={() => {
                   triggerAudio('tap');
                   navigateTo('/');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'inicio'
-                    ? 'bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 text-white shadow-[0_4px_20px_rgba(168,85,247,0.4)] border border-white/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                 }`}
               >
                 <Home className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3176,10 +3100,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/eventos');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'eventos'
-                    ? 'bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white shadow-[0_4px_20px_rgba(244,63,94,0.4)] border border-white/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3191,10 +3115,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/pkxd-id');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center relative ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center relative ${
                   activeTab === 'passaporte'
-                    ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-purple-950 font-black shadow-[0_4px_20px_rgba(251,191,36,0.4)] border border-yellow-200'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3206,10 +3130,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/comunidade');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'comunidade'
-                    ? 'bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 text-white shadow-[0_4px_20px_rgba(99,102,241,0.4)] border border-white/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                 }`}
               >
                 <Users className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3221,10 +3145,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/missoes');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'missoes'
-                    ? 'bg-gradient-to-r from-cyan-500 via-teal-500 to-indigo-600 text-slate-950 font-black shadow-[0_4px_20px_rgba(6,182,212,0.4)] border border-cyan-200'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                 }`}
               >
                 <Target className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3236,10 +3160,10 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/artes');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'artes'
-                    ? 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 text-white shadow-[0_4px_20px_rgba(236,72,153,0.4)] border border-white/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                 }`}
               >
                 <Palette className="w-3.5 h-3.5 flex-shrink-0" />
@@ -3253,12 +3177,12 @@ export default function App() {
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl sm:rounded-2xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer active:scale-95 text-center ${
                   activeTab === 'creator-metas'
-                    ? 'bg-purple-600 text-white border border-purple-400/40 shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-purple-700 hover:bg-purple-50'
                 }`}
               >
-                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-purple-300" />
-                <span className="truncate">Metas Creator</span>
+                <Crown className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" />
+                <span className="truncate">Metas</span>
               </button>
             </div>
 
