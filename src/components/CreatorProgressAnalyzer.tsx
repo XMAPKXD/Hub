@@ -180,9 +180,18 @@ export default function CreatorProgressAnalyzer({
   const [requirements, setRequirements] = useState<CreatorRequirement[]>(getStoredRequirements);
   const [queryInput, setQueryInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStep, setConnectionStep] = useState<'idle' | 'connecting' | 'select_channel' | 'analyzing' | 'no_channel'>('idle');
+  const [detectedChannels, setDetectedChannels] = useState<{
+    channel: ChannelMetrics;
+    rawItem: any;
+  }[]>([]);
+  const [analyzingChannel, setAnalyzingChannel] = useState<ChannelMetrics | null>(null);
+  const [userAccessToken, setUserAccessToken] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [googleStatusMessage, setGoogleStatusMessage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [showManualSearch, setShowManualSearch] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'met' | 'pending'>('all');
   
   const currentUser = user || auth.currentUser;
   const isLoggedInWithGoogle = Boolean(
@@ -274,7 +283,196 @@ export default function CreatorProgressAnalyzer({
     }
   }, [analysis?.isAllRequiredMet]);
 
-  // Fetch channel data with robust server API and automatic client-side fallback
+  // Format a raw YouTube API item into ChannelMetrics
+  const formatRawYouTubeChannel = (item: any): ChannelMetrics => {
+    const channelId = item.id; // Strictly YouTube Channel ID (starts with UC...)
+    const snippet = item.snippet || {};
+    const stats = item.statistics || {};
+
+    const subCount = parseInt(stats.subscriberCount || '0', 10);
+    const vidCount = parseInt(stats.videoCount || '0', 10);
+    const viewCount = parseInt(stats.viewCount || '0', 10);
+
+    // Exact custom handle or formatted handle from title
+    let handle = '';
+    if (snippet.customUrl) {
+      handle = snippet.customUrl.startsWith('@') ? snippet.customUrl : `@${snippet.customUrl}`;
+    } else {
+      handle = `@${(snippet.title || 'canal').replace(/\s+/g, '').toLowerCase()}`;
+    }
+
+    const avatarUrl = snippet.thumbnails?.high?.url 
+      || snippet.thumbnails?.medium?.url 
+      || snippet.thumbnails?.default?.url 
+      || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80';
+
+    return {
+      channelId,
+      title: snippet.title || 'Meu Canal',
+      handle,
+      avatarUrl,
+      subscriberCount: subCount,
+      videoCount: vidCount,
+      totalViews: viewCount,
+      views3MonthsEstimated: Math.round(viewCount * 0.25),
+      recentVideos: [],
+      estimatedMonthlyGrowth: Math.max(100, Math.round(subCount * 0.04)),
+      averageRecentViews: vidCount > 0 ? Math.round(viewCount / vidCount) : 0,
+      pkxdVideosDetected: 0,
+      isPublicDataAvailable: true,
+      lastCheckedAt: new Date().toISOString()
+    };
+  };
+
+  // Start animated flow for identified channel
+  const startAnalyzingFlow = async (channel: ChannelMetrics, token?: string, uploadsPlaylistId?: string) => {
+    setIsConnecting(false);
+    setAnalyzingChannel(channel);
+    setConnectionStep('analyzing');
+    if (triggerAudio) triggerAudio('tap');
+
+    let enrichedChannel = { ...channel };
+
+    // Fetch recent uploads from playlist if token & playlist are available
+    if (token && uploadsPlaylistId) {
+      try {
+        const vRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=20&playlistId=${uploadsPlaylistId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        if (vRes.ok) {
+          const vData = await vRes.json();
+          const recent = (vData.items || []).map((vItem: any) => {
+            const vSnippet = vItem.snippet || {};
+            const title = vSnippet.title || '';
+            const isShort = title.toLowerCase().includes('#shorts') || title.toLowerCase().includes('shorts');
+            const isPkxdContent = title.toLowerCase().includes('pk xd') || title.toLowerCase().includes('pkxd');
+            return {
+              id: vSnippet.resourceId?.videoId || vItem.id,
+              title,
+              publishedAt: vSnippet.publishedAt || new Date().toISOString(),
+              isShort,
+              isPkxdContent,
+              views: 0
+            };
+          });
+
+          const pkxdDetected = recent.filter((v: any) => v.isPkxdContent).length;
+          const shortsCount = recent.filter((v: any) => v.isShort).length;
+          enrichedChannel.recentVideos = recent;
+          enrichedChannel.pkxdVideosDetected = pkxdDetected;
+
+          // Automatically set creator format based on user's recent content
+          if (shortsCount > recent.length / 2 && recent.length > 0) {
+            setCreatorFormat('shorts');
+          }
+        }
+      } catch (err) {
+        console.warn('Vídeos recentes não puderam ser carregados:', err);
+      }
+    }
+
+    // Show the requested transition:
+    // ✓ YouTube conectado
+    // Canal encontrado: [FOTO] Nome do Canal, @handle
+    // ANALISANDO SEU PROGRESSO...
+    setTimeout(() => {
+      handleSaveChannel(enrichedChannel);
+      setConnectionStep('idle');
+      setAnalyzingChannel(null);
+      if (triggerAudio) triggerAudio('success');
+    }, 1600);
+  };
+
+  // Official YouTube Channel connection handler
+  const handleConnectYouTube = async () => {
+    setIsConnecting(true);
+    setConnectionStep('connecting');
+    setErrorMessage(null);
+    setStatusMessage(null);
+    if (triggerAudio) triggerAudio('tap');
+
+    try {
+      const provider = new GoogleAuthProvider();
+      // Official YouTube Readonly Scope
+      provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken;
+
+      if (!accessToken) {
+        throw new Error('Não foi possível obter o token de autorização da API do YouTube.');
+      }
+
+      setUserAccessToken(accessToken);
+
+      if (onAddXP) {
+        onAddXP(50, 'Conexão oficial do Canal do YouTube');
+      }
+
+      // Query official YouTube Data API v3 for the authenticated user's channels
+      const ytRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails,statistics&mine=true', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      if (!ytRes.ok) {
+        const errorData = await ytRes.json().catch(() => ({}));
+        const msg = errorData?.error?.message || `Erro ${ytRes.status} ao consultar canais do YouTube.`;
+        throw new Error(msg);
+      }
+
+      const ytData = await ytRes.json();
+      const items = ytData.items || [];
+
+      if (items.length === 0) {
+        setConnectionStep('no_channel');
+        setIsConnecting(false);
+        return;
+      }
+
+      if (items.length > 1) {
+        // Multiple channels found on this account
+        const formattedList = items.map((item: any) => ({
+          channel: formatRawYouTubeChannel(item),
+          rawItem: item
+        }));
+        setDetectedChannels(formattedList);
+        setConnectionStep('select_channel');
+        setIsConnecting(false);
+        return;
+      }
+
+      // Single channel found
+      const formatted = formatRawYouTubeChannel(items[0]);
+      await startAnalyzingFlow(formatted, accessToken, items[0].contentDetails?.relatedPlaylists?.uploads);
+
+    } catch (authErr: any) {
+      console.error('YouTube connection error:', authErr);
+      setIsConnecting(false);
+      setConnectionStep('idle');
+      if (authErr?.code !== 'auth/popup-closed-by-user') {
+        const msg = authErr?.code === 'auth/unauthorized-domain'
+          ? `O domínio ${window.location.hostname} precisa estar adicionado em Domínios Autorizados no Firebase Auth.`
+          : (authErr.message || 'Falha ao conectar com o canal do YouTube.');
+        setErrorMessage(msg);
+      }
+    }
+  };
+
+  // User selects one channel from the multi-channel selection list
+  const handleSelectDetectedChannel = async (entry: { channel: ChannelMetrics; rawItem: any }) => {
+    await startAnalyzingFlow(entry.channel, userAccessToken || undefined, entry.rawItem?.contentDetails?.relatedPlaylists?.uploads);
+  };
+
+  // Optional manual fallback search by public @handle
   const handleSearchChannel = async (queryToSearch?: string) => {
     const targetQuery = (queryToSearch || queryInput).trim();
     if (!targetQuery) {
@@ -284,7 +482,6 @@ export default function CreatorProgressAnalyzer({
 
     setIsLoading(true);
     setErrorMessage(null);
-    setGoogleStatusMessage(null);
     if (triggerAudio) triggerAudio('tap');
 
     let json: any = null;
@@ -321,7 +518,7 @@ export default function CreatorProgressAnalyzer({
 
     if (!fetchSucceeded || !json || !json.data) {
       setIsLoading(false);
-      setErrorMessage(json?.error || `Não foi possível encontrar o canal "${targetQuery}". Verifique se o @handle está correto ou conecte com o Google.`);
+      setErrorMessage(json?.error || `Não foi possível encontrar o canal "${targetQuery}". Verifique se o @handle está correto ou conecte seu canal oficial.`);
       return;
     }
 
@@ -347,7 +544,6 @@ export default function CreatorProgressAnalyzer({
       handleSaveChannel(formattedChannel);
       if (triggerAudio) triggerAudio('success');
 
-      // Auto-detect format if channel has clear indicator
       if (formattedChannel.recentVideos.filter(v => v.isShort).length >= 5) {
         setCreatorFormat('shorts');
       }
@@ -359,104 +555,12 @@ export default function CreatorProgressAnalyzer({
     }
   };
 
-  // Google Login & YouTube Account connection
-  const handleGoogleConnect = async () => {
-    setIsGoogleConnecting(true);
-    setErrorMessage(null);
-    setGoogleStatusMessage(null);
-    if (triggerAudio) triggerAudio('tap');
-
-    try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
-      provider.setCustomParameters({ prompt: 'select_account' });
-
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const accessToken = credential?.accessToken;
-
-      if (onAddXP) {
-        onAddXP(50, 'Login com Google no Creator Analyzer');
-      }
-
-      setGoogleStatusMessage(`Conectado como ${result.user.displayName || result.user.email}! Verificando canal do YouTube...`);
-      if (triggerAudio) triggerAudio('success');
-
-      let channelLoaded = false;
-
-      // 1. Try querying YouTube Data API with user OAuth access token
-      if (accessToken) {
-        try {
-          const ytRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&mine=true', {
-            headers: {
-              Authorization: `Bearer ${accessToken}`
-            }
-          });
-          if (ytRes.ok) {
-            const ytData = await ytRes.json();
-            if (ytData.items && ytData.items.length > 0) {
-              const ch = ytData.items[0];
-              const subCount = parseInt(ch.statistics?.subscriberCount || '0', 10);
-              const vidCount = parseInt(ch.statistics?.videoCount || '0', 10);
-              const viewCount = parseInt(ch.statistics?.viewCount || '0', 10);
-              const customUrl = ch.snippet?.customUrl || '';
-              const handle = customUrl ? (customUrl.startsWith('@') ? customUrl : `@${customUrl}`) : `@${(ch.snippet?.title || 'canal').replace(/\s+/g, '').toLowerCase()}`;
-
-              const formatted: ChannelMetrics = {
-                channelId: ch.id,
-                title: ch.snippet?.title || result.user.displayName || 'Meu Canal',
-                handle,
-                avatarUrl: ch.snippet?.thumbnails?.high?.url || ch.snippet?.thumbnails?.medium?.url || result.user.photoURL || '',
-                subscriberCount: subCount,
-                videoCount: vidCount,
-                totalViews: viewCount,
-                views3MonthsEstimated: Math.round(viewCount * 0.25),
-                recentVideos: [],
-                estimatedMonthlyGrowth: Math.max(100, Math.round(subCount * 0.04)),
-                averageRecentViews: vidCount > 0 ? Math.round(viewCount / vidCount) : 0,
-                pkxdVideosDetected: 0,
-                isPublicDataAvailable: true,
-                lastCheckedAt: new Date().toISOString()
-              };
-
-              handleSaveChannel(formatted);
-              channelLoaded = true;
-              setGoogleStatusMessage(`Canal "${formatted.title}" vinculado com sucesso!`);
-            }
-          }
-        } catch (ytErr) {
-          console.warn('OAuth token fetch attempt warning:', ytErr);
-        }
-      }
-
-      // 2. If not detected via OAuth or restricted, suggest their display name as handle
-      if (!channelLoaded) {
-        const cleanName = (result.user.displayName || '').replace(/\s+/g, '').toLowerCase();
-        if (cleanName) {
-          const suggestedHandle = `@${cleanName}`;
-          setQueryInput(suggestedHandle);
-          setGoogleStatusMessage(`Conectado com o Google! Buscando canal associado a ${suggestedHandle}...`);
-          await handleSearchChannel(suggestedHandle);
-        } else {
-          setGoogleStatusMessage(`Conta Google conectada com sucesso! Digite o @handle do seu canal acima para vincular.`);
-        }
-      }
-    } catch (authErr: any) {
-      console.error('Google Auth error:', authErr);
-      if (authErr?.code !== 'auth/popup-closed-by-user') {
-        const msg = authErr?.code === 'auth/unauthorized-domain'
-          ? `Domínio ${window.location.hostname} não autorizado no Firebase Auth.`
-          : (authErr.message || 'Falha ao conectar com o Google.');
-        setErrorMessage(msg);
-      }
-    } finally {
-      setIsGoogleConnecting(false);
-    }
-  };
-
   const handleDisconnect = () => {
     if (window.confirm('Deseja desconectar o canal e limpar os dados da análise?')) {
       handleSaveChannel(null);
+      setConnectionStep('idle');
+      setDetectedChannels([]);
+      setAnalyzingChannel(null);
       setQueryInput('');
       if (triggerAudio) triggerAudio('tap');
     }
@@ -552,171 +656,322 @@ export default function CreatorProgressAnalyzer({
             )}
           </AnimatePresence>
 
-          {/* Input or Connected Channel Bar */}
-          {!channelData ? (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-2.5">
-                <div className="relative flex-1">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
-                    <Search className="w-4 h-4" />
-                  </div>
-                  <input
-                    id="youtube-handle-input"
-                    type="text"
-                    value={queryInput}
-                    onChange={(e) => setQueryInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearchChannel()}
-                    placeholder="Digite seu @handle (ex: @pkxd, @meucanal), link do canal ou ID..."
-                    className="w-full bg-zinc-950 border border-zinc-700/80 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
-                  />
+          {/* Step 1: YouTube Connection & Identification Flow */}
+          {connectionStep === 'connecting' ? (
+            <div className="p-8 rounded-2xl bg-zinc-950/90 border border-red-500/30 text-center space-y-4 animate-in fade-in">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500 shadow-lg shadow-red-500/20">
+                <RefreshCw className="w-8 h-8 animate-spin" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-white">Conectando com o YouTube...</h3>
+                <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                  Aguardando autorização da conta e identificando os dados oficiais do seu canal via YouTube API.
+                </p>
+              </div>
+            </div>
+          ) : connectionStep === 'no_channel' ? (
+            <div className="p-6 sm:p-8 rounded-2xl bg-zinc-950/90 border border-amber-500/30 space-y-4 animate-in fade-in">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                  <AlertCircle className="w-6 h-6" />
                 </div>
-
+                <div className="space-y-1">
+                  <h3 className="text-base font-black text-white">Nenhum canal do YouTube encontrado nesta conta</h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    A conta Google autorizada não possui um canal do YouTube criado. Certifique-se de conectar a conta correta onde seu canal está cadastrado ou crie seu canal no YouTube.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
-                  id="search-channel-btn"
-                  disabled={isLoading}
-                  onClick={() => handleSearchChannel()}
-                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black uppercase text-xs tracking-wider transition-all shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
+                  onClick={handleConnectYouTube}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-red-600/30 active:scale-95"
                 >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Analisando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Search className="w-4 h-4" />
-                      <span>Analisar Canal</span>
-                    </>
-                  )}
+                  ▶ Tentar com outra conta Google
+                </button>
+                <button
+                  onClick={() => setConnectionStep('idle')}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Voltar
                 </button>
               </div>
+            </div>
+          ) : connectionStep === 'select_channel' ? (
+            <div className="p-6 sm:p-8 rounded-2xl bg-zinc-950/90 border border-purple-500/30 space-y-5 animate-in fade-in">
+              <div className="space-y-1">
+                <span className="text-[11px] font-black uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-purple-400" />
+                  Múltiplos Canais Encontrados
+                </span>
+                <h3 className="text-xl font-black text-white">Qual canal você quer analisar?</h3>
+                <p className="text-xs text-zinc-400">
+                  Sua conta possui mais de um canal no YouTube. Escolha qual deles deseja vincular à análise de Creator:
+                </p>
+              </div>
 
-              {/* Quick sample chips */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-[11px] font-semibold text-zinc-500">Testar com canais de exemplo:</span>
-                {SAMPLE_CHANNELS.map(s => (
-                  <button
-                    key={s.query}
-                    onClick={() => {
-                      setQueryInput(s.query);
-                      handleSearchChannel(s.query);
-                    }}
-                    className="text-[11px] font-medium bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-purple-300 hover:text-white px-2.5 py-1 rounded-xl transition-colors cursor-pointer"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                {detectedChannels.map((entry, idx) => (
+                  <div
+                    key={entry.channel.channelId || idx}
+                    className="p-4 rounded-2xl bg-zinc-900/90 hover:bg-zinc-900 border border-zinc-800 hover:border-purple-500/50 transition-all flex flex-col justify-between gap-3 shadow-md group"
                   >
-                    {s.query}
-                  </button>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={entry.channel.avatarUrl}
+                        alt={entry.channel.title}
+                        className="w-12 h-12 rounded-xl object-cover border border-purple-500/30 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-black text-white truncate group-hover:text-purple-300 transition-colors">
+                          {entry.channel.title}
+                        </h4>
+                        <p className="text-xs text-zinc-400 font-mono truncate">{entry.channel.handle}</p>
+                        <p className="text-[11px] text-purple-400 font-semibold mt-0.5">
+                          {entry.channel.subscriberCount.toLocaleString('pt-BR')} inscritos • {entry.channel.videoCount} vídeos
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleSelectDetectedChannel(entry)}
+                      className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow active:scale-95 flex items-center justify-center gap-1.5"
+                    >
+                      <span>Selecionar este canal</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))}
               </div>
 
-              {/* Divider */}
-              <div className="relative my-3 flex items-center justify-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-800" />
-                </div>
-                <span className="relative px-3 bg-zinc-900 text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                  ou conecte direto com o google
-                </span>
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => setConnectionStep('idle')}
+                  className="text-xs text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancelar seleção
+                </button>
+              </div>
+            </div>
+          ) : connectionStep === 'analyzing' && analyzingChannel ? (
+            /* Experience requested verbatim:
+               ✓ YouTube conectado
+               Canal encontrado:
+               [foto] Nome do Canal
+               @handle
+               ANALISANDO SEU PROGRESSO...
+            */
+            <div className="p-8 sm:p-10 rounded-2xl bg-zinc-950/95 border border-emerald-500/40 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-black text-xs uppercase tracking-wider">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>✓ YouTube conectado</span>
               </div>
 
-              {/* Google Login & YouTube Connect Card */}
-              <div 
-                id="google-connect-card"
-                className="p-4 sm:p-5 rounded-2xl bg-zinc-950/80 border border-purple-500/20 hover:border-purple-500/40 transition-all flex flex-col sm:flex-row items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-3.5 w-full sm:w-auto">
-                  <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center shrink-0 shadow-md">
-                    <svg className="w-6 h-6" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                    </svg>
-                  </div>
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
+                  Canal encontrado:
+                </span>
+                
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <img
+                    src={analyzingChannel.avatarUrl}
+                    alt={analyzingChannel.title}
+                    className="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500/60 shadow-xl"
+                    referrerPolicy="no-referrer"
+                  />
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-white">Login com Google</h4>
-                      <span className="text-[10px] bg-purple-500/20 text-purple-300 font-extrabold px-1.5 py-0.5 rounded border border-purple-500/30">
-                        +50 XP
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      {isLoggedInWithGoogle 
-                        ? `Conectado como ${currentUser?.displayName || currentUser?.email}`
-                        : 'Vincule seu canal oficial com 1 clique usando sua conta Google'
-                      }
+                    <h3 className="text-xl sm:text-2xl font-black text-white">
+                      {analyzingChannel.title}
+                    </h3>
+                    <p className="text-sm font-mono text-purple-400 mt-0.5">
+                      {analyzingChannel.handle}
+                    </p>
+                    <p className="text-[11px] text-zinc-500 font-mono mt-1">
+                      ID: {analyzingChannel.channelId}
                     </p>
                   </div>
                 </div>
-
-                <button
-                  id="google-auth-analyzer-btn"
-                  type="button"
-                  disabled={isGoogleConnecting || isLoading}
-                  onClick={handleGoogleConnect}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
-                >
-                  {isGoogleConnecting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Conectando Google...</span>
-                    </>
-                  ) : isLoggedInWithGoogle ? (
-                    <>
-                      <Youtube className="w-4 h-4 text-red-300" />
-                      <span>Sincronizar Meu Canal</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Entrar com o Google</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
               </div>
 
-              {googleStatusMessage && (
-                <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-300 flex items-center gap-2.5 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                  <span>{googleStatusMessage}</span>
+              <div className="pt-4 border-t border-zinc-800/80 flex flex-col items-center gap-2">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-purple-400 animate-pulse">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>ANALISANDO SEU PROGRESSO...</span>
                 </div>
-              )}
+                <p className="text-[11px] text-zinc-500">
+                  Calculando métricas de inscritos, visualizações e requisitos oficiais de Creator.
+                </p>
+              </div>
+            </div>
+          ) : !channelData ? (
+            /* Standalone Connection Box when not connected */
+            <div className="space-y-4">
+              <div 
+                id="connect-youtube-container"
+                className="p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-zinc-950 via-zinc-900/90 to-zinc-950 border border-red-500/30 hover:border-red-500/50 transition-all shadow-2xl relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
 
-              {errorMessage && (
-                <div className="p-3.5 rounded-2xl bg-red-950/40 border border-red-500/40 text-xs text-red-300 flex items-center gap-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                  <span>{errorMessage}</span>
+                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div className="space-y-2 max-w-xl">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/15 border border-red-500/30 text-[11px] font-black uppercase tracking-wider text-red-400">
+                      <Youtube className="w-4 h-4 text-red-500" />
+                      <span>Conexão Oficial com o YouTube</span>
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      Conecte seu canal oficial do YouTube
+                    </h3>
+                    
+                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                      O sistema identificará o seu canal oficial (ID do canal, nome, foto pública e métricas) e iniciará automaticamente a análise detalhada de todos os requisitos para Creator do PK XD.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-zinc-400">
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-400" /> Identificação automática do Channel ID
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-400" /> Métricas em tempo real
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-full md:w-auto shrink-0 flex flex-col items-center gap-2">
+                    <button
+                      id="connect-youtube-btn"
+                      type="button"
+                      disabled={isConnecting}
+                      onClick={handleConnectYouTube}
+                      className="w-full md:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-sm sm:text-base font-black uppercase tracking-wider transition-all shadow-xl shadow-red-600/40 hover:shadow-red-600/60 flex items-center justify-center gap-3 cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      {isConnecting ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 animate-spin" />
+                          <span>Conectando YouTube...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-lg leading-none">▶</span>
+                          <span>CONECTAR MEU YOUTUBE</span>
+                        </>
+                      )}
+                    </button>
+                    <span className="text-[10px] text-zinc-500 font-medium">
+                      Conexão segura via Google OAuth & YouTube API
+                    </span>
+                  </div>
                 </div>
-              )}
+
+                {errorMessage && (
+                  <div className="mt-5 p-3.5 rounded-2xl bg-red-950/40 border border-red-500/40 text-xs text-red-300 flex items-center gap-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Collapsible Manual Search by Handle */}
+              <div className="pt-2 text-center">
+                <button
+                  onClick={() => setShowManualSearch(!showManualSearch)}
+                  className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>{showManualSearch ? 'Ocultar busca manual' : 'Ou consultar canal por @handle público'}</span>
+                  <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showManualSearch ? 'rotate-90' : ''}`} />
+                </button>
+
+                {showManualSearch && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 text-left space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+                          <Search className="w-4 h-4" />
+                        </div>
+                        <input
+                          id="youtube-handle-input"
+                          type="text"
+                          value={queryInput}
+                          onChange={(e) => setQueryInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSearchChannel()}
+                          placeholder="Digite o @handle (ex: @pkxd, @meucanal)..."
+                          className="w-full bg-zinc-900 border border-zinc-700/80 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                        />
+                      </div>
+
+                      <button
+                        id="search-channel-btn"
+                        disabled={isLoading}
+                        onClick={() => handleSearchChannel()}
+                        className="px-5 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                      >
+                        {isLoading ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Buscando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Search className="w-4 h-4" />
+                            <span>Consultar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-[10px] font-semibold text-zinc-500">Testar com exemplos:</span>
+                      {SAMPLE_CHANNELS.map(s => (
+                        <button
+                          key={s.query}
+                          onClick={() => {
+                            setQueryInput(s.query);
+                            handleSearchChannel(s.query);
+                          }}
+                          className="text-[10px] bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-purple-300 hover:text-white px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          {s.query}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
           ) : (
             /* Connected Channel Profile Badge */
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800">
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-950/90 border border-emerald-500/30 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 {channelData.avatarUrl ? (
                   <img
                     src={channelData.avatarUrl}
                     alt={channelData.title}
-                    className="w-14 h-14 rounded-2xl object-cover border-2 border-purple-500/50 shadow-md"
+                    className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500/60 shadow-md shrink-0"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-2xl bg-purple-900/50 border border-purple-500/40 flex items-center justify-center text-purple-300 font-black text-xl">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-900/50 border border-purple-500/40 flex items-center justify-center text-purple-300 font-black text-xl shrink-0">
                     {channelData.title.slice(0, 1).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-black text-white">{channelData.title}</h3>
-                    <span className="text-[10px] bg-purple-500/20 border border-purple-500/30 text-purple-300 px-2 py-0.5 rounded-full font-bold">
-                      Canal Verificado
+                    <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-2.5 py-0.5 rounded-full font-extrabold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <span>✓ YouTube Conectado</span>
                     </span>
-                    {isLoggedInWithGoogle && (
-                      <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                        <span>Google Vinculado</span>
-                      </span>
-                    )}
                   </div>
-                  <p className="text-xs text-zinc-400 font-mono mt-0.5">{channelData.handle}</p>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono mt-0.5">
+                    <span>{channelData.handle}</span>
+                    <span>•</span>
+                    <span className="text-[11px] text-zinc-500">ID: {channelData.channelId}</span>
+                  </div>
                   <div className="flex items-center gap-3 text-[11px] text-zinc-400 mt-1 font-medium">
                     <span className="text-purple-300 font-bold">
                       {channelData.subscriberCount.toLocaleString('pt-BR')} inscritos
@@ -726,19 +981,19 @@ export default function CreatorProgressAnalyzer({
                     {channelData.pkxdVideosDetected ? (
                       <>
                         <span>•</span>
-                        <span className="text-pink-300">~{channelData.pkxdVideosDetected} vídeos de PK XD identificados</span>
+                        <span className="text-pink-300 font-bold">~{channelData.pkxdVideosDetected} vídeos PK XD</span>
                       </>
                     ) : null}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-center">
+              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                 <button
                   id="reanalyze-btn"
                   onClick={() => handleSearchChannel(channelData.handle)}
                   disabled={isLoading}
-                  className="px-3 py-2 rounded-xl text-xs font-bold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/60 transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                   title="Atualizar dados do canal"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -747,7 +1002,7 @@ export default function CreatorProgressAnalyzer({
                 <button
                   id="disconnect-channel-btn"
                   onClick={handleDisconnect}
-                  className="px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 bg-red-950/20 hover:bg-red-950/40 border border-red-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 bg-red-950/20 hover:bg-red-950/40 border border-red-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
                   title="Trocar de canal"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -895,18 +1150,62 @@ export default function CreatorProgressAnalyzer({
 
             {/* Individual Requirements Cards Grid */}
             <div>
-              <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="text-sm font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-purple-400" />
-                  <span>Detalhamento dos Requisitos</span>
-                </h3>
-                <span className="text-xs text-zinc-500">
-                  {creatorFormat === 'long_video' ? 'Formato Vídeos Longos' : 'Formato Shorts'}
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-400" />
+                    <span>Detalhamento dos Requisitos</span>
+                  </h3>
+                  <span className="text-xs text-zinc-500">
+                    {creatorFormat === 'long_video' ? 'Formato Vídeos Longos' : 'Formato Shorts'}
+                  </span>
+                </div>
+
+                {/* Filter Tabs: Todos, Concluídos, Pendentes */}
+                <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                  <button
+                    onClick={() => setActiveFilter('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      activeFilter === 'all'
+                        ? 'bg-purple-600 text-white shadow'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    Todos ({analysis.totalCount})
+                  </button>
+                  <button
+                    onClick={() => setActiveFilter('met')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      activeFilter === 'met'
+                        ? 'bg-emerald-600 text-white shadow'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>Concluídos ({analysis.metCount})</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveFilter('pending')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      activeFilter === 'pending'
+                        ? 'bg-amber-600 text-white shadow'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span>Pendentes ({analysis.totalCount - analysis.metCount})</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {analysis.evaluatedRequirements.map(item => {
+                {analysis.evaluatedRequirements
+                  .filter(item => {
+                    if (activeFilter === 'met') return item.isMet;
+                    if (activeFilter === 'pending') return !item.isMet;
+                    return true;
+                  })
+                  .map(item => {
                   const { requirement, currentValue, targetValue, percentage, isMet, isAutoVerified, deficitText, estimateText } = item;
                   
                   return (
@@ -926,10 +1225,8 @@ export default function CreatorProgressAnalyzer({
                           <div className="flex items-center gap-2">
                             {isMet ? (
                               <span className="text-lg">🟢</span>
-                            ) : isAutoVerified ? (
-                              <span className="text-lg">🟡</span>
                             ) : (
-                              <span className="text-lg">⚪</span>
+                              <span className="text-lg">🟡</span>
                             )}
                             <h4 className="text-sm font-bold text-white leading-tight">
                               {requirement.name}
@@ -952,14 +1249,32 @@ export default function CreatorProgressAnalyzer({
                         </p>
                       </div>
 
-                      {/* Middle: Progress Numbers & Bar */}
-                      <div className="space-y-2 pt-2 border-t border-zinc-800/80">
+                      {/* Middle: Key metrics grid (Valor atual, necessário, quanto falta, progresso) */}
+                      <div className="space-y-2.5 pt-2 border-t border-zinc-800/80">
+                        <div className="grid grid-cols-2 gap-2 text-[11px] p-2 rounded-xl bg-zinc-950/60 border border-zinc-800/60">
+                          <div>
+                            <span className="text-zinc-500 block text-[10px] uppercase font-bold">Valor Atual</span>
+                            <span className="font-mono font-bold text-white">
+                              {typeof currentValue === 'number' 
+                                ? `${currentValue.toLocaleString('pt-BR')} ${requirement.unit}`
+                                : currentValue ? 'Confirmado' : 'Pendente'
+                              }
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500 block text-[10px] uppercase font-bold">Valor Necessário</span>
+                            <span className="font-mono font-bold text-zinc-300">
+                              {typeof targetValue === 'number'
+                                ? `${targetValue.toLocaleString('pt-BR')} ${requirement.unit}`
+                                : 'Obrigatório'
+                              }
+                            </span>
+                          </div>
+                        </div>
+
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-mono text-zinc-300">
-                            {typeof currentValue === 'number' 
-                              ? `${currentValue.toLocaleString('pt-BR')} / ${targetValue.toLocaleString('pt-BR')} ${requirement.unit}`
-                              : currentValue ? 'Confirmado' : 'Pendente'
-                            }
+                          <span className="text-zinc-400 text-[11px] font-semibold">
+                            {isMet ? 'Meta alcançada' : 'Progresso da meta:'}
                           </span>
                           <span className="font-black text-purple-300">{percentage}%</span>
                         </div>
@@ -977,20 +1292,20 @@ export default function CreatorProgressAnalyzer({
                         </div>
 
                         {/* Deficit / Status text */}
-                        <div className="flex items-center justify-between text-xs pt-1">
+                        <div className="flex items-center justify-between text-xs pt-0.5">
                           {isMet ? (
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">
-                              ✓ Requisito atingido
+                            <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
+                              ✓ Requisito 100% concluído
                             </span>
                           ) : (
-                            <span className="text-pink-300 font-semibold">
-                              “{deficitText || item.statusMessage}”
+                            <span className="text-pink-300 font-bold text-[11px]">
+                              Quanto falta: {deficitText || item.statusMessage}
                             </span>
                           )}
 
                           {!isAutoVerified && (
                             <span className="text-[10px] text-zinc-500 flex items-center gap-1" title="Critério requer confirmação">
-                              <HelpCircle className="w-3 h-3" /> Manual
+                              <HelpCircle className="w-3 h-3" /> Declaração
                             </span>
                           )}
                         </div>
