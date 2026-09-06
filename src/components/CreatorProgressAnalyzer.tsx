@@ -1073,7 +1073,7 @@ export default function CreatorProgressAnalyzer({
                 </button>
               </div>
 
-              {/* Tier Target Toggle with all 4 Tiers */}
+              {/* Tier Target Toggle: Stardust & Rising Star */}
               <div className="flex items-center flex-wrap gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800/80">
                 <span className="text-[10px] uppercase font-bold text-zinc-500 px-1 hidden sm:inline">Meta para Subir:</span>
                 <button
@@ -1208,7 +1208,7 @@ export default function CreatorProgressAnalyzer({
                       <span>Trilha de Tiers Oficial: Como Subir de Nível</span>
                     </div>
                     <h3 className="text-lg font-black text-white uppercase tracking-tight mt-0.5">
-                      Progressão dos 4 Níveis de Creator PK XD
+                      Progressão dos Níveis Oficiais: Stardust e Rising Star
                     </h3>
                     <p className="text-xs text-zinc-400 mt-0.5">
                       Veja o que você precisa alcançar para subir de Tier e desbloquear novos benefícios no jogo.
@@ -1236,8 +1236,9 @@ export default function CreatorProgressAnalyzer({
                   {tierEvolution.progressions.map((tier) => {
                     const isSelected = selectedTier === tier.tierId;
                     const tierMeta = PKXD_CREATOR_TIERS.find(t => t.id === tier.tierId);
+                    const isShortsFormat = creatorFormat === 'shorts';
                     const subReq = tier.summary.evaluatedRequirements.find(r => r.requirement.metricType === 'subscribers');
-                    const targetSubs = subReq?.targetValue || (tier.level === 1 ? 5000 : 15000);
+                    const targetSubs = subReq?.targetValue || (tier.level === 1 ? (isShortsFormat ? 5000 : 1000) : (isShortsFormat ? 10000 : 5000));
 
                     return (
                       <div

@@ -193,7 +193,7 @@ export const PKXD_CREATOR_TIERS: import('../types/creator').TierInfo[] = [
     borderClass: 'border-amber-500/40 hover:border-amber-500',
     bgGradient: 'from-amber-950/40 via-zinc-900 to-zinc-950',
     minSubscribersLong: 5000,
-    minSubscribersShorts: 15000,
+    minSubscribersShorts: 10000,
     minAvgViewsLong: 1500,
     minAvgViewsShorts: 10000,
     monthlyFrequency: 10,
@@ -228,10 +228,10 @@ export const RISING_STAR_REQUIREMENTS: CreatorRequirement[] = [
     name: 'Inscritos (Shorts)',
     metricType: 'subscribers',
     category: 'rising_star',
-    targetValue: 15000,
+    targetValue: 10000,
     unit: 'inscritos',
     isRequired: true,
-    description: 'No mínimo 15.000 inscritos para criadores de YouTube Shorts no Tier Rising Star.',
+    description: 'No mínimo 10.000 inscritos para criadores de YouTube Shorts no Tier Rising Star.',
     officialSourceUrl: 'https://playpkxd.com',
     lastUpdated: '2025-12-01',
     autoVerifiable: true,
@@ -295,9 +295,21 @@ export function getStoredRequirements(): CreatorRequirement[] {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Filter out obsolete superstar/legend tiers
+        // Exclusively maintain official tiers: Stardust and Rising Star (+ admission criteria)
         const validTiers = new Set(['admission', 'stardust', 'rising_star']);
-        const filtered = parsed.filter((r: any) => validTiers.has(r.category));
+        const filtered = parsed
+          .filter((r: any) => validTiers.has(r.category))
+          .map((r: any) => {
+            // Update legacy 15000 shorts requirement to 10000
+            if (r.id === 'rs_subscribers_shorts' && r.targetValue === 15000) {
+              return {
+                ...r,
+                targetValue: 10000,
+                description: 'No mínimo 10.000 inscritos para criadores de YouTube Shorts no Tier Rising Star.'
+              };
+            }
+            return r;
+          });
         const existingIds = new Set(filtered.map(p => p.id));
         const missing = ALL_CREATOR_REQUIREMENTS.filter(r => !existingIds.has(r.id));
         return [...filtered, ...missing];
