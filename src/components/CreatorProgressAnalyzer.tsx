@@ -26,7 +26,16 @@ import {
   LogOut, 
   HelpCircle,
   BarChart3,
-  Lightbulb
+  Lightbulb,
+  Crown,
+  Rocket,
+  Star,
+  Trophy,
+  Zap,
+  Lock,
+  Unlock,
+  ArrowUpRight,
+  ChevronUp
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'motion/react';
@@ -46,9 +55,13 @@ import {
 import { 
   getStoredRequirements, 
   saveStoredRequirements, 
-  OFFICIAL_CREATOR_REQUIREMENTS 
+  OFFICIAL_CREATOR_REQUIREMENTS,
+  PKXD_CREATOR_TIERS
 } from '../data/creatorRequirements';
-import { evaluateRequirements } from '../utils/creatorAnalyzer';
+import { 
+  evaluateRequirements, 
+  getChannelTierProgressions 
+} from '../utils/creatorAnalyzer';
 import CreatorRequirementsConfigModal from './CreatorRequirementsConfigModal';
 
 interface CreatorProgressAnalyzerProps {
@@ -259,13 +272,22 @@ export default function CreatorProgressAnalyzer({
     });
   };
 
-  // Run analysis calculation
+  // Run analysis calculation for the currently selected tier
   const analysis: AnalysisSummary | null = channelData 
     ? evaluateRequirements(
         requirements, 
         { ...channelData, manualOverrides: manualDeclarations }, 
         creatorFormat, 
         selectedTier
+      )
+    : null;
+
+  // Comprehensive evaluation across all 4 tiers for progression and climbing tiers
+  const tierEvolution = channelData
+    ? getChannelTierProgressions(
+        requirements,
+        { ...channelData, manualOverrides: manualDeclarations },
+        creatorFormat
       )
     : null;
 
@@ -1051,22 +1073,23 @@ export default function CreatorProgressAnalyzer({
                 </button>
               </div>
 
-              {/* Tier Target Toggle */}
-              <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800/80">
-                <span className="text-[10px] uppercase font-bold text-zinc-500 px-2 hidden sm:inline">Meta:</span>
+              {/* Tier Target Toggle with all 4 Tiers */}
+              <div className="flex items-center flex-wrap gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800/80">
+                <span className="text-[10px] uppercase font-bold text-zinc-500 px-1 hidden sm:inline">Meta para Subir:</span>
                 <button
                   id="tier-stardust-btn"
                   onClick={() => {
                     setSelectedTier('stardust');
                     if (triggerAudio) triggerAudio('tap');
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     selectedTier === 'stardust'
-                      ? 'bg-indigo-600 text-white shadow'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
                   }`}
                 >
-                  Tier Stardust (Entrada)
+                  <Star className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Tier 1: Stardust</span>
                 </button>
                 <button
                   id="tier-rising-star-btn"
@@ -1074,13 +1097,44 @@ export default function CreatorProgressAnalyzer({
                     setSelectedTier('rising_star');
                     if (triggerAudio) triggerAudio('tap');
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     selectedTier === 'rising_star'
-                      ? 'bg-amber-600 text-white shadow'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
                   }`}
                 >
-                  Tier Rising Star (Avançado)
+                  <Rocket className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Tier 2: Rising Star</span>
+                </button>
+                <button
+                  id="tier-superstar-btn"
+                  onClick={() => {
+                    setSelectedTier('superstar');
+                    if (triggerAudio) triggerAudio('tap');
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    selectedTier === 'superstar'
+                      ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/20'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  }`}
+                >
+                  <Trophy className="w-3.5 h-3.5 text-pink-400" />
+                  <span>Tier 3: Superstar</span>
+                </button>
+                <button
+                  id="tier-legend-btn"
+                  onClick={() => {
+                    setSelectedTier('legend');
+                    if (triggerAudio) triggerAudio('tap');
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    selectedTier === 'legend'
+                      ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-black shadow-lg shadow-yellow-500/20'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  }`}
+                >
+                  <Crown className={`w-3.5 h-3.5 ${selectedTier === 'legend' ? 'text-black' : 'text-yellow-400'}`} />
+                  <span>Tier 4: Legend</span>
                 </button>
               </div>
             </div>
@@ -1096,8 +1150,28 @@ export default function CreatorProgressAnalyzer({
             >
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-2 text-center md:text-left">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-black uppercase tracking-wider text-purple-300">
-                    <span>SEU PROGRESSO PARA CREATOR</span>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-black uppercase tracking-wider text-purple-300">
+                      <span>SEU PROGRESSO PARA CREATOR</span>
+                    </div>
+
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
+                      selectedTier === 'stardust'
+                        ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
+                        : selectedTier === 'rising_star'
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                        : selectedTier === 'superstar'
+                        ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
+                        : 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
+                    }`}>
+                      {selectedTier === 'stardust' && <Star className="w-3.5 h-3.5" />}
+                      {selectedTier === 'rising_star' && <Rocket className="w-3.5 h-3.5" />}
+                      {selectedTier === 'superstar' && <Trophy className="w-3.5 h-3.5" />}
+                      {selectedTier === 'legend' && <Crown className="w-3.5 h-3.5" />}
+                      <span>
+                        Meta: Tier {selectedTier === 'stardust' ? '1 (Stardust)' : selectedTier === 'rising_star' ? '2 (Rising Star)' : selectedTier === 'superstar' ? '3 (Superstar)' : '4 (Legend)'}
+                      </span>
+                    </div>
                   </div>
 
                   <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
@@ -1105,17 +1179,30 @@ export default function CreatorProgressAnalyzer({
                   </h2>
                   <p className="text-sm font-mono text-zinc-400">{channelData.handle}</p>
 
-                  <div className="pt-2">
+                  <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-2">
                     {analysis.isAllRequiredMet ? (
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-black text-sm uppercase tracking-wider shadow-lg">
                         <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                        <span>🎉 VOCÊ ATINGIU TODOS OS REQUISITOS!</span>
+                        <span>🎉 ATINGIU TODOS OS CRITÉRIOS DESTE TIER!</span>
                       </div>
                     ) : (
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-black text-sm uppercase tracking-wider shadow-lg">
                         <Flame className="w-5 h-5 text-pink-400" />
-                        <span>🚀 VOCÊ ESTÁ NO CAMINHO!</span>
+                        <span>🚀 FALTAM {analysis.totalCount - analysis.metCount} REQUISITOS PARA SUBIR!</span>
                       </div>
+                    )}
+
+                    {tierEvolution && tierEvolution.nextTier && tierEvolution.nextTier !== selectedTier && (
+                      <button
+                        onClick={() => {
+                          setSelectedTier(tierEvolution.nextTier!);
+                          if (triggerAudio) triggerAudio('tap');
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500/20 transition-all cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Próximo a Subir: {tierEvolution.nextTier.toUpperCase()} →</span>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1123,7 +1210,7 @@ export default function CreatorProgressAnalyzer({
                 {/* Big Circular/Bar Overall Progress Gauge */}
                 <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-zinc-950/70 border border-white/10 min-w-[210px] text-center">
                   <span className="text-xs uppercase font-black text-zinc-400 tracking-wider">
-                    Progresso Geral
+                    Progresso no Tier
                   </span>
                   <div className="text-4xl sm:text-5xl font-black my-1 bg-gradient-to-r from-purple-400 via-pink-400 to-emerald-400 bg-clip-text text-transparent">
                     {analysis.overallPercentage}%
@@ -1148,16 +1235,204 @@ export default function CreatorProgressAnalyzer({
               </div>
             </div>
 
+            {/* TRILHA DE TIERS: SUBA DE NÍVEL (Novo Módulo de Evolução) */}
+            {tierEvolution && (
+              <div id="creator-tier-roadmap" className="bg-zinc-900/70 border border-zinc-800 rounded-3xl p-6 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                      <Trophy className="w-4 h-4" />
+                      <span>Trilha de Tiers Oficial: Como Subir de Nível</span>
+                    </div>
+                    <h3 className="text-lg font-black text-white uppercase tracking-tight mt-0.5">
+                      Progressão dos 4 Níveis de Creator PK XD
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Veja o que você precisa alcançar para subir de Tier e desbloquear novos benefícios no jogo.
+                    </p>
+                  </div>
+
+                  {/* Current Status Pill */}
+                  <div className="flex items-center gap-2 bg-zinc-950 px-4 py-2 rounded-2xl border border-zinc-800 self-start sm:self-auto">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="text-xs font-bold text-zinc-400">
+                      Nível Atual:
+                    </span>
+                    <span className="text-xs font-black text-white uppercase bg-white/10 px-2 py-0.5 rounded-md">
+                      {tierEvolution.currentTier === 'aspirant'
+                        ? 'Aspirante a Creator'
+                        : tierEvolution.currentTier === 'stardust'
+                        ? 'Tier 1: Stardust'
+                        : tierEvolution.currentTier === 'rising_star'
+                        ? 'Tier 2: Rising Star'
+                        : tierEvolution.currentTier === 'superstar'
+                        ? 'Tier 3: Superstar'
+                        : 'Tier 4: Legend'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4-Tier Interactive Advancement Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {tierEvolution.progressions.map((tier) => {
+                    const isSelected = selectedTier === tier.tierId;
+                    const tierMeta = PKXD_CREATOR_TIERS.find(t => t.id === tier.tierId);
+                    const subReq = tier.summary.evaluatedRequirements.find(r => r.requirement.metricType === 'subscribers');
+                    const targetSubs = subReq?.targetValue || (tier.level === 1 ? 5000 : tier.level === 2 ? 15000 : tier.level === 3 ? 50000 : 100000);
+
+                    return (
+                      <div
+                        key={tier.tierId}
+                        id={`tier-card-${tier.tierId}`}
+                        onClick={() => {
+                          setSelectedTier(tier.tierId);
+                          if (triggerAudio) triggerAudio('tap');
+                        }}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-zinc-800/90 border-purple-500 shadow-lg shadow-purple-500/10 ring-2 ring-purple-500/30'
+                            : 'bg-zinc-950/60 border-zinc-800/90 hover:border-zinc-700 hover:bg-zinc-900/60'
+                        }`}
+                      >
+                        <div>
+                          {/* Top row: Tier Level & Status Badge */}
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
+                              Nível {tier.level}
+                            </span>
+
+                            {tier.isUnlocked ? (
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center gap-1">
+                                <Check className="w-2.5 h-2.5" />
+                                <span>Alcançado</span>
+                              </span>
+                            ) : tier.isNextToClimb ? (
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center gap-1 animate-pulse">
+                                <Zap className="w-2.5 h-2.5" />
+                                <span>Próximo a Subir</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>Bloqueado</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Tier Title & Icon */}
+                          <div className="flex items-center gap-2.5 mb-1.5">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                              tier.tierId === 'stardust'
+                                ? 'bg-indigo-500/20 text-indigo-400'
+                                : tier.tierId === 'rising_star'
+                                ? 'bg-amber-500/20 text-amber-400'
+                                : tier.tierId === 'superstar'
+                                ? 'bg-pink-500/20 text-pink-400'
+                                : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {tier.tierId === 'stardust' && <Star className="w-4 h-4" />}
+                              {tier.tierId === 'rising_star' && <Rocket className="w-4 h-4" />}
+                              {tier.tierId === 'superstar' && <Trophy className="w-4 h-4" />}
+                              {tier.tierId === 'legend' && <Crown className="w-4 h-4" />}
+                            </div>
+
+                            <div>
+                              <h4 className="text-sm font-black text-white uppercase tracking-tight leading-tight">
+                                {tier.name}
+                              </h4>
+                              <span className="text-[11px] text-zinc-400">
+                                {targetSubs.toLocaleString('pt-BR')} inscritos mín.
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Progress bar inside card */}
+                          <div className="mt-3 mb-2">
+                            <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+                              <span className="text-zinc-400">Progresso</span>
+                              <span className={tier.percentage === 100 ? 'text-emerald-400' : 'text-purple-400'}>
+                                {tier.percentage}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  tier.isUnlocked
+                                    ? 'bg-emerald-400'
+                                    : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                                }`}
+                                style={{ width: `${tier.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* What's needed to climb */}
+                          <div className="text-[11px] text-zinc-400 space-y-1 py-1">
+                            {tier.isUnlocked ? (
+                              <p className="text-emerald-400 font-bold flex items-center gap-1">
+                                <Check className="w-3 h-3" />
+                                <span>Requisitos 100% atingidos!</span>
+                              </p>
+                            ) : (
+                              <p className="text-zinc-300">
+                                {tier.subscribersNeeded > 0 ? (
+                                  <span>Faltam <strong className="text-white">{tier.subscribersNeeded.toLocaleString('pt-BR')}</strong> inscritos</span>
+                                ) : (
+                                  <span>Inscritos OK! Conclua os outros critérios</span>
+                                )}
+                              </p>
+                            )}
+
+                            {/* Reward snippet */}
+                            {tierMeta && (
+                              <div className="pt-1 text-[10px] text-amber-300/90 font-medium">
+                                🎁 {tierMeta.benefits[0] || 'Benefícios exclusivos'}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action button */}
+                        <div className="pt-3 border-t border-zinc-800/80 mt-2">
+                          <button
+                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                              isSelected
+                                ? 'bg-purple-600 text-white shadow'
+                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
+                            }`}
+                          >
+                            {isSelected ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                <span>Focado Neste Tier</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Focar para Subir</span>
+                                <ChevronRight className="w-3 h-3" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Individual Requirements Cards Grid */}
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-purple-400" />
-                    <span>Detalhamento dos Requisitos</span>
+                    <span>
+                      Requisitos para Subir: Tier {selectedTier === 'stardust' ? '1 (Stardust)' : selectedTier === 'rising_star' ? '2 (Rising Star)' : selectedTier === 'superstar' ? '3 (Superstar)' : '4 (Legend)'}
+                    </span>
                   </h3>
                   <span className="text-xs text-zinc-500">
-                    {creatorFormat === 'long_video' ? 'Formato Vídeos Longos' : 'Formato Shorts'}
+                    Metas para subir no {creatorFormat === 'long_video' ? 'Formato Vídeos Longos (+5 min)' : 'Formato Shorts'}
                   </span>
                 </div>
 

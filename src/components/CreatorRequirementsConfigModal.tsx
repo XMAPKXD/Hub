@@ -262,8 +262,10 @@ export default function CreatorRequirementsConfigModal({
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
                   >
                     <option value="admission">Critério Geral de Admissão</option>
-                    <option value="stardust">Tier Stardust (Inicial)</option>
-                    <option value="rising_star">Tier Rising Star</option>
+                    <option value="stardust">Tier 1: Stardust (Inicial)</option>
+                    <option value="rising_star">Tier 2: Rising Star (Ascensão)</option>
+                    <option value="superstar">Tier 3: Superstar (Estrela)</option>
+                    <option value="legend">Tier 4: Legend (Lenda)</option>
                   </select>
                 </div>
 

@@ -157,6 +157,102 @@ export const OFFICIAL_CREATOR_REQUIREMENTS: CreatorRequirement[] = [
   }
 ];
 
+// Tier definitions and progression metadata
+export const PKXD_CREATOR_TIERS: import('../types/creator').TierInfo[] = [
+  {
+    id: 'stardust',
+    level: 1,
+    name: 'Stardust',
+    badgeName: 'Creator Stardust',
+    tagline: 'Porta de entrada no Programa Oficial',
+    icon: '⭐',
+    accentColor: '#8b5cf6', // purple-500
+    borderClass: 'border-purple-500/40 hover:border-purple-500',
+    bgGradient: 'from-purple-950/40 via-zinc-900 to-zinc-950',
+    minSubscribersLong: 1000,
+    minSubscribersShorts: 5000,
+    minAvgViewsLong: 700,
+    minAvgViewsShorts: 1000,
+    monthlyFrequency: 8,
+    monthlyGems: 500,
+    benefits: [
+      'Selo Oficial de Creator PK XD no jogo',
+      '500 Gemas mensais creditadas na conta',
+      'Cargo exclusivo de Criador no Discord Oficial',
+      'Acesso ao canal VIP com spoilers e teasers'
+    ]
+  },
+  {
+    id: 'rising_star',
+    level: 2,
+    name: 'Rising Star',
+    badgeName: 'Creator Rising Star',
+    tagline: 'Criador em ascensão com audiência ativa',
+    icon: '🚀',
+    accentColor: '#f59e0b', // amber-500
+    borderClass: 'border-amber-500/40 hover:border-amber-500',
+    bgGradient: 'from-amber-950/40 via-zinc-900 to-zinc-950',
+    minSubscribersLong: 5000,
+    minSubscribersShorts: 15000,
+    minAvgViewsLong: 1500,
+    minAvgViewsShorts: 10000,
+    monthlyFrequency: 10,
+    monthlyGems: 1500,
+    benefits: [
+      'Códigos promocionais de Gemas/Moedas para sortear aos inscritos',
+      '1.500 Gemas mensais + Pacote de Moedas',
+      'Divulgação do canal nas redes sociais oficiais do PK XD',
+      'Acesso antecipado aos testes de novas atualizações (Beta Tester)'
+    ]
+  },
+  {
+    id: 'superstar',
+    level: 3,
+    name: 'Superstar',
+    badgeName: 'Creator Superstar',
+    tagline: 'Criador destaque com grande impacto na comunidade',
+    icon: '🏆',
+    accentColor: '#ec4899', // pink-500
+    borderClass: 'border-pink-500/40 hover:border-pink-500',
+    bgGradient: 'from-pink-950/40 via-zinc-900 to-zinc-950',
+    minSubscribersLong: 25000,
+    minSubscribersShorts: 50000,
+    minAvgViewsLong: 4000,
+    minAvgViewsShorts: 30000,
+    monthlyFrequency: 12,
+    monthlyGems: 5000,
+    benefits: [
+      'Armadura e Acessório exclusivo Creator Superstar in-game',
+      '5.000 Gemas mensais + Passe de Temporada gratuito',
+      'Promocodes de itens raros e roupas para seus seguidores',
+      'Contato direto com os desenvolvedores da Afterverse'
+    ]
+  },
+  {
+    id: 'legend',
+    level: 4,
+    name: 'Legend',
+    badgeName: 'Creator Legend',
+    tagline: 'Lenda do PK XD e referência global de conteúdo',
+    icon: '👑',
+    accentColor: '#eab308', // yellow-500
+    borderClass: 'border-yellow-500/40 hover:border-yellow-500',
+    bgGradient: 'from-yellow-950/40 via-zinc-900 to-zinc-950',
+    minSubscribersLong: 100000,
+    minSubscribersShorts: 250000,
+    minAvgViewsLong: 15000,
+    minAvgViewsShorts: 80000,
+    monthlyFrequency: 15,
+    monthlyGems: 15000,
+    benefits: [
+      'Criação de um item/roupa oficial no jogo assinado com seu nome',
+      'Estátua e homenagem especial em eventos da Ilha',
+      'Cota ilimitada de Gemas e Moedas para gravações',
+      'Convite VIP para eventos presenciais e transmissões mundiais'
+    ]
+  }
+];
+
 // Rising Star requirements (for tier advancement preview)
 export const RISING_STAR_REQUIREMENTS: CreatorRequirement[] = [
   {
@@ -178,10 +274,10 @@ export const RISING_STAR_REQUIREMENTS: CreatorRequirement[] = [
     name: 'Inscritos (Shorts)',
     metricType: 'subscribers',
     category: 'rising_star',
-    targetValue: 10000,
+    targetValue: 15000,
     unit: 'inscritos',
     isRequired: true,
-    description: 'No mínimo 10.000 inscritos para criadores de YouTube Shorts no Tier Rising Star.',
+    description: 'No mínimo 15.000 inscritos para criadores de YouTube Shorts no Tier Rising Star.',
     officialSourceUrl: 'https://playpkxd.com',
     lastUpdated: '2025-12-01',
     autoVerifiable: true,
@@ -192,10 +288,10 @@ export const RISING_STAR_REQUIREMENTS: CreatorRequirement[] = [
     name: 'Média de Views (Vídeo Longo)',
     metricType: 'avg_views',
     category: 'rising_star',
-    targetValue: 1000,
+    targetValue: 1500,
     unit: 'views/vídeo',
     isRequired: true,
-    description: 'Média de 1.000 visualizações por vídeo no Tier Rising Star.',
+    description: 'Média de 1.500 visualizações por vídeo no Tier Rising Star.',
     officialSourceUrl: 'https://playpkxd.com',
     lastUpdated: '2025-12-01',
     autoVerifiable: true,
@@ -214,7 +310,176 @@ export const RISING_STAR_REQUIREMENTS: CreatorRequirement[] = [
     lastUpdated: '2025-12-01',
     autoVerifiable: true,
     applicableFormat: 'shorts'
+  },
+  {
+    id: 'rs_monthly_frequency',
+    name: 'Frequência de Publicações',
+    metricType: 'monthly_frequency',
+    category: 'rising_star',
+    targetValue: 10,
+    unit: 'vídeos/mês',
+    isRequired: true,
+    description: 'Publicar com consistência no mínimo 10 vídeos ou shorts por mês no Tier Rising Star.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'both'
   }
+];
+
+// Superstar requirements (Tier 3)
+export const SUPERSTAR_REQUIREMENTS: CreatorRequirement[] = [
+  {
+    id: 'super_subscribers_long',
+    name: 'Inscritos (Vídeo Longo)',
+    metricType: 'subscribers',
+    category: 'superstar',
+    targetValue: 25000,
+    unit: 'inscritos',
+    isRequired: true,
+    description: 'No mínimo 25.000 inscritos para criadores de YouTube Longo no Tier Superstar.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'long_video'
+  },
+  {
+    id: 'super_subscribers_shorts',
+    name: 'Inscritos (Shorts)',
+    metricType: 'subscribers',
+    category: 'superstar',
+    targetValue: 50000,
+    unit: 'inscritos',
+    isRequired: true,
+    description: 'No mínimo 50.000 inscritos para criadores de YouTube Shorts no Tier Superstar.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'shorts'
+  },
+  {
+    id: 'super_avg_views_long',
+    name: 'Média de Views (Vídeo Longo)',
+    metricType: 'avg_views',
+    category: 'superstar',
+    targetValue: 4000,
+    unit: 'views/vídeo',
+    isRequired: true,
+    description: 'Média de 4.000 visualizações por vídeo no Tier Superstar.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'long_video'
+  },
+  {
+    id: 'super_avg_views_shorts',
+    name: 'Média de Views (Shorts)',
+    metricType: 'avg_views',
+    category: 'superstar',
+    targetValue: 30000,
+    unit: 'views/short',
+    isRequired: true,
+    description: 'Média de 30.000 visualizações por vídeo no Tier Superstar.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'shorts'
+  },
+  {
+    id: 'super_monthly_frequency',
+    name: 'Frequência de Publicações',
+    metricType: 'monthly_frequency',
+    category: 'superstar',
+    targetValue: 12,
+    unit: 'vídeos/mês',
+    isRequired: true,
+    description: 'Manter no mínimo 12 publicações mensais no Tier Superstar.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'both'
+  }
+];
+
+// Legend requirements (Tier 4)
+export const LEGEND_REQUIREMENTS: CreatorRequirement[] = [
+  {
+    id: 'legend_subscribers_long',
+    name: 'Inscritos (Vídeo Longo)',
+    metricType: 'subscribers',
+    category: 'legend',
+    targetValue: 100000,
+    unit: 'inscritos',
+    isRequired: true,
+    description: 'Conquistar a Placa de Prata com no mínimo 100.000 inscritos no YouTube.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'long_video'
+  },
+  {
+    id: 'legend_subscribers_shorts',
+    name: 'Inscritos (Shorts)',
+    metricType: 'subscribers',
+    category: 'legend',
+    targetValue: 250000,
+    unit: 'inscritos',
+    isRequired: true,
+    description: 'No mínimo 250.000 inscritos para criadores de Shorts no Tier Legend.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'shorts'
+  },
+  {
+    id: 'legend_avg_views_long',
+    name: 'Média de Views (Vídeo Longo)',
+    metricType: 'avg_views',
+    category: 'legend',
+    targetValue: 15000,
+    unit: 'views/vídeo',
+    isRequired: true,
+    description: 'Média de 15.000 visualizações por vídeo no Tier Legend.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'long_video'
+  },
+  {
+    id: 'legend_avg_views_shorts',
+    name: 'Média de Views (Shorts)',
+    metricType: 'avg_views',
+    category: 'legend',
+    targetValue: 80000,
+    unit: 'views/short',
+    isRequired: true,
+    description: 'Média de 80.000 visualizações por vídeo no Tier Legend.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'shorts'
+  },
+  {
+    id: 'legend_monthly_frequency',
+    name: 'Frequência de Publicações',
+    metricType: 'monthly_frequency',
+    category: 'legend',
+    targetValue: 15,
+    unit: 'vídeos/mês',
+    isRequired: true,
+    description: 'Manter ao menos 15 publicações mensais no Tier Legend.',
+    officialSourceUrl: 'https://playpkxd.com',
+    lastUpdated: '2025-12-01',
+    autoVerifiable: true,
+    applicableFormat: 'both'
+  }
+];
+
+export const ALL_CREATOR_REQUIREMENTS: CreatorRequirement[] = [
+  ...OFFICIAL_CREATOR_REQUIREMENTS,
+  ...RISING_STAR_REQUIREMENTS,
+  ...SUPERSTAR_REQUIREMENTS,
+  ...LEGEND_REQUIREMENTS
 ];
 
 const LOCAL_STORAGE_KEY = 'pkxd_custom_creator_requirements';
@@ -225,13 +490,16 @@ export function getStoredRequirements(): CreatorRequirement[] {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        // If saved list was an older version with fewer requirements, merge with full list
+        const existingIds = new Set(parsed.map(p => p.id));
+        const missing = ALL_CREATOR_REQUIREMENTS.filter(r => !existingIds.has(r.id));
+        return [...parsed, ...missing];
       }
     }
   } catch (e) {
     console.warn('Erro ao ler requisitos customizados do localStorage:', e);
   }
-  return OFFICIAL_CREATOR_REQUIREMENTS;
+  return ALL_CREATOR_REQUIREMENTS;
 }
 
 export function saveStoredRequirements(reqs: CreatorRequirement[]): void {
@@ -246,5 +514,5 @@ export function resetToDefaultRequirements(): CreatorRequirement[] {
   try {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
   } catch (e) {}
-  return OFFICIAL_CREATOR_REQUIREMENTS;
+  return ALL_CREATOR_REQUIREMENTS;
 }

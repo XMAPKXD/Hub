@@ -23,6 +23,10 @@ export function evaluateRequirements(
     // Tier check
     if (targetTier === 'rising_star') {
       return req.category === 'rising_star' || req.category === 'admission';
+    } else if (targetTier === 'superstar') {
+      return req.category === 'superstar' || req.category === 'admission';
+    } else if (targetTier === 'legend') {
+      return req.category === 'legend' || req.category === 'admission';
     } else {
       // admission + stardust criteria
       return req.category === 'admission' || req.category === 'stardust';
@@ -217,5 +221,87 @@ export function evaluateRequirements(
     evaluatedRequirements,
     pendingRequirements: pendingList,
     metRequirements: metList
+  };
+}
+
+export interface TierProgressionStatus {
+  tierId: ProgramTier;
+  level: number;
+  name: string;
+  isUnlocked: boolean;
+  percentage: number;
+  metCount: number;
+  totalCount: number;
+  subscribersNeeded: number;
+  isCurrent: boolean;
+  isNextToClimb: boolean;
+  summary: AnalysisSummary;
+}
+
+export function getChannelTierProgressions(
+  requirements: CreatorRequirement[],
+  channel: ChannelMetrics,
+  format: CreatorFormat
+): {
+  currentTier: ProgramTier | 'aspirant';
+  nextTier: ProgramTier | null;
+  progressions: TierProgressionStatus[];
+} {
+  const tiers: { id: ProgramTier; level: number; name: string }[] = [
+    { id: 'stardust', level: 1, name: 'Stardust' },
+    { id: 'rising_star', level: 2, name: 'Rising Star' },
+    { id: 'superstar', level: 3, name: 'Superstar' },
+    { id: 'legend', level: 4, name: 'Legend' }
+  ];
+
+  const evaluations: { tier: typeof tiers[0]; summary: AnalysisSummary }[] = tiers.map(t => ({
+    tier: t,
+    summary: evaluateRequirements(requirements, channel, format, t.id)
+  }));
+
+  // Determine highest tier unlocked
+  let currentTier: ProgramTier | 'aspirant' = 'aspirant';
+  for (const item of evaluations) {
+    if (item.summary.isAllRequiredMet) {
+      currentTier = item.tier.id;
+    } else {
+      break;
+    }
+  }
+
+  // Next tier to climb is the first one where isAllRequiredMet is false
+  const nextTierItem = evaluations.find(item => !item.summary.isAllRequiredMet);
+  const nextTier: ProgramTier | null = nextTierItem ? nextTierItem.tier.id : null;
+
+  const progressions: TierProgressionStatus[] = evaluations.map((item, idx) => {
+    const isUnlocked = item.summary.isAllRequiredMet;
+    const isCurrent = currentTier === item.tier.id;
+    const isNextToClimb = nextTier === item.tier.id;
+
+    // Find subscribers requirement
+    const subReq = item.summary.evaluatedRequirements.find(r => r.requirement.metricType === 'subscribers');
+    const subCurrent = typeof subReq?.currentValue === 'number' ? subReq.currentValue : (channel.subscriberCount || 0);
+    const subTarget = subReq?.targetValue || 1000;
+    const subscribersNeeded = Math.max(0, subTarget - subCurrent);
+
+    return {
+      tierId: item.tier.id,
+      level: item.tier.level,
+      name: item.tier.name,
+      isUnlocked,
+      percentage: item.summary.overallPercentage,
+      metCount: item.summary.metCount,
+      totalCount: item.summary.totalCount,
+      subscribersNeeded,
+      isCurrent,
+      isNextToClimb,
+      summary: item.summary
+    };
+  });
+
+  return {
+    currentTier,
+    nextTier,
+    progressions
   };
 }

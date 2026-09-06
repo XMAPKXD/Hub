@@ -10,7 +10,26 @@ export type MetricType =
 
 export type CreatorFormat = 'long_video' | 'shorts' | 'both';
 
-export type ProgramTier = 'admission' | 'stardust' | 'rising_star';
+export type ProgramTier = 'admission' | 'stardust' | 'rising_star' | 'superstar' | 'legend';
+
+export interface TierInfo {
+  id: ProgramTier;
+  level: number;
+  name: string;
+  badgeName: string;
+  tagline: string;
+  icon: string;
+  accentColor: string;
+  borderClass: string;
+  bgGradient: string;
+  minSubscribersLong: number;
+  minSubscribersShorts: number;
+  minAvgViewsLong: number;
+  minAvgViewsShorts: number;
+  monthlyFrequency: number;
+  monthlyGems: number;
+  benefits: string[];
+}
 
 export interface CreatorRequirement {
   id: string;
