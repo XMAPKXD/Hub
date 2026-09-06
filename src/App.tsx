@@ -3135,6 +3135,12 @@ export default function App() {
             }}
             soundEnabled={soundEnabled}
             triggerAudio={triggerAudio}
+            user={user}
+            onAddXP={handleAddFanXP}
+            onOpenAuthModal={(mode) => {
+              setExplicitAuthMode(mode || 'login');
+              setExplicitAuthModalOpen(true);
+            }}
           />
         ) : isApplicationsRoute ? (
           <ApplicationsSection 

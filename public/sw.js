@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pkxd-central-cache-v2';
+const CACHE_NAME = 'pkxd-central-cache-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -40,6 +40,11 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+
+  // CRITICAL: NEVER intercept or cache /api/ requests with ServiceWorker!
+  if (url.pathname.startsWith('/api/') || url.pathname === '/api') {
+    return;
+  }
 
   // Network first for HTML/navigation requests
   if (req.mode === 'navigate' || req.headers.get('accept')?.includes('text/html')) {
