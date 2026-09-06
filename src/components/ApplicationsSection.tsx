@@ -34,6 +34,7 @@ import { playTapSound, playSuccessSound, playLevelUpSound } from '../utils/audio
 
 interface ApplicationsSectionProps {
   onBackToHub: () => void;
+  onOpenCreatorAnalyzer?: () => void;
   onAddXP: (amount: number, reason: string) => void;
   soundEnabled: boolean;
   user: any;
@@ -46,6 +47,7 @@ interface ApplicationsSectionProps {
 
 export default function ApplicationsSection({ 
   onBackToHub, 
+  onOpenCreatorAnalyzer,
   onAddXP, 
   soundEnabled,
   user,
@@ -1044,18 +1046,20 @@ export default function ApplicationsSection({
                 </p>
               </div>
             </div>
-            <a
-              href="/progresso-creator"
-              onClick={(e) => {
-                e.preventDefault();
-                window.history.pushState({}, '', '/progresso-creator');
-                window.dispatchEvent(new PopStateEvent('popstate'));
+            <button
+              onClick={() => {
+                if (onOpenCreatorAnalyzer) {
+                  onOpenCreatorAnalyzer();
+                } else {
+                  window.history.pushState({}, '', '/progresso-creator');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
               }}
-              className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
+              className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 shrink-0 cursor-pointer"
             >
               <span>Ver Meu Progresso</span>
               <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            </button>
           </div>
 
           {/* Tabs list (Beautiful solid visual blocks) */}

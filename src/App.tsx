@@ -305,6 +305,7 @@ export default function App() {
   });
 
   // Simple robust state-based path router supporting browser navigation and deep linking (pathname + hash + search fallback)
+  const [showCreatorAnalyzer, setShowCreatorAnalyzer] = useState(false);
   const [currentPath, setCurrentPath] = useState(() => {
     try {
       const path = decodeURIComponent(window.location.pathname);
@@ -328,56 +329,84 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
+        const specialRoutes = ['admin', 'inscricoes', 'progresso-creator', 'progresso', 'creator', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
         if (pLower.includes('admin')) {
           targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('inscric')) {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('progresso') || pLower.includes('creator') || pLower.includes('analyzer')) {
+          targetPath = baseIsSpecial ? `/progresso-creator/${hashSuffix}` : (base ? `/${base}/progresso-creator/${hashSuffix}` : `/progresso-creator/${hashSuffix}`);
+          setShowCreatorAnalyzer(true);
         } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
           targetPath = baseIsSpecial ? `/createaccount/${hashSuffix}` : (base ? `/${base}/createaccount/${hashSuffix}` : `/createaccount/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
           targetPath = baseIsSpecial ? `/resetpassword/${hashSuffix}` : (base ? `/${base}/resetpassword/${hashSuffix}` : `/resetpassword/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('login') || pLower.includes('entrar')) {
           targetPath = baseIsSpecial ? `/login/${hashSuffix}` : (base ? `/${base}/login/${hashSuffix}` : `/login/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('passaporte') || pLower.includes('pkxd-id') || pLower.includes('pkxdid')) {
           targetPath = baseIsSpecial ? `/pkxd-id/${hashSuffix}` : (base ? `/${base}/pkxd-id/${hashSuffix}` : `/pkxd-id/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('artes')) {
           targetPath = baseIsSpecial ? `/artes/${hashSuffix}` : (base ? `/${base}/artes/${hashSuffix}` : `/artes/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('evento')) {
           targetPath = baseIsSpecial ? `/eventos/${hashSuffix}` : (base ? `/${base}/eventos/${hashSuffix}` : `/eventos/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('comunidade')) {
           targetPath = baseIsSpecial ? `/comunidade/${hashSuffix}` : (base ? `/${base}/comunidade/${hashSuffix}` : `/comunidade/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('missoes')) {
           targetPath = baseIsSpecial ? `/missoes/${hashSuffix}` : (base ? `/${base}/missoes/${hashSuffix}` : `/missoes/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         } else {
           targetPath = baseIsSpecial ? `/${hashSuffix}` : (base ? `/${base}/${hashSuffix}` : `/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
         }
       } else {
         // Standard environments
         if (pLower.includes('admin')) {
           targetPath = `/admin${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('inscric')) {
           targetPath = `/inscricoes${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('progresso') || pLower.includes('creator') || pLower.includes('analyzer')) {
+          targetPath = `/progresso-creator${hashSuffix}`;
+          setShowCreatorAnalyzer(true);
         } else if (pLower.includes('createaccount') || pLower.includes('create-account') || pLower.includes('cadastro') || pLower.includes('register') || pLower.includes('criar-conta')) {
           targetPath = `/createaccount${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('resetpassword') || pLower.includes('reset-password') || pLower.includes('esquecisenha') || pLower.includes('recuperarsenha') || pLower.includes('esqueci-senha')) {
           targetPath = `/resetpassword${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('login') || pLower.includes('entrar')) {
           targetPath = `/login${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('passaporte') || pLower.includes('pkxd-id') || pLower.includes('pkxdid')) {
           targetPath = `/pkxd-id${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('artes')) {
           targetPath = `/artes${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('evento')) {
           targetPath = `/eventos${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('comunidade')) {
           targetPath = `/comunidade${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else if (pLower.includes('missoes')) {
           targetPath = `/missoes${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         } else {
           targetPath = `/${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
         }
       }
 
@@ -387,9 +416,9 @@ export default function App() {
         const p = decodeURIComponent(window.location.pathname);
         const h = decodeURIComponent(window.location.hash);
         const s = decodeURIComponent(window.location.search);
-        setCurrentPath(`${p} ${h} ${s}`);
+        setCurrentPath(`${targetPath} ${p} ${h} ${s}`);
       } catch (e) {
-        setCurrentPath(`${window.location.pathname} ${window.location.hash} ${window.location.search}`);
+        setCurrentPath(targetPath);
       }
 
       // scroll to top smoothly
@@ -438,9 +467,23 @@ export default function App() {
         const p = decodeURIComponent(window.location.pathname);
         const h = decodeURIComponent(window.location.hash);
         const s = decodeURIComponent(window.location.search);
-        setCurrentPath(`${p} ${h} ${s}`);
+        const combined = `${p} ${h} ${s}`;
+        setCurrentPath(combined);
+        const cLower = combined.toLowerCase();
+        if (cLower.includes('progresso') || cLower.includes('creator') || cLower.includes('analyzer')) {
+          setShowCreatorAnalyzer(true);
+        } else {
+          setShowCreatorAnalyzer(false);
+        }
       } catch (e) {
-        setCurrentPath(`${window.location.pathname} ${window.location.hash} ${window.location.search}`);
+        const combined = `${window.location.pathname} ${window.location.hash} ${window.location.search}`;
+        setCurrentPath(combined);
+        const cLower = combined.toLowerCase();
+        if (cLower.includes('progresso') || cLower.includes('creator') || cLower.includes('analyzer')) {
+          setShowCreatorAnalyzer(true);
+        } else {
+          setShowCreatorAnalyzer(false);
+        }
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -463,10 +506,10 @@ export default function App() {
       setActiveTab('comunidade');
     } else if (pLower.includes('missoes') || pLower.includes('missao')) {
       setActiveTab('missoes');
-    } else if (!pLower.includes('admin') && !pLower.includes('inscric')) {
+    } else if (!pLower.includes('admin') && !pLower.includes('inscric') && !pLower.includes('progresso') && !pLower.includes('creator') && !pLower.includes('analyzer') && !showCreatorAnalyzer) {
       setActiveTab('inicio');
     }
-  }, [currentPath]);
+  }, [currentPath, showCreatorAnalyzer]);
 
   // Register Service Worker for Web Push on mount
   useEffect(() => {
@@ -526,7 +569,8 @@ export default function App() {
   const isApplicationsRoute = currentPath.toLowerCase().includes('inscric') || 
                                currentPath.toLowerCase().includes('inscriç') || 
                                currentPath.toLowerCase().includes('inscricao');
-  const isCreatorProgressRoute = currentPath.toLowerCase().includes('progresso') ||
+  const isCreatorProgressRoute = showCreatorAnalyzer ||
+                                 currentPath.toLowerCase().includes('progresso') ||
                                  currentPath.toLowerCase().includes('creator') ||
                                  currentPath.toLowerCase().includes('analyzer');
 
@@ -2539,8 +2583,10 @@ export default function App() {
               onClick={() => {
                 triggerAudio('tap');
                 if (isCreatorProgressRoute) {
+                  setShowCreatorAnalyzer(false);
                   navigateTo('/Hub/');
                 } else {
+                  setShowCreatorAnalyzer(true);
                   navigateTo('/progresso-creator');
                 }
               }}
@@ -3083,13 +3129,23 @@ export default function App() {
 
         {isAdminRoute ? null : isCreatorProgressRoute ? (
           <CreatorProgressAnalyzer 
-            onBackToHub={() => navigateTo('/Hub/')}
+            onBackToHub={() => {
+              setShowCreatorAnalyzer(false);
+              navigateTo('/Hub/');
+            }}
             soundEnabled={soundEnabled}
             triggerAudio={triggerAudio}
           />
         ) : isApplicationsRoute ? (
           <ApplicationsSection 
-            onBackToHub={() => navigateTo('/Hub/')}
+            onBackToHub={() => {
+              setShowCreatorAnalyzer(false);
+              navigateTo('/Hub/');
+            }}
+            onOpenCreatorAnalyzer={() => {
+              setShowCreatorAnalyzer(true);
+              navigateTo('/progresso-creator');
+            }}
             onAddXP={handleAddFanXP}
             soundEnabled={soundEnabled}
             user={user}
@@ -3228,6 +3284,7 @@ export default function App() {
                     id="banner-view-progress-btn"
                     onClick={() => {
                       triggerAudio('tap');
+                      setShowCreatorAnalyzer(true);
                       navigateTo('/progresso-creator');
                     }}
                     className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 shrink-0 transition-all active:scale-95 cursor-pointer"
