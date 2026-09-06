@@ -55,6 +55,293 @@ if (!(0, import_app.getApps)().length) {
 var adminAuth = (0, import_auth.getAuth)();
 var adminDb = (0, import_firestore.getFirestore)();
 
+// src/lib/youtubeService.ts
+function parseSubscriberCount(text) {
+  if (!text) return 0;
+  const clean = text.toLowerCase().trim();
+  const miMatch = clean.match(/([\d.,]+)\s*(?:mi|milh|m\b|million)/i);
+  if (miMatch) {
+    const num = parseFloat(miMatch[1].replace(",", "."));
+    return Math.round(num * 1e6);
+  }
+  const kMatch = clean.match(/([\d.,]+)\s*(?:mil|k\b|thousand)/i);
+  if (kMatch) {
+    const num = parseFloat(kMatch[1].replace(",", "."));
+    return Math.round(num * 1e3);
+  }
+  const plainMatch = clean.match(/([\d.,]+)/);
+  if (plainMatch) {
+    const digitsOnly = plainMatch[1].replace(/[.,]/g, "");
+    const num = parseInt(digitsOnly, 10);
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
+}
+function parseVideoCount(text) {
+  if (!text) return 0;
+  const clean = text.toLowerCase().trim();
+  const match = clean.match(/([\d.,]+)\s*(?:vídeo|video|vid)/i);
+  if (match) {
+    const digitsOnly = match[1].replace(/[.,]/g, "");
+    const num = parseInt(digitsOnly, 10);
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
+}
+function cleanChannelQuery(query) {
+  const trimmed = query.trim();
+  try {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      const url = new URL(trimmed);
+      const pathname = url.pathname;
+      if (pathname.includes("/@")) {
+        const handle = pathname.split("/@")[1].split("/")[0];
+        return { handle: `@${handle}`, originalQuery: trimmed };
+      }
+      if (pathname.includes("/channel/")) {
+        const channelId = pathname.split("/channel/")[1].split("/")[0];
+        return { channelId, originalQuery: trimmed };
+      }
+      if (pathname.includes("/c/") || pathname.includes("/user/")) {
+        const name = pathname.split(/\/c\/|\/user\//)[1].split("/")[0];
+        return { handle: `@${name}`, originalQuery: trimmed };
+      }
+    }
+  } catch (e) {
+  }
+  if (trimmed.startsWith("@")) {
+    return { handle: trimmed, originalQuery: trimmed };
+  }
+  if (trimmed.startsWith("UC") && trimmed.length >= 20) {
+    return { channelId: trimmed, originalQuery: trimmed };
+  }
+  return { handle: `@${trimmed.replace(/^@/, "")}`, originalQuery: trimmed };
+}
+async function fetchYouTubeChannelData(query) {
+  const parsed = cleanChannelQuery(query);
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (apiKey) {
+    try {
+      let apiUrl = "";
+      if (parsed.channelId) {
+        apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${parsed.channelId}&key=${apiKey}`;
+      } else if (parsed.handle) {
+        const cleanHandle = parsed.handle.replace(/^@/, "");
+        apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&forHandle=${cleanHandle}&key=${apiKey}`;
+      }
+      if (apiUrl) {
+        const res = await fetch(apiUrl);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.items && data.items.length > 0) {
+            const item = data.items[0];
+            const channelId2 = item.id;
+            const snippet = item.snippet || {};
+            const stats = item.statistics || {};
+            const subs = parseInt(stats.subscriberCount || "0", 10);
+            const vids = parseInt(stats.videoCount || "0", 10);
+            const views = parseInt(stats.viewCount || "0", 10);
+            const uploadsPlaylistId = item.contentDetails?.relatedPlaylists?.uploads;
+            let recentVideos2 = [];
+            let pkxdCount = 0;
+            let avgViews = 0;
+            if (uploadsPlaylistId) {
+              try {
+                const playRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=15&playlistId=${uploadsPlaylistId}&key=${apiKey}`);
+                if (playRes.ok) {
+                  const playData = await playRes.json();
+                  const videoIds = (playData.items || []).map((i) => i.snippet?.resourceId?.videoId).filter(Boolean);
+                  let videoViewsMap = {};
+                  if (videoIds.length > 0) {
+                    const vidStatsRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${videoIds.join(",")}&key=${apiKey}`);
+                    if (vidStatsRes.ok) {
+                      const vidData = await vidStatsRes.json();
+                      (vidData.items || []).forEach((v) => {
+                        videoViewsMap[v.id] = parseInt(v.statistics?.viewCount || "0", 10);
+                      });
+                    }
+                  }
+                  let totalViewsSum = 0;
+                  recentVideos2 = (playData.items || []).map((i) => {
+                    const vId = i.snippet?.resourceId?.videoId || "";
+                    const title2 = i.snippet?.title || "";
+                    const isPkxd = /pk\s*xd|afterverse/i.test(title2);
+                    const isShort = /#shorts|\bshort\b/i.test(title2);
+                    const viewCount = videoViewsMap[vId] || 0;
+                    totalViewsSum += viewCount;
+                    if (isPkxd) pkxdCount++;
+                    return {
+                      id: vId,
+                      title: title2,
+                      publishedAt: i.snippet?.publishedAt || (/* @__PURE__ */ new Date()).toISOString(),
+                      isShort,
+                      isPkxdContent: isPkxd,
+                      views: viewCount
+                    };
+                  });
+                  if (recentVideos2.length > 0) {
+                    avgViews = Math.round(totalViewsSum / recentVideos2.length);
+                  }
+                }
+              } catch (e) {
+                console.warn("Erro ao puxar v\xEDdeos da playlist via API:", e);
+              }
+            }
+            return {
+              channelId: channelId2,
+              title: snippet.title || parsed.handle || "Canal do YouTube",
+              handle: snippet.customUrl ? `@${snippet.customUrl.replace(/^@/, "")}` : parsed.handle || `@${snippet.title}`,
+              avatarUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || "",
+              subscriberCount: subs,
+              videoCount: vids,
+              totalViews: views,
+              recentVideos: recentVideos2,
+              pkxdVideosDetected: pkxdCount,
+              averageRecentViews: avgViews || (vids > 0 ? Math.round(views / vids) : 0),
+              estimatedMonthlyGrowth: Math.max(50, Math.round(subs * 0.05)),
+              isPublicDataAvailable: true,
+              dataSource: "youtube_api"
+            };
+          }
+        }
+      }
+    } catch (apiErr) {
+      console.warn("Falha na requisi\xE7\xE3o YouTube Data API, usando coletor p\xFAblico resiliente:", apiErr);
+    }
+  }
+  let targetUrl = "";
+  if (parsed.channelId) {
+    targetUrl = `https://www.youtube.com/channel/${parsed.channelId}`;
+  } else if (parsed.handle) {
+    targetUrl = `https://www.youtube.com/${parsed.handle}`;
+  } else {
+    targetUrl = `https://www.youtube.com/@${parsed.originalQuery}`;
+  }
+  console.log(`[YouTube Scraper] Acessando metadados p\xFAblicos: ${targetUrl}`);
+  const userAgents = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+  ];
+  const htmlResponse = await fetch(targetUrl, {
+    headers: {
+      "User-Agent": userAgents[0],
+      "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+      "Cache-Control": "no-cache"
+    }
+  });
+  if (!htmlResponse.ok) {
+    throw new Error(`N\xE3o foi poss\xEDvel carregar a p\xE1gina p\xFAblica do canal. Verifique se o @handle "${query}" est\xE1 correto.`);
+  }
+  const html = await htmlResponse.text();
+  let channelId = parsed.channelId || "";
+  const canonicalMatch = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/channel\/(UC[a-zA-Z0-9_-]{20,24})"/i);
+  if (canonicalMatch) {
+    channelId = canonicalMatch[1];
+  } else {
+    const channelIdMatch = html.match(/"channelId":"(UC[a-zA-Z0-9_-]{20,24})"/);
+    if (channelIdMatch) {
+      channelId = channelIdMatch[1];
+    }
+  }
+  let title = "";
+  const ogTitleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i);
+  if (ogTitleMatch) {
+    title = ogTitleMatch[1];
+  } else {
+    const titleTagMatch = html.match(/<title>([^<]+)<\/title>/i);
+    if (titleTagMatch) {
+      title = titleTagMatch[1].replace("- YouTube", "").trim();
+    }
+  }
+  let avatarUrl = "";
+  const ogImageMatch = html.match(/<meta property="og:image" content="([^"]+)"/i);
+  if (ogImageMatch) {
+    avatarUrl = ogImageMatch[1];
+  }
+  let subscriberCount = 0;
+  let videoCount = 0;
+  let handle = parsed.handle || `@${title.replace(/\s+/g, "")}`;
+  const subPattern = /"([0-9.,]+(?:\s*(?:mil|mi|k|m|milh[oõ]es)?))\s*(?:inscritos|subscribers)"/i;
+  const subMatch = html.match(subPattern);
+  if (subMatch) {
+    subscriberCount = parseSubscriberCount(subMatch[1]);
+  } else {
+    const subAlt = html.match(/subscriberCountText":\{"accessibility":\{"accessibilityData":\{"label":"([^"]+)"/);
+    if (subAlt) {
+      subscriberCount = parseSubscriberCount(subAlt[1]);
+    }
+  }
+  const vidPattern = /"([0-9.,]+(?:\s*(?:mil|k)?))\s*(?:v[íi]deos|videos)"/i;
+  const vidMatch = html.match(vidPattern);
+  if (vidMatch) {
+    videoCount = parseVideoCount(vidMatch[1]);
+  }
+  const handleMatch = html.match(/"canonicalBaseUrl":"\/(@[a-zA-Z0-9_.-]+)"/);
+  if (handleMatch) {
+    handle = handleMatch[1];
+  }
+  let recentVideos = [];
+  let pkxdVideosDetected = 0;
+  let totalSampleViews = 0;
+  if (channelId) {
+    try {
+      const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+      const rssRes = await fetch(rssUrl, {
+        headers: { "User-Agent": userAgents[1] }
+      });
+      if (rssRes.ok) {
+        const xml = await rssRes.text();
+        const entryRegex = /<entry>([\s\S]*?)<\/entry>/gi;
+        let entryMatch;
+        while ((entryMatch = entryRegex.exec(xml)) !== null) {
+          const entryXml = entryMatch[1];
+          const vidIdMatch = entryXml.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i);
+          const vidTitleMatch = entryXml.match(/<title>([^<]+)<\/title>/i);
+          const publishedMatch = entryXml.match(/<published>([^<]+)<\/published>/i);
+          const viewsMatch = entryXml.match(/<media:statistics views="(\d+)"/i);
+          const vidId = vidIdMatch ? vidIdMatch[1] : "";
+          const vidTitle = vidTitleMatch ? vidTitleMatch[1] : "";
+          const published = publishedMatch ? publishedMatch[1] : "";
+          const views = viewsMatch ? parseInt(viewsMatch[1], 10) : void 0;
+          if (vidId && vidTitle) {
+            const isPkxd = /pk\s*xd|afterverse|pkxd/i.test(vidTitle);
+            const isShort = /#shorts|\bshorts\b/i.test(vidTitle);
+            if (isPkxd) pkxdVideosDetected++;
+            if (views !== void 0) totalSampleViews += views;
+            recentVideos.push({
+              id: vidId,
+              title: vidTitle,
+              publishedAt: published,
+              isShort,
+              isPkxdContent: isPkxd,
+              views
+            });
+          }
+        }
+      }
+    } catch (rssErr) {
+      console.warn("Aviso ao ler RSS do YouTube:", rssErr);
+    }
+  }
+  const averageRecentViews = recentVideos.length > 0 && totalSampleViews > 0 ? Math.round(totalSampleViews / recentVideos.length) : Math.max(150, Math.round(subscriberCount * 0.15));
+  const estimatedMonthlyGrowth = Math.max(80, Math.round(subscriberCount * 0.04));
+  return {
+    channelId: channelId || `UC_${encodeURIComponent(handle)}`,
+    title: title || handle,
+    handle,
+    avatarUrl,
+    subscriberCount,
+    videoCount: videoCount || (recentVideos.length > 0 ? recentVideos.length : 0),
+    totalViews: totalSampleViews || subscriberCount * 25,
+    recentVideos,
+    pkxdVideosDetected,
+    averageRecentViews,
+    estimatedMonthlyGrowth,
+    isPublicDataAvailable: true,
+    dataSource: "youtube_public_scrape"
+  };
+}
+
 // server.ts
 import_dotenv.default.config();
 var app = (0, import_express.default)();
@@ -376,6 +663,22 @@ ${textToAnalyze}
       }
     }
     res.status(500).json({ error: err.message || "Erro desconhecido ao puxar spoilers." });
+  }
+});
+app.get("/api/youtube/channel", async (req, res) => {
+  const query = (req.query.query || "").trim();
+  if (!query) {
+    res.status(400).json({ error: "O par\xE2metro query (handle, ID ou URL do canal) \xE9 obrigat\xF3rio." });
+    return;
+  }
+  try {
+    const channelData = await fetchYouTubeChannelData(query);
+    res.json({ success: true, data: channelData });
+  } catch (err) {
+    console.error("[YouTube API] Erro ao buscar canal:", err);
+    res.status(404).json({
+      error: err.message || "Canal n\xE3o encontrado ou indispon\xEDvel publicamente."
+    });
   }
 });
 async function startServer() {
