@@ -1097,44 +1097,14 @@ export default function CreatorProgressAnalyzer({
                     setSelectedTier('rising_star');
                     if (triggerAudio) triggerAudio('tap');
                   }}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     selectedTier === 'rising_star'
                       ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
                   }`}
                 >
                   <Rocket className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Tier 2: Rising Star</span>
-                </button>
-                <button
-                  id="tier-superstar-btn"
-                  onClick={() => {
-                    setSelectedTier('superstar');
-                    if (triggerAudio) triggerAudio('tap');
-                  }}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    selectedTier === 'superstar'
-                      ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/20'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-                  }`}
-                >
-                  <Trophy className="w-3.5 h-3.5 text-pink-400" />
-                  <span>Tier 3: Superstar</span>
-                </button>
-                <button
-                  id="tier-legend-btn"
-                  onClick={() => {
-                    setSelectedTier('legend');
-                    if (triggerAudio) triggerAudio('tap');
-                  }}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    selectedTier === 'legend'
-                      ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-black shadow-lg shadow-yellow-500/20'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-                  }`}
-                >
-                  <Crown className={`w-3.5 h-3.5 ${selectedTier === 'legend' ? 'text-black' : 'text-yellow-400'}`} />
-                  <span>Tier 4: Legend</span>
+                  <span>Tier 2: Rising Star (Subir de Nível)</span>
                 </button>
               </div>
             </div>
@@ -1158,18 +1128,11 @@ export default function CreatorProgressAnalyzer({
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
                       selectedTier === 'stardust'
                         ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
-                        : selectedTier === 'rising_star'
-                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                        : selectedTier === 'superstar'
-                        ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
-                        : 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
+                        : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
                     }`}>
-                      {selectedTier === 'stardust' && <Star className="w-3.5 h-3.5" />}
-                      {selectedTier === 'rising_star' && <Rocket className="w-3.5 h-3.5" />}
-                      {selectedTier === 'superstar' && <Trophy className="w-3.5 h-3.5" />}
-                      {selectedTier === 'legend' && <Crown className="w-3.5 h-3.5" />}
+                      {selectedTier === 'stardust' ? <Star className="w-3.5 h-3.5" /> : <Rocket className="w-3.5 h-3.5" />}
                       <span>
-                        Meta: Tier {selectedTier === 'stardust' ? '1 (Stardust)' : selectedTier === 'rising_star' ? '2 (Rising Star)' : selectedTier === 'superstar' ? '3 (Superstar)' : '4 (Legend)'}
+                        Meta: {selectedTier === 'stardust' ? 'Tier 1 (Stardust - Entrada)' : 'Tier 2 (Rising Star - Subir de Nível)'}
                       </span>
                     </div>
                   </div>
@@ -1263,22 +1226,18 @@ export default function CreatorProgressAnalyzer({
                         ? 'Aspirante a Creator'
                         : tierEvolution.currentTier === 'stardust'
                         ? 'Tier 1: Stardust'
-                        : tierEvolution.currentTier === 'rising_star'
-                        ? 'Tier 2: Rising Star'
-                        : tierEvolution.currentTier === 'superstar'
-                        ? 'Tier 3: Superstar'
-                        : 'Tier 4: Legend'}
+                        : 'Tier 2: Rising Star'}
                     </span>
                   </div>
                 </div>
 
-                {/* 4-Tier Interactive Advancement Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 2-Tier Interactive Advancement Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
                   {tierEvolution.progressions.map((tier) => {
                     const isSelected = selectedTier === tier.tierId;
                     const tierMeta = PKXD_CREATOR_TIERS.find(t => t.id === tier.tierId);
                     const subReq = tier.summary.evaluatedRequirements.find(r => r.requirement.metricType === 'subscribers');
-                    const targetSubs = subReq?.targetValue || (tier.level === 1 ? 5000 : tier.level === 2 ? 15000 : tier.level === 3 ? 50000 : 100000);
+                    const targetSubs = subReq?.targetValue || (tier.level === 1 ? 5000 : 15000);
 
                     return (
                       <div
@@ -1324,16 +1283,9 @@ export default function CreatorProgressAnalyzer({
                             <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
                               tier.tierId === 'stardust'
                                 ? 'bg-indigo-500/20 text-indigo-400'
-                                : tier.tierId === 'rising_star'
-                                ? 'bg-amber-500/20 text-amber-400'
-                                : tier.tierId === 'superstar'
-                                ? 'bg-pink-500/20 text-pink-400'
-                                : 'bg-yellow-500/20 text-yellow-400'
+                                : 'bg-amber-500/20 text-amber-400'
                             }`}>
-                              {tier.tierId === 'stardust' && <Star className="w-4 h-4" />}
-                              {tier.tierId === 'rising_star' && <Rocket className="w-4 h-4" />}
-                              {tier.tierId === 'superstar' && <Trophy className="w-4 h-4" />}
-                              {tier.tierId === 'legend' && <Crown className="w-4 h-4" />}
+                              {tier.tierId === 'stardust' ? <Star className="w-4 h-4" /> : <Rocket className="w-4 h-4" />}
                             </div>
 
                             <div>
@@ -1428,7 +1380,7 @@ export default function CreatorProgressAnalyzer({
                   <h3 className="text-sm font-black uppercase tracking-wider text-zinc-300 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-purple-400" />
                     <span>
-                      Requisitos para Subir: Tier {selectedTier === 'stardust' ? '1 (Stardust)' : selectedTier === 'rising_star' ? '2 (Rising Star)' : selectedTier === 'superstar' ? '3 (Superstar)' : '4 (Legend)'}
+                      Requisitos: {selectedTier === 'stardust' ? 'Tier 1: Stardust (Entrada)' : 'Tier 2: Rising Star (Subir de Nível)'}
                     </span>
                   </h3>
                   <span className="text-xs text-zinc-500">

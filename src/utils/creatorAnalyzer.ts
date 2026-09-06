@@ -23,10 +23,6 @@ export function evaluateRequirements(
     // Tier check
     if (targetTier === 'rising_star') {
       return req.category === 'rising_star' || req.category === 'admission';
-    } else if (targetTier === 'superstar') {
-      return req.category === 'superstar' || req.category === 'admission';
-    } else if (targetTier === 'legend') {
-      return req.category === 'legend' || req.category === 'admission';
     } else {
       // admission + stardust criteria
       return req.category === 'admission' || req.category === 'stardust';
@@ -47,16 +43,19 @@ export function evaluateRequirements(
         break;
 
       case 'views_3months':
+        // Conta todas as visualizações dos vídeos de PK XD / vídeos do canal
         if (channel.manualOverrides?.pkxdViews3Months !== undefined) {
           currentValue = channel.manualOverrides.pkxdViews3Months;
-          isAutoVerified = false;
+        } else if (channel.totalViews !== undefined && channel.totalViews > 0) {
+          currentValue = channel.totalViews;
         } else if (channel.views3MonthsEstimated !== undefined && channel.views3MonthsEstimated > 0) {
           currentValue = channel.views3MonthsEstimated;
-          isAutoVerified = true;
+        } else if (channel.recentVideos && channel.recentVideos.length > 0) {
+          currentValue = channel.recentVideos.reduce((acc, v) => acc + (v.views || 0), 0);
         } else {
           currentValue = 0;
-          isAutoVerified = false;
         }
+        isAutoVerified = true;
         break;
 
       case 'pkxd_long_videos':
@@ -152,9 +151,6 @@ export function evaluateRequirements(
       if (!isAutoVerified && currentValue === 0 && (req.metricType === 'community_compliance' || req.metricType === 'program_terms')) {
         statusMessage = 'Não foi possível verificar este requisito automaticamente.';
         deficitText = 'Requer confirmação direta do criador';
-      } else if (!isAutoVerified && currentValue === 0 && req.metricType === 'views_3months') {
-        statusMessage = 'Não foi possível verificar as views específicas de PK XD automaticamente.';
-        deficitText = `Meta de 10.000 views nos últimos 3 meses`;
       } else {
         const remaining = Math.max(0, req.targetValue - Number(currentValue));
         deficitText = `Faltam ${remaining.toLocaleString('pt-BR')} ${req.unit}`;
@@ -249,9 +245,7 @@ export function getChannelTierProgressions(
 } {
   const tiers: { id: ProgramTier; level: number; name: string }[] = [
     { id: 'stardust', level: 1, name: 'Stardust' },
-    { id: 'rising_star', level: 2, name: 'Rising Star' },
-    { id: 'superstar', level: 3, name: 'Superstar' },
-    { id: 'legend', level: 4, name: 'Legend' }
+    { id: 'rising_star', level: 2, name: 'Rising Star' }
   ];
 
   const evaluations: { tier: typeof tiers[0]; summary: AnalysisSummary }[] = tiers.map(t => ({

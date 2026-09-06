@@ -10,7 +10,7 @@ export type MetricType =
 
 export type CreatorFormat = 'long_video' | 'shorts' | 'both';
 
-export type ProgramTier = 'admission' | 'stardust' | 'rising_star' | 'superstar' | 'legend';
+export type ProgramTier = 'admission' | 'stardust' | 'rising_star';
 
 export interface TierInfo {
   id: ProgramTier;

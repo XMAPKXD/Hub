@@ -264,8 +264,6 @@ export default function CreatorRequirementsConfigModal({
                     <option value="admission">Critério Geral de Admissão</option>
                     <option value="stardust">Tier 1: Stardust (Inicial)</option>
                     <option value="rising_star">Tier 2: Rising Star (Ascensão)</option>
-                    <option value="superstar">Tier 3: Superstar (Estrela)</option>
-                    <option value="legend">Tier 4: Legend (Lenda)</option>
                   </select>
                 </div>
 
