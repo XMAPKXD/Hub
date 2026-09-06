@@ -23,6 +23,13 @@ import EventsSection from './components/EventsSection';
 import PassportSection from './components/PassportSection';
 import PWAInstaller from './components/PWAInstaller';
 import AuthModal, { AuthMode } from './components/AuthModal';
+import CookieBanner from './components/privacy/CookieBanner';
+import CookiePreferencesModal from './components/privacy/CookiePreferencesModal';
+import UserDataRequestModal from './components/privacy/UserDataRequestModal';
+import PrivacyPolicyView from './components/privacy/PrivacyPolicyView';
+import TermsOfUseView from './components/privacy/TermsOfUseView';
+import PrivacyCenterView from './components/privacy/PrivacyCenterView';
+import { DataRequestType } from './types/privacy';
 import { 
   Sparkles, 
   Settings, 
@@ -329,11 +336,23 @@ export default function App() {
         // On GitHub Pages, preserve the repository prefix subdirectory
         const segments = window.location.pathname.split('/');
         const base = segments[1]; // E.g., repo name
-        const specialRoutes = ['admin', 'inscricoes', 'progresso-creator', 'progresso', 'creator', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha'];
+        const specialRoutes = ['admin', 'inscricoes', 'progresso-creator', 'progresso', 'creator', 'artes', 'eventos', 'passaporte', 'pkxd-id', 'comunidade', 'missoes', 'login', 'createaccount', 'register', 'resetpassword', 'recuperarsenha', 'privacidade', 'termos-de-uso', 'termos', 'direitos', 'privacidade-e-direitos'];
         const baseIsSpecial = base && specialRoutes.some(r => base.toLowerCase() === r);
 
-        if (pLower.includes('admin')) {
+        if (pLower.includes('cookies')) {
+          setIsCookiePreferencesOpen(true);
+          return;
+        } else if (pLower.includes('admin')) {
           targetPath = baseIsSpecial ? `/admin/${hashSuffix}` : (base ? `/${base}/admin/${hashSuffix}` : `/admin/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('direitos') || pLower.includes('privacidade-e-direitos')) {
+          targetPath = baseIsSpecial ? `/privacidade-e-direitos/${hashSuffix}` : (base ? `/${base}/privacidade-e-direitos/${hashSuffix}` : `/privacidade-e-direitos/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('privacidade') || pLower.includes('politica')) {
+          targetPath = baseIsSpecial ? `/privacidade/${hashSuffix}` : (base ? `/${base}/privacidade/${hashSuffix}` : `/privacidade/${hashSuffix}`);
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('termos')) {
+          targetPath = baseIsSpecial ? `/termos-de-uso/${hashSuffix}` : (base ? `/${base}/termos-de-uso/${hashSuffix}` : `/termos-de-uso/${hashSuffix}`);
           setShowCreatorAnalyzer(false);
         } else if (pLower.includes('inscric')) {
           targetPath = baseIsSpecial ? `/inscricoes/${hashSuffix}` : (base ? `/${base}/inscricoes/${hashSuffix}` : `/inscricoes/${hashSuffix}`);
@@ -371,8 +390,20 @@ export default function App() {
         }
       } else {
         // Standard environments
-        if (pLower.includes('admin')) {
+        if (pLower.includes('cookies')) {
+          setIsCookiePreferencesOpen(true);
+          return;
+        } else if (pLower.includes('admin')) {
           targetPath = `/admin${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('direitos') || pLower.includes('privacidade-e-direitos')) {
+          targetPath = `/privacidade-e-direitos${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('privacidade') || pLower.includes('politica')) {
+          targetPath = `/privacidade${hashSuffix}`;
+          setShowCreatorAnalyzer(false);
+        } else if (pLower.includes('termos')) {
+          targetPath = `/termos-de-uso${hashSuffix}`;
           setShowCreatorAnalyzer(false);
         } else if (pLower.includes('inscric')) {
           targetPath = `/inscricoes${hashSuffix}`;
@@ -564,6 +595,11 @@ export default function App() {
   const [newsToEdit, setNewsToEdit] = useState<NewsItem | null>(null);
   const [notifMessage, setNotifMessage] = useState<string | null>(null);
 
+  // Global Privacy, Cookie Preferences & Data Request State
+  const [isCookiePreferencesOpen, setIsCookiePreferencesOpen] = useState(false);
+  const [isUserDataRequestOpen, setIsUserDataRequestOpen] = useState(false);
+  const [userDataRequestInitialType, setUserDataRequestInitialType] = useState<DataRequestType>('access');
+
   // Dynamic scroll position state to make alert notifications scroll position responsive!
   const [scrollY, setScrollY] = useState(0);
   const isApplicationsRoute = currentPath.toLowerCase().includes('inscric') || 
@@ -573,6 +609,14 @@ export default function App() {
                                  currentPath.toLowerCase().includes('progresso') ||
                                  currentPath.toLowerCase().includes('creator') ||
                                  currentPath.toLowerCase().includes('analyzer');
+  const isPrivacyCenterRoute = currentPath.toLowerCase().includes('direitos') || 
+                               currentPath.toLowerCase().includes('privacidade-e-direitos') || 
+                               currentPath.toLowerCase().includes('privacidade-central');
+  const isPrivacyPolicyRoute = !isPrivacyCenterRoute && (
+                               currentPath.toLowerCase().includes('privacidade') || 
+                               currentPath.toLowerCase().includes('politica')
+                             );
+  const isTermsRoute = currentPath.toLowerCase().includes('termos');
 
   useEffect(() => {
     try {
@@ -582,13 +626,19 @@ export default function App() {
         document.title = "PKXD Central - Creator Progress Analyzer";
       } else if (isApplicationsRoute) {
         document.title = "PKXD Central - Inscrições";
+      } else if (isPrivacyCenterRoute) {
+        document.title = "PKXD Central - Privacidade e Direitos";
+      } else if (isPrivacyPolicyRoute) {
+        document.title = "PKXD Central - Política de Privacidade";
+      } else if (isTermsRoute) {
+        document.title = "PKXD Central - Termos de Uso";
       } else {
         document.title = "PKXD Central";
       }
     } catch (e) {
       console.warn(e);
     }
-  }, [isAdminRoute, isApplicationsRoute, isCreatorProgressRoute]);
+  }, [isAdminRoute, isApplicationsRoute, isCreatorProgressRoute, isPrivacyCenterRoute, isPrivacyPolicyRoute, isTermsRoute]);
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -2750,7 +2800,7 @@ export default function App() {
       )}
 
       {/* Hero Header Area */}
-      {!isApplicationsRoute && !isAdminRoute && !isCreatorProgressRoute && activeTab !== 'artes' && (
+      {!isApplicationsRoute && !isAdminRoute && !isCreatorProgressRoute && !isPrivacyCenterRoute && !isPrivacyPolicyRoute && !isTermsRoute && activeTab !== 'artes' && (
         <header id="masthead-hero" className="relative overflow-hidden py-12 md:py-16 px-4 bg-gradient-to-b from-purple-800/45 via-slate-950/80 to-slate-950 select-none">
           
           {/* Neon Glow spots */}
@@ -3127,7 +3177,38 @@ export default function App() {
           </div>
         )}
 
-        {isAdminRoute ? null : isCreatorProgressRoute ? (
+        {isAdminRoute ? null : isPrivacyCenterRoute ? (
+          <PrivacyCenterView
+            onBack={() => navigateTo('/')}
+            onNavigateToPolicy={() => navigateTo('/privacidade')}
+            onNavigateToTerms={() => navigateTo('/termos-de-uso')}
+            onOpenCookiePreferences={() => setIsCookiePreferencesOpen(true)}
+            onOpenDataRequest={() => {
+              setUserDataRequestInitialType('access');
+              setIsUserDataRequestOpen(true);
+            }}
+            onOpenDataDeletion={() => {
+              setUserDataRequestInitialType('deletion');
+              setIsUserDataRequestOpen(true);
+            }}
+            triggerAudio={triggerAudio}
+          />
+        ) : isPrivacyPolicyRoute ? (
+          <PrivacyPolicyView
+            onBack={() => navigateTo('/privacidade-e-direitos')}
+            onOpenCookiePreferences={() => setIsCookiePreferencesOpen(true)}
+            onOpenDataRequest={() => {
+              setUserDataRequestInitialType('access');
+              setIsUserDataRequestOpen(true);
+            }}
+            triggerAudio={triggerAudio}
+          />
+        ) : isTermsRoute ? (
+          <TermsOfUseView
+            onBack={() => navigateTo('/privacidade-e-direitos')}
+            triggerAudio={triggerAudio}
+          />
+        ) : isCreatorProgressRoute ? (
           <CreatorProgressAnalyzer 
             onBackToHub={() => {
               setShowCreatorAnalyzer(false);
@@ -3560,20 +3641,148 @@ export default function App() {
       </main>
 
       {/* Footer Area */}
-      <footer id="main-footer" className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 mt-8 select-none border-t border-white/10">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+      <footer id="main-footer" className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-16 mt-12 select-none border-t border-white/10 font-sans">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           
-          {/* Logo brand - Removed site icon and updated title for PKXD Central */}
-          <div className="flex items-center gap-2">
-            <strong className="font-sans text-sm text-gray-300 uppercase tracking-wider">
-              PKXD Central • 2026
-            </strong>
+          {/* Brand & Mission */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse" />
+              <strong className="font-sans text-sm font-black text-white tracking-wider uppercase">
+                PKXD Central • 2026
+              </strong>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed max-w-sm">
+              Este site é um portal independente mantido por fãs de PK XD. PK XD é uma marca registrada de suas respectivas publicadoras. Todas as mídias pertencem a seus legítimos donos.
+            </p>
           </div>
 
-          <p className="font-sans text-[11px] text-gray-500 max-w-sm sm:text-right">
-            Este site é um portal independente mantido por fãs de PK XD. PK XD é uma marca registrada de suas respectivas publicadoras. Todas as mídias pertencem a seus legítimos donos.
-          </p>
+          {/* Direct Navigation Links */}
+          <div className="space-y-3">
+            <span className="text-[11px] font-black uppercase tracking-wider text-zinc-300 block">
+              Navegação Rápida
+            </span>
+            <ul className="space-y-2 text-xs text-zinc-400">
+              <li>
+                <button
+                  onClick={() => {
+                    triggerAudio('tap');
+                    navigateTo('/Hub/');
+                  }}
+                  className="hover:text-purple-400 transition-colors cursor-pointer"
+                >
+                  Início / Hub de Notícias
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    triggerAudio('tap');
+                    navigateTo('/progresso-creator');
+                  }}
+                  className="hover:text-purple-400 transition-colors cursor-pointer"
+                >
+                  Creator Progress Analyzer
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    triggerAudio('tap');
+                    navigateTo('/inscricoes');
+                  }}
+                  className="hover:text-purple-400 transition-colors cursor-pointer"
+                >
+                  Inscrições & Painel Creator
+                </button>
+              </li>
+            </ul>
+          </div>
 
+          {/* Privacy, Cookies and Rights Column (User Request #11) */}
+          <div className="space-y-3" id="footer-privacy-column">
+            <span className="text-[11px] font-black uppercase tracking-wider text-purple-400 block">
+              Privacidade
+            </span>
+            <ul className="space-y-2 text-xs text-zinc-400 font-medium">
+              <li>
+                <button
+                  id="footer-link-privacy-policy"
+                  onClick={() => {
+                    triggerAudio('tap');
+                    navigateTo('/privacidade');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-left"
+                >
+                  <span>Política de Privacidade</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  id="footer-link-terms-of-use"
+                  onClick={() => {
+                    triggerAudio('tap');
+                    navigateTo('/termos-de-uso');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-left"
+                >
+                  <span>Termos de Uso</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  id="footer-link-cookies"
+                  onClick={() => {
+                    triggerAudio('tap');
+                    navigateTo('/privacidade-e-direitos');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-left"
+                >
+                  <span>Cookies</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  id="footer-link-cookie-preferences"
+                  onClick={() => {
+                    triggerAudio('tap');
+                    setIsCookiePreferencesOpen(true);
+                  }}
+                  className="text-purple-300 hover:text-purple-200 transition-colors cursor-pointer flex items-center gap-1.5 text-left font-bold"
+                >
+                  <span>Preferências de Cookies</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  id="footer-link-user-rights"
+                  onClick={() => {
+                    triggerAudio('tap');
+                    setUserDataRequestInitialType('access');
+                    setIsUserDataRequestOpen(true);
+                  }}
+                  className="text-indigo-300 hover:text-indigo-200 transition-colors cursor-pointer flex items-center gap-1.5 text-left font-bold"
+                >
+                  <span>Seus Direitos</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Bottom subtle copyright */}
+        <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500">
+          <span>© 2026 PKXD Central • Fã Clube Independente</span>
+          <button
+            onClick={() => {
+              triggerAudio('tap');
+              navigateTo('/privacidade-e-direitos');
+            }}
+            className="hover:text-zinc-300 transition-colors cursor-pointer underline"
+          >
+            Acessar Centro de Privacidade e Direitos
+          </button>
         </div>
       </footer>
 
@@ -4223,6 +4432,25 @@ export default function App() {
         triggerAudio={triggerAudio}
         onNavigate={navigateTo}
         onAddXP={handleAddFanXP}
+      />
+
+      {/* GLOBAL COOKIE BANNER & PRIVACY MODALS */}
+      <CookieBanner
+        onOpenPreferences={() => setIsCookiePreferencesOpen(true)}
+        triggerAudio={triggerAudio}
+      />
+
+      <CookiePreferencesModal
+        isOpen={isCookiePreferencesOpen}
+        onClose={() => setIsCookiePreferencesOpen(false)}
+        triggerAudio={triggerAudio}
+      />
+
+      <UserDataRequestModal
+        isOpen={isUserDataRequestOpen}
+        initialType={userDataRequestInitialType}
+        onClose={() => setIsUserDataRequestOpen(false)}
+        triggerAudio={triggerAudio}
       />
 
     </div>
