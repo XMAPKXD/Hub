@@ -14,6 +14,7 @@ import BestShorts from './components/BestShorts';
 import FanLevelSection from './components/FanLevelSection';
 import PastSpoilersSection from './components/PastSpoilersSection';
 import ApplicationsSection from './components/ApplicationsSection';
+import CreatorProgressAnalyzer from './components/CreatorProgressAnalyzer';
 import SocialSection from './components/SocialSection';
 import MissionsSection from './components/MissionsSection';
 import ArtesSection from './components/ArtesSection';
@@ -525,11 +526,16 @@ export default function App() {
   const isApplicationsRoute = currentPath.toLowerCase().includes('inscric') || 
                                currentPath.toLowerCase().includes('inscriç') || 
                                currentPath.toLowerCase().includes('inscricao');
+  const isCreatorProgressRoute = currentPath.toLowerCase().includes('progresso') ||
+                                 currentPath.toLowerCase().includes('creator') ||
+                                 currentPath.toLowerCase().includes('analyzer');
 
   useEffect(() => {
     try {
       if (isAdminRoute) {
         document.title = "PKXD Central - Painel Admin";
+      } else if (isCreatorProgressRoute) {
+        document.title = "PKXD Central - Creator Progress Analyzer";
       } else if (isApplicationsRoute) {
         document.title = "PKXD Central - Inscrições";
       } else {
@@ -538,7 +544,7 @@ export default function App() {
     } catch (e) {
       console.warn(e);
     }
-  }, [isAdminRoute, isApplicationsRoute]);
+  }, [isAdminRoute, isApplicationsRoute, isCreatorProgressRoute]);
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -2527,6 +2533,29 @@ export default function App() {
               )}
             </button>
 
+            {/* Creator Progress Analyzer Navigation Tab */}
+            <button
+              id="nav-progresso-creator-btn"
+              onClick={() => {
+                triggerAudio('tap');
+                if (isCreatorProgressRoute) {
+                  navigateTo('/Hub/');
+                } else {
+                  navigateTo('/progresso-creator');
+                }
+              }}
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-xl border font-sans text-[10px] sm:text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md active:scale-95 shrink-0 whitespace-nowrap ${
+                isCreatorProgressRoute
+                  ? 'bg-gradient-to-r from-purple-400 to-indigo-400 text-purple-950 border-purple-300 hover:brightness-110 shadow-purple-500/20'
+                  : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400/50 hover:brightness-110'
+              }`}
+              title={isCreatorProgressRoute ? 'Voltar ao Hub' : 'Ver meu progresso para Creator'}
+            >
+              <Award className="w-3.5 h-3.5 shrink-0 text-yellow-300" />
+              <span className="hidden xs:inline">{isCreatorProgressRoute ? 'Voltar' : 'Progresso Creator'}</span>
+              <span className="xs:hidden text-[10px] font-bold">{isCreatorProgressRoute ? 'Hub' : 'Creator'}</span>
+            </button>
+
             {/* 2. Inscrições Page Navigation Tab */}
             <button
               id="nav-inscricoes-btn"
@@ -2675,7 +2704,7 @@ export default function App() {
       )}
 
       {/* Hero Header Area */}
-      {!isApplicationsRoute && !isAdminRoute && activeTab !== 'artes' && (
+      {!isApplicationsRoute && !isAdminRoute && !isCreatorProgressRoute && activeTab !== 'artes' && (
         <header id="masthead-hero" className="relative overflow-hidden py-12 md:py-16 px-4 bg-gradient-to-b from-purple-800/45 via-slate-950/80 to-slate-950 select-none">
           
           {/* Neon Glow spots */}
@@ -3052,7 +3081,13 @@ export default function App() {
           </div>
         )}
 
-        {isAdminRoute ? null : isApplicationsRoute ? (
+        {isAdminRoute ? null : isCreatorProgressRoute ? (
+          <CreatorProgressAnalyzer 
+            onBackToHub={() => navigateTo('/Hub/')}
+            soundEnabled={soundEnabled}
+            triggerAudio={triggerAudio}
+          />
+        ) : isApplicationsRoute ? (
           <ApplicationsSection 
             onBackToHub={() => navigateTo('/Hub/')}
             onAddXP={handleAddFanXP}
@@ -3166,6 +3201,42 @@ export default function App() {
 
             {activeTab === 'inicio' && (
               <div className="space-y-12 animate-fade-in">
+                {/* Creator Progress Analyzer Quick Banner */}
+                <div 
+                  id="creator-analyzer-home-banner"
+                  className="bg-gradient-to-r from-purple-950/80 via-indigo-950/90 to-slate-900 border border-purple-500/40 rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shrink-0">
+                      <Sparkles className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                          Novo Recurso
+                        </span>
+                        <h3 className="text-base sm:text-lg font-black text-white uppercase">
+                          Creator Progress Analyzer
+                        </h3>
+                      </div>
+                      <p className="text-xs sm:text-sm text-zinc-300 mt-0.5">
+                        Descubra quanto falta para você atingir os requisitos oficiais para se tornar Creator do PK XD!
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    id="banner-view-progress-btn"
+                    onClick={() => {
+                      triggerAudio('tap');
+                      navigateTo('/progresso-creator');
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 shrink-0 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span>Ver Meu Progresso</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
                 {/* Dynamic Countdown clock Widget with optional alternative timer */}
                 {(() => {
                   // Check if the current spoiler highlight is active

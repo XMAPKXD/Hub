@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import webpush from "web-push";
 import crypto from "crypto";
 import { adminDb } from "./src/lib/firebase-admin.ts";
+import { fetchYouTubeChannelData } from "./src/lib/youtubeService.ts";
 
 dotenv.config();
 
@@ -395,6 +396,24 @@ ${textToAnalyze}
     }
 
     res.status(500).json({ error: err.message || "Erro desconhecido ao puxar spoilers." });
+  }
+});
+
+// Creator Progress Analyzer - YouTube channel data endpoint
+app.get("/api/youtube/channel", async (req, res) => {
+  const query = (req.query.query as string || "").trim();
+  if (!query) {
+    res.status(400).json({ error: "O parâmetro query (handle, ID ou URL do canal) é obrigatório." });
+    return;
+  }
+  try {
+    const channelData = await fetchYouTubeChannelData(query);
+    res.json({ success: true, data: channelData });
+  } catch (err: any) {
+    console.error("[YouTube API] Erro ao buscar canal:", err);
+    res.status(404).json({ 
+      error: err.message || "Canal não encontrado ou indisponível publicamente." 
+    });
   }
 });
 

@@ -1026,6 +1026,38 @@ export default function ApplicationsSection({
             </div>
           </div>
 
+          {/* Creator Progress Analyzer Callout */}
+          <div 
+            id="applications-creator-analyzer-callout"
+            className="bg-gradient-to-r from-purple-950/70 via-zinc-900 to-indigo-950/70 border border-purple-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300">
+                <Sparkles className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-white">
+                  Quer saber quanto falta para se tornar Creator Oficial do PK XD?
+                </h4>
+                <p className="text-[11px] text-zinc-400">
+                  Calcule seus inscritos, vídeos e métricas automaticamente com base nos requisitos oficiais.
+                </p>
+              </div>
+            </div>
+            <a
+              href="/progresso-creator"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/progresso-creator');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
+            >
+              <span>Ver Meu Progresso</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
           {/* Tabs list (Beautiful solid visual blocks) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             <button
