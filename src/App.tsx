@@ -29,6 +29,7 @@ import UserDataRequestModal from './components/privacy/UserDataRequestModal';
 import PrivacyPolicyView from './components/privacy/PrivacyPolicyView';
 import TermsOfUseView from './components/privacy/TermsOfUseView';
 import PrivacyCenterView from './components/privacy/PrivacyCenterView';
+import WelcomeGuideCard from './components/WelcomeGuideCard';
 import { DataRequestType } from './types/privacy';
 import { 
   Sparkles, 
@@ -213,6 +214,20 @@ export default function App() {
     return false;
   });
   const [activeTab, setActiveTab] = useState<'inicio' | 'eventos' | 'comunidade' | 'missoes' | 'artes'>('inicio');
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState(() => {
+    try {
+      return localStorage.getItem('pkxd_welcome_guide_dismissed') !== 'true';
+    } catch (e) {
+      return true;
+    }
+  });
+  const [isCompactHomeMode, setIsCompactHomeMode] = useState(() => {
+    try {
+      return localStorage.getItem('pkxd_compact_home_mode') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [continuedAsGuest, setContinuedAsGuest] = useState(false);
@@ -3343,7 +3358,42 @@ export default function App() {
             </div>
 
             {activeTab === 'inicio' && (
-              <div className="space-y-12 animate-fade-in">
+              <div className="space-y-8 sm:space-y-10 animate-fade-in">
+                {/* Clean First Access Guide */}
+                {showWelcomeGuide && (
+                  <WelcomeGuideCard
+                    onNavigateToPassport={() => {
+                      if (triggerAudio) triggerAudio('tap');
+                      navigateTo('/pkxd-id');
+                    }}
+                    onNavigateToSpoilers={() => {
+                      if (triggerAudio) triggerAudio('tap');
+                      const el = document.getElementById('countdown-card-root');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    onNavigateToCreator={() => {
+                      if (triggerAudio) triggerAudio('tap');
+                      setShowCreatorAnalyzer(true);
+                      navigateTo('/progresso-creator');
+                    }}
+                    triggerAudio={triggerAudio}
+                    isCompactMode={isCompactHomeMode}
+                    onToggleCompactMode={() => {
+                      const next = !isCompactHomeMode;
+                      setIsCompactHomeMode(next);
+                      try {
+                        localStorage.setItem('pkxd_compact_home_mode', String(next));
+                      } catch (e) {}
+                    }}
+                    onDismiss={() => {
+                      setShowWelcomeGuide(false);
+                      try {
+                        localStorage.setItem('pkxd_welcome_guide_dismissed', 'true');
+                      } catch (e) {}
+                    }}
+                  />
+                )}
+
                 {/* Creator Progress Analyzer Quick Banner */}
                 <div 
                   id="creator-analyzer-home-banner"
@@ -3468,31 +3518,33 @@ export default function App() {
                       </div>
 
                       {/* CANDIDATAR-SE A ADMIN BANNER - Placed exactly below the spoiler and featured videos section */}
-                      <div className="max-w-4xl mx-auto mt-8 mb-6 px-4 sm:px-0" id="admin-application-banner-under-spoilers">
-                        <div className="bg-gradient-to-r from-purple-900/60 via-indigo-950/70 to-zinc-900 border-2 border-purple-500/30 rounded-2xl p-6 shadow-[0_4px_25px_rgba(139,92,246,0.15)] hover:shadow-[0_4px_35px_rgba(139,92,246,0.25)] hover:border-purple-500/50 transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-                          {/* Glowing neon side effect */}
-                          <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-pink-500 to-purple-600" />
-                          
-                          <div className="space-y-2 text-center md:text-left">
-                            <h4 className="font-sans font-black text-lg text-white uppercase tracking-tight flex items-center gap-2 justify-center md:justify-start font-bold">
-                              <span>✨ Quer fazer parte da equipe PKXD Central?</span>
-                            </h4>
-                            <p className="font-sans text-xs text-gray-300 max-w-xl leading-relaxed">
-                              Estamos recrutando novos administradores focados, criativos e cheios de energia! Se você ama o PK XD, quer ajudar a organizar spoilers, posts de novidades e gerenciar o fã-clube oficial do site, inscreva-se agora mesmo!
-                            </p>
-                          </div>
+                      {!isCompactHomeMode && (
+                        <div className="max-w-4xl mx-auto mt-8 mb-6 px-4 sm:px-0" id="admin-application-banner-under-spoilers">
+                          <div className="bg-gradient-to-r from-purple-900/60 via-indigo-950/70 to-zinc-900 border-2 border-purple-500/30 rounded-2xl p-6 shadow-[0_4px_25px_rgba(139,92,246,0.15)] hover:shadow-[0_4px_35px_rgba(139,92,246,0.25)] hover:border-purple-500/50 transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                            {/* Glowing neon side effect */}
+                            <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-pink-500 to-purple-600" />
+                            
+                            <div className="space-y-2 text-center md:text-left">
+                              <h4 className="font-sans font-black text-lg text-white uppercase tracking-tight flex items-center gap-2 justify-center md:justify-start font-bold">
+                                <span>✨ Quer fazer parte da equipe PKXD Central?</span>
+                              </h4>
+                              <p className="font-sans text-xs text-gray-300 max-w-xl leading-relaxed">
+                                Estamos recrutando novos administradores focados, criativos e cheios de energia! Se você ama o PK XD, quer ajudar a organizar spoilers, posts de novidades e gerenciar o fã-clube oficial do site, inscreva-se agora mesmo!
+                              </p>
+                            </div>
 
-                          <button 
-                            onClick={() => {
-                              triggerAudio('tap');
-                              navigateTo('/inscricoes#admin');
-                            }}
-                            className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-650 hover:from-pink-400 hover:to-indigo-550 active:scale-[0.98] text-white font-sans font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border border-white/20 cursor-pointer flex items-center justify-center gap-2 transition-all flex-shrink-0 animate-pulse hover:animate-none"
-                          >
-                            <span>🔐 Candidatar para Admin 🌟</span>
-                          </button>
+                            <button 
+                              onClick={() => {
+                                triggerAudio('tap');
+                                navigateTo('/inscricoes#admin');
+                              }}
+                              className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-650 hover:from-pink-400 hover:to-indigo-550 active:scale-[0.98] text-white font-sans font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border border-white/20 cursor-pointer flex items-center justify-center gap-2 transition-all flex-shrink-0 animate-pulse hover:animate-none"
+                            >
+                              <span>🔐 Candidatar para Admin 🌟</span>
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* PRÓXIMOS VÍDEOS/LIVES COM CÓDIGOS SECTION */}
                       <div className="max-w-4xl mx-auto" id="upcoming-streams-section-wrapper">
@@ -3515,23 +3567,27 @@ export default function App() {
                       </div>
 
                       {/* Theories & PK XD News Publication Area */}
-                      <div className="max-w-4xl mx-auto" id="theories-section-wrapper">
-                        <TheoriesSection 
-                          theories={theoriesList}
-                          isAdmin={isAdmin}
-                          currentUser={user}
-                          onDelete={handleDeleteTheory}
-                          onLike={handleLikeTheory}
-                          onAddXP={handleAddFanXP}
-                          onNavigate={navigateTo}
-                        />
-                      </div>
+                      {!isCompactHomeMode && (
+                        <div className="max-w-4xl mx-auto" id="theories-section-wrapper">
+                          <TheoriesSection 
+                            theories={theoriesList}
+                            isAdmin={isAdmin}
+                            currentUser={user}
+                            onDelete={handleDeleteTheory}
+                            onLike={handleLikeTheory}
+                            onAddXP={handleAddFanXP}
+                            onNavigate={navigateTo}
+                          />
+                        </div>
+                      )}
 
                       {/* WhatsApp Channel Promo Feature banner */}
                       <WhatsAppPromo channelUrl={WHATSAPP_CHANNEL_URL} onAddXP={handleAddFanXP} />
 
                       {/* Official Partner Channel Area - Alertas PK XD */}
-                      <PartnerChannelPromo onAddXP={handleAddFanXP} />
+                      {!isCompactHomeMode && (
+                        <PartnerChannelPromo onAddXP={handleAddFanXP} />
+                      )}
                     </>
                   );
                 })()}

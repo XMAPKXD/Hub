@@ -241,7 +241,12 @@ export interface PKXDPassport {
   timeInCommunity: string;
   favoriteMinigame: string;
   houseTheme: string;
-  cardTheme: 'neon-purple' | 'cyber-blue' | 'golden-vip' | 'sunset-pink' | 'emerald-gamer' | 'volcano-red' | 'frost-diamond';
+  cardTheme: 'neon-purple' | 'cyber-blue' | 'golden-vip' | 'sunset-pink' | 'emerald-gamer' | 'volcano-red' | 'frost-diamond' | 'galaxy-space' | 'candy-pop' | 'retro-arcade' | 'aurora-nordic' | 'lava-core';
+  avatarFrame?: 'classic' | 'neon-glow' | 'vip-gold' | 'cyber-tech' | 'fire-magic' | 'galaxy-star';
+  favoritePet?: string;
+  statusPhrase?: string;
+  nicknamePrefix?: string;
+  honorBadgeId?: string;
   badges: PassportBadge[];
   stamps: PassportStamp[];
   friends: PassportFriend[];

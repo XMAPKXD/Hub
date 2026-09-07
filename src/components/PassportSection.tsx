@@ -44,6 +44,8 @@ import {
 } from 'lucide-react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { exportPKXDCardImage } from '../utils/pkxdCardExporter';
+import CardDownloadPreviewModal from './CardDownloadPreviewModal';
 
 interface PassportSectionProps {
   currentUser?: any;
@@ -361,13 +363,12 @@ export function decodePassportPayload(encoded: string): PKXDPassport | null {
 }
 
 /**
- * Builds the full self-contained share URL
+ * Builds the compact, clean official share URL for PKXD ID
  */
 export function getPassportShareUrl(p: PKXDPassport): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pkxdcentral.site';
-  const tagParam = encodeURIComponent(p.playerTag);
-  const cardPayload = encodePassportPayload(p);
-  return `${origin}/?passaporte=${tagParam}&card=${cardPayload}`;
+  const tagParam = encodeURIComponent(p.playerTag || 'Explorador');
+  return `${origin}/?passaporte=${tagParam}`;
 }
 
 export default function PassportSection({
@@ -406,6 +407,16 @@ export default function PassportSection({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAddStampModalOpen, setIsAddStampModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<PassportBadge | null>(null);
+  const [previewModalData, setPreviewModalData] = useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    blob?: Blob;
+    filename: string;
+  }>({
+    isOpen: false,
+    imageUrl: '',
+    filename: ''
+  });
   
   // Notifications & Copy state
   const [copiedLink, setCopiedLink] = useState(false);
@@ -554,6 +565,10 @@ export default function PassportSection({
   const [editHouse, setEditHouse] = useState(passport.houseTheme);
   const [editTheme, setEditTheme] = useState(passport.cardTheme);
   const [editAvatar, setEditAvatar] = useState(passport.avatarUrl);
+  const [editAvatarFrame, setEditAvatarFrame] = useState(passport.avatarFrame || 'classic');
+  const [editPet, setEditPet] = useState(passport.favoritePet || 'Unicórnio Mágico');
+  const [editStatus, setEditStatus] = useState(passport.statusPhrase || '🎮 Explorando a Ilha');
+  const [editPrefix, setEditPrefix] = useState(passport.nicknamePrefix || '');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // Parse URL on mount / search params change to load shared passport
@@ -785,6 +800,10 @@ export default function PassportSection({
       houseTheme: editHouse.trim() || 'Mansão Gamer',
       cardTheme: editTheme,
       avatarUrl: editAvatar || currentUser?.photoURL || PRESET_AVATARS[0],
+      avatarFrame: editAvatarFrame as any,
+      favoritePet: editPet.trim() || 'Unicórnio Mágico',
+      statusPhrase: editStatus.trim(),
+      nicknamePrefix: editPrefix.trim(),
       updatedAt: Date.now()
     };
 
@@ -1264,6 +1283,61 @@ export default function PassportSection({
           glow2: 'bg-blue-500/20',
           ringColor: 'border-sky-400/80 ring-sky-400/30'
         };
+      case 'galaxy-space':
+        return {
+          bg: 'from-fuchsia-950 via-purple-950 to-zinc-950 border-fuchsia-400/80 shadow-[0_12px_45px_rgba(217,70,239,0.35)]',
+          chip: 'from-fuchsia-300 via-purple-400 to-indigo-600 border-fuchsia-200 text-purple-950',
+          accentText: 'text-fuchsia-300',
+          badgeBorder: 'border-fuchsia-500/40 bg-purple-950/60',
+          levelBar: 'from-fuchsia-400 via-purple-500 to-indigo-400',
+          glow1: 'bg-fuchsia-500/20',
+          glow2: 'bg-purple-500/20',
+          ringColor: 'border-fuchsia-400/80 ring-fuchsia-400/30'
+        };
+      case 'candy-pop':
+        return {
+          bg: 'from-pink-950 via-sky-950 to-indigo-950 border-pink-400/80 shadow-[0_12px_45px_rgba(244,114,182,0.35)]',
+          chip: 'from-pink-200 via-sky-300 to-indigo-400 border-pink-200 text-pink-950',
+          accentText: 'text-pink-300',
+          badgeBorder: 'border-pink-500/40 bg-sky-950/60',
+          levelBar: 'from-pink-400 via-sky-300 to-emerald-300',
+          glow1: 'bg-pink-500/20',
+          glow2: 'bg-sky-500/20',
+          ringColor: 'border-pink-400/80 ring-pink-400/30'
+        };
+      case 'retro-arcade':
+        return {
+          bg: 'from-purple-950 via-zinc-950 to-emerald-950 border-green-400/80 shadow-[0_12px_45px_rgba(74,222,128,0.35)]',
+          chip: 'from-green-300 via-emerald-400 to-purple-600 border-green-200 text-green-950',
+          accentText: 'text-green-300',
+          badgeBorder: 'border-green-500/40 bg-zinc-950/60',
+          levelBar: 'from-purple-500 via-pink-500 to-green-400',
+          glow1: 'bg-green-500/20',
+          glow2: 'bg-purple-500/20',
+          ringColor: 'border-green-400/80 ring-green-400/30'
+        };
+      case 'aurora-nordic':
+        return {
+          bg: 'from-teal-950 via-slate-950 to-cyan-950 border-teal-300/80 shadow-[0_12px_45px_rgba(45,212,191,0.35)]',
+          chip: 'from-teal-200 via-cyan-300 to-sky-500 border-teal-100 text-teal-950',
+          accentText: 'text-teal-300',
+          badgeBorder: 'border-teal-500/40 bg-teal-950/60',
+          levelBar: 'from-teal-300 via-cyan-400 to-blue-400',
+          glow1: 'bg-teal-500/20',
+          glow2: 'bg-cyan-500/20',
+          ringColor: 'border-teal-300/80 ring-teal-300/30'
+        };
+      case 'lava-core':
+        return {
+          bg: 'from-stone-950 via-orange-950 to-red-950 border-orange-500/90 shadow-[0_12px_45px_rgba(249,115,22,0.35)]',
+          chip: 'from-orange-300 via-amber-400 to-red-600 border-orange-200 text-orange-950',
+          accentText: 'text-orange-400',
+          badgeBorder: 'border-orange-500/40 bg-red-950/60',
+          levelBar: 'from-amber-400 via-orange-500 to-red-600',
+          glow1: 'bg-orange-500/20',
+          glow2: 'bg-red-500/20',
+          ringColor: 'border-orange-500/80 ring-orange-500/30'
+        };
       case 'neon-purple':
       default:
         return {
@@ -1279,45 +1353,64 @@ export default function PassportSection({
     }
   };
 
-  // Download Card as High Quality PNG Image
+  // Download Card as High Quality PNG Image with multi-layer export & preview modal
   const handleDownloadCard = async (targetNickname?: string, targetTag?: string) => {
-    if (!cardRef.current) return;
     setIsDownloadingCard(true);
     try {
       if (triggerAudio) triggerAudio('tap');
-      
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 3, // Ultra crisp Retina resolution
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-        logging: false,
-        imageTimeout: 6000,
-      });
+      const targetPassport = viewingSharedPassport || passport;
+      const cleanNick = (targetNickname || targetPassport.nickname || 'PKXD').replace(/[^a-zA-Z0-9_]/g, '_');
+      const cleanTag = (targetTag || targetPassport.playerTag || '000').replace(/[^a-zA-Z0-9_]/g, '_');
+      const filename = `PKXD_ID_${cleanNick}_${cleanTag}.png`;
 
-      const imgData = canvas.toDataURL('image/png');
-      const cleanNick = (targetNickname || passport.nickname || 'PKXD').replace(/[^a-zA-Z0-9_]/g, '_');
-      const cleanTag = (targetTag || passport.playerTag || '000').replace(/[^a-zA-Z0-9_]/g, '_');
-      
-      const link = document.createElement('a');
-      link.download = `PKXD_ID_${cleanNick}_${cleanTag}.png`;
-      link.href = imgData;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const result = await exportPKXDCardImage(cardRef.current, targetPassport);
 
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-      if (triggerAudio) triggerAudio('levelUp');
-      if (onAddXP) onAddXP(15, 'Baixou e salvou o cartão oficial PKXD ID');
-      setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 4000);
+      if (result.success && result.objectUrl) {
+        setPreviewModalData({
+          isOpen: true,
+          imageUrl: result.objectUrl,
+          blob: result.blob,
+          filename
+        });
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        if (triggerAudio) triggerAudio('levelUp');
+        if (onAddXP) onAddXP(15, 'Baixou e salvou o cartão oficial PKXD ID');
+        setDownloadSuccess(true);
+        setTimeout(() => setDownloadSuccess(false), 4000);
+      } else {
+        throw new Error(result.error || 'Falha ao processar imagem');
+      }
     } catch (err) {
-      console.error('Erro ao baixar cartão PKXD ID:', err);
-      alert('Não foi possível gerar a imagem no momento. Tente novamente!');
+      console.warn('Erro ao processar imagem do cartão PKXD ID:', err);
+      // Fallback: directly render native 2D canvas
+      try {
+        const targetPassport = viewingSharedPassport || passport;
+        const { renderNativeCanvasCard } = await import('../utils/pkxdCardExporter');
+        const nativeCanvas = await renderNativeCanvasCard(targetPassport);
+        nativeCanvas.toBlob((blob) => {
+          if (blob) {
+            const objectUrl = URL.createObjectURL(blob);
+            const cleanNick = (targetNickname || targetPassport.nickname || 'PKXD').replace(/[^a-zA-Z0-9_]/g, '_');
+            const cleanTag = (targetTag || targetPassport.playerTag || '000').replace(/[^a-zA-Z0-9_]/g, '_');
+            const filename = `PKXD_ID_${cleanNick}_${cleanTag}.png`;
+            setPreviewModalData({
+              isOpen: true,
+              imageUrl: objectUrl,
+              blob,
+              filename
+            });
+            setDownloadSuccess(true);
+            setTimeout(() => setDownloadSuccess(false), 4000);
+          }
+        }, 'image/png');
+      } catch (fallbackErr) {
+        console.error('Fallback canvas generation also failed:', fallbackErr);
+        alert('Não foi possível gerar a imagem no momento. Tente novamente!');
+      }
     } finally {
       setIsDownloadingCard(false);
     }
@@ -1606,9 +1699,21 @@ export default function PassportSection({
 
                   {/* Card Main Profile Cluster */}
                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 relative z-10">
-                    {/* Avatar with Glow & Ring */}
+                    {/* Avatar with Glow, Frame & Ring */}
                     <div className="relative group flex-shrink-0">
-                      <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 ${themeStyle.ringColor} shadow-xl bg-black/70 p-1`}>
+                      <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shadow-xl bg-black/70 p-1 transition-all ${
+                        displayPassport.avatarFrame === 'neon-glow'
+                          ? 'border-2 border-pink-400 ring-4 ring-pink-500/50 shadow-[0_0_20px_rgba(236,72,153,0.6)]'
+                          : displayPassport.avatarFrame === 'vip-gold'
+                          ? 'border-2 border-yellow-300 ring-4 ring-amber-400/60 shadow-[0_0_25px_rgba(234,179,8,0.7)]'
+                          : displayPassport.avatarFrame === 'cyber-tech'
+                          ? 'border-2 border-cyan-400 ring-2 ring-cyan-400/70 shadow-[0_0_20px_rgba(6,182,212,0.6)] rounded-tl-none rounded-br-none'
+                          : displayPassport.avatarFrame === 'fire-magic'
+                          ? 'border-2 border-orange-400 ring-4 ring-red-500/60 shadow-[0_0_25px_rgba(239,68,68,0.7)]'
+                          : displayPassport.avatarFrame === 'galaxy-star'
+                          ? 'border-2 border-fuchsia-400 ring-4 ring-purple-500/60 shadow-[0_0_25px_rgba(168,85,247,0.7)]'
+                          : `border-2 ${themeStyle.ringColor}`
+                      }`}>
                         <img 
                           src={displayPassport.avatarUrl || PRESET_AVATARS[0]} 
                           alt={displayPassport.nickname} 
@@ -1630,6 +1735,11 @@ export default function PassportSection({
                     <div className="flex-1 text-center sm:text-left space-y-2 w-full min-w-0">
                       <div>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                          {displayPassport.nicknamePrefix && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-black uppercase bg-gradient-to-r from-yellow-400 to-amber-500 text-black shadow-sm tracking-wider">
+                              {displayPassport.nicknamePrefix}
+                            </span>
+                          )}
                           <h4 className="font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-white drop-shadow truncate max-w-[240px]">
                             {displayPassport.nickname}
                           </h4>
@@ -1643,10 +1753,19 @@ export default function PassportSection({
                           </div>
                         </div>
                         
-                        <p className={`font-sans font-extrabold text-xs ${themeStyle.accentText} uppercase tracking-wide flex items-center justify-center sm:justify-start gap-1 mt-0.5`}>
-                          <Sparkles className="w-3.5 h-3.5 fill-current" />
-                          <span>{displayPassport.title || 'Explorador da Ilha'}</span>
-                        </p>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-0.5">
+                          <p className={`font-sans font-extrabold text-xs ${themeStyle.accentText} uppercase tracking-wide flex items-center gap-1`}>
+                            <Sparkles className="w-3.5 h-3.5 fill-current" />
+                            <span>{displayPassport.title || 'Explorador da Ilha'}</span>
+                          </p>
+
+                          {displayPassport.statusPhrase && (
+                            <span className="text-[10px] font-mono text-cyan-200 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                              <span className="truncate">{displayPassport.statusPhrase}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Bio Quote */}
@@ -1688,8 +1807,10 @@ export default function PassportSection({
                     </div>
 
                     <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
-                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🏠 Estilo de Casa</span>
-                      <strong className="text-white text-[11px] truncate block">{displayPassport.houseTheme}</strong>
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🐾 Pet / Companheiro</span>
+                      <strong className="text-white text-[11px] truncate block">
+                        {displayPassport.favoritePet || 'Unicórnio Mágico'}
+                      </strong>
                     </div>
 
                     <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
@@ -2511,7 +2632,89 @@ export default function PassportSection({
                 />
               </div>
 
+              {/* Nickname Prefix and Status Phrase */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase text-amber-300 flex items-center gap-1">
+                    <span>🏷️ Prefixo do Nick</span>
+                  </label>
+                  <select
+                    value={editPrefix}
+                    onChange={(e) => setEditPrefix(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-800 border border-white/15 rounded-xl text-xs text-white font-bold cursor-pointer focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="">Nenhum</option>
+                    <option value="[PRO]">⭐ [PRO]</option>
+                    <option value="[VIP]">👑 [VIP]</option>
+                    <option value="[CREATOR]">🎬 [CREATOR]</option>
+                    <option value="[FÃ]">❤️ [FÃ]</option>
+                    <option value="[PKXD]">🎮 [PKXD]</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase text-cyan-300 flex items-center gap-1">
+                    <span>💬 Frase de Status / Atividade</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={35}
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    placeholder="Ex: 🎮 Jogando Crazy Run"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-medium focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Status presets */}
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {[
+                  '🎮 Jogando Crazy Run',
+                  '🍕 Entregador de Pizza',
+                  '💎 Caçando Gemas',
+                  '🎉 Em Festa com Amigos',
+                  '🔮 Aguardando Spoilers'
+                ].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setEditStatus(st)}
+                    className="px-2 py-0.5 rounded-lg bg-black/40 hover:bg-black/70 border border-white/10 text-[10px] text-zinc-300 transition-colors cursor-pointer"
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+
+              {/* Pet / Companion and Minigame */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase text-pink-300 flex items-center gap-1">
+                    <span>🐾 Pet / Companheiro Favorito</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={24}
+                    value={editPet}
+                    onChange={(e) => setEditPet(e.target.value)}
+                    placeholder="Ex: Unicórnio Mágico"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-pink-400"
+                  />
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {['🦄 Unicórnio', '🐉 Dragão', '🤖 Robô Bob', '🐱 Gatinho', '🐶 Poddle', '🦖 Dino'].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setEditPet(p)}
+                        className="px-1.5 py-0.5 rounded bg-black/30 hover:bg-black/60 border border-white/5 text-[9px] text-pink-200 cursor-pointer"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-extrabold uppercase text-neutral-400">Minigame Favorito</label>
                   <select
@@ -2526,22 +2729,45 @@ export default function PassportSection({
                     ))}
                   </select>
                 </div>
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-neutral-400">Estilo de Casa</label>
-                  <input
-                    type="text"
-                    value={editHouse}
-                    onChange={(e) => setEditHouse(e.target.value)}
-                    placeholder="Ex: Mansão Gamer, Castelo Mágico"
-                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-purple-500"
-                  />
+              {/* Avatar Frame Selection */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold uppercase text-purple-300 flex items-center gap-1">
+                  <span>🖼️ Moldura Especial do Avatar</span>
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {[
+                    { id: 'classic', label: 'Clássica', border: 'border-white/40' },
+                    { id: 'neon-glow', label: 'Neon Glow', border: 'border-pink-400 shadow-[0_0_10px_rgba(236,72,153,0.5)]' },
+                    { id: 'vip-gold', label: 'VIP Gold', border: 'border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.5)]' },
+                    { id: 'cyber-tech', label: 'Cyber Tech', border: 'border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.5)]' },
+                    { id: 'fire-magic', label: 'Fogo Mágico', border: 'border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]' },
+                    { id: 'galaxy-star', label: 'Galáxia', border: 'border-fuchsia-400 shadow-[0_0_10px_rgba(217,70,239,0.5)]' }
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setEditAvatarFrame(f.id as any)}
+                      className={`p-2 rounded-xl border text-[10px] font-bold text-center transition-all cursor-pointer ${
+                        editAvatarFrame === f.id
+                          ? 'border-purple-400 bg-purple-500/20 text-white scale-105 shadow-md'
+                          : 'border-white/10 bg-black/40 text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 mx-auto rounded-lg border-2 ${f.border} mb-1`} />
+                      <span className="truncate block text-[9px]">{f.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Card Theme Selection */}
+              {/* Card Theme Selection (12 Themes!) */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold uppercase text-neutral-400">Tema Visual do Cartão</label>
+                <label className="text-[10px] font-extrabold uppercase text-neutral-400 flex items-center justify-between">
+                  <span>Tema Visual do Cartão</span>
+                  <span className="text-[9px] text-zinc-400 font-mono">12 Estilos Disponíveis</span>
+                </label>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {[
                     { id: 'neon-purple', label: 'Neon Cosmic', color: 'bg-purple-600' },
@@ -2550,7 +2776,12 @@ export default function PassportSection({
                     { id: 'sunset-pink', label: 'Sunset Pink', color: 'bg-pink-600' },
                     { id: 'emerald-gamer', label: 'Emerald', color: 'bg-emerald-600' },
                     { id: 'volcano-red', label: 'Magma Red', color: 'bg-red-600' },
-                    { id: 'frost-diamond', label: 'Frost Ice', color: 'bg-sky-400' }
+                    { id: 'frost-diamond', label: 'Frost Ice', color: 'bg-sky-400' },
+                    { id: 'galaxy-space', label: 'Galáxia Espacial', color: 'bg-fuchsia-600' },
+                    { id: 'candy-pop', label: 'Candy Pop', color: 'bg-rose-400' },
+                    { id: 'retro-arcade', label: 'Retro Arcade', color: 'bg-emerald-400' },
+                    { id: 'aurora-nordic', label: 'Aurora Boreal', color: 'bg-teal-400' },
+                    { id: 'lava-core', label: 'Núcleo de Lava', color: 'bg-orange-600' }
                   ].map((t) => (
                     <button
                       key={t.id}
@@ -3065,6 +3296,20 @@ export default function PassportSection({
           </div>
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* MODAL: PREVIEW E DOWNLOAD SEGURO DO PKXD ID */}
+      {/* ========================================================= */}
+      <CardDownloadPreviewModal
+        isOpen={previewModalData.isOpen}
+        onClose={() => setPreviewModalData(prev => ({ ...prev, isOpen: false }))}
+        imageUrl={previewModalData.imageUrl}
+        blob={previewModalData.blob}
+        filename={previewModalData.filename}
+        nickname={(viewingSharedPassport || passport).nickname}
+        playerTag={(viewingSharedPassport || passport).playerTag}
+        triggerAudio={triggerAudio as any}
+      />
     </div>
   );
 }
