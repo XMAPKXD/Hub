@@ -366,9 +366,8 @@ export function decodePassportPayload(encoded: string): PKXDPassport | null {
  * Builds the compact, clean official share URL for PKXD ID
  */
 export function getPassportShareUrl(p: PKXDPassport): string {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pkxdcentral.site';
-  const tagParam = encodeURIComponent(p.playerTag || 'Explorador');
-  return `${origin}/?passaporte=${tagParam}`;
+  const cleanTag = encodeURIComponent(p.playerTag || 'Explorador');
+  return `https://pkxdcentral.site/?id=${cleanTag}`;
 }
 
 export default function PassportSection({
@@ -567,16 +566,43 @@ export default function PassportSection({
   const [editAvatar, setEditAvatar] = useState(passport.avatarUrl);
   const [editAvatarFrame, setEditAvatarFrame] = useState(passport.avatarFrame || 'classic');
   const [editPet, setEditPet] = useState(passport.favoritePet || 'Unicórnio Mágico');
+  const [editVehicle, setEditVehicle] = useState(passport.favoriteVehicle || 'Hoverboard Neon');
+  const [editJob, setEditJob] = useState(passport.islandJob || 'Entregador de Pizza Ninja');
+  const [editNameColor, setEditNameColor] = useState<'gold' | 'cyan' | 'purple' | 'pink' | 'white' | 'fire'>(passport.nameColor || 'white');
+  const [editFeaturedIcon, setEditFeaturedIcon] = useState(passport.featuredBadgeIcon || '⚡');
   const [editStatus, setEditStatus] = useState(passport.statusPhrase || '🎮 Explorando a Ilha');
   const [editPrefix, setEditPrefix] = useState(passport.nicknamePrefix || '');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handleOpenEditModal = () => {
+    setEditNick(passport.nickname);
+    setEditTag(passport.playerTag);
+    if (passport.playerTag && passport.playerTag.includes('#')) {
+      setEditTagNumber(passport.playerTag.split('#')[1] || '');
+    }
+    setEditBio(passport.bio);
+    setEditTitle(passport.title);
+    setEditMinigame(passport.favoriteMinigame);
+    setEditHouse(passport.houseTheme || 'Mansão Gamer');
+    setEditTheme(passport.cardTheme);
+    setEditAvatar(passport.avatarUrl);
+    setEditAvatarFrame(passport.avatarFrame || 'classic');
+    setEditPet(passport.favoritePet || 'Unicórnio Mágico');
+    setEditVehicle(passport.favoriteVehicle || 'Hoverboard Neon');
+    setEditJob(passport.islandJob || 'Entregador de Pizza Ninja');
+    setEditNameColor(passport.nameColor || 'white');
+    setEditFeaturedIcon(passport.featuredBadgeIcon || '⚡');
+    setEditStatus(passport.statusPhrase || '🎮 Explorando a Ilha');
+    setEditPrefix(passport.nicknamePrefix || '');
+    setIsEditModalOpen(true);
+  };
 
   // Parse URL on mount / search params change to load shared passport
   useEffect(() => {
     const handleCheckSharedUrl = async () => {
       try {
         const params = new URLSearchParams(window.location.search);
-        const sharedTag = params.get('passaporte') || params.get('tag') || params.get('p');
+        const sharedTag = params.get('id') || params.get('passaporte') || params.get('tag') || params.get('p') || params.get('pkxd-id');
         const cardPayload = params.get('card') || params.get('data');
 
         if (!sharedTag && !cardPayload) return;
@@ -802,6 +828,10 @@ export default function PassportSection({
       avatarUrl: editAvatar || currentUser?.photoURL || PRESET_AVATARS[0],
       avatarFrame: editAvatarFrame as any,
       favoritePet: editPet.trim() || 'Unicórnio Mágico',
+      favoriteVehicle: editVehicle.trim() || 'Hoverboard Neon',
+      islandJob: editJob.trim() || 'Entregador de Pizza Ninja',
+      nameColor: editNameColor,
+      featuredBadgeIcon: editFeaturedIcon,
       statusPhrase: editStatus.trim(),
       nicknamePrefix: editPrefix.trim(),
       updatedAt: Date.now()
@@ -1455,19 +1485,7 @@ export default function PassportSection({
             <button
               onClick={() => {
                 if (triggerAudio) triggerAudio('tap');
-                const parts = (passport.playerTag || '').split('#');
-                const currentNick = parts[0] || passport.nickname || '';
-                const currentNumber = parts[1] || '';
-                setEditNick(currentNick);
-                setEditTagNumber(currentNumber);
-                setEditTag(passport.playerTag || `${currentNick}#${currentNumber}`);
-                setEditBio(passport.bio);
-                setEditTitle(passport.title);
-                setEditMinigame(passport.favoriteMinigame);
-                setEditHouse(passport.houseTheme);
-                setEditTheme(passport.cardTheme);
-                setEditAvatar(passport.avatarUrl);
-                setIsEditModalOpen(true);
+                handleOpenEditModal();
               }}
               className="px-4 py-2.5 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/30 hover:border-purple-400 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-md"
             >
@@ -1740,8 +1758,20 @@ export default function PassportSection({
                               {displayPassport.nicknamePrefix}
                             </span>
                           )}
-                          <h4 className="font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-white drop-shadow truncate max-w-[240px]">
-                            {displayPassport.nickname}
+                          <h4 className={`font-sans font-black text-xl sm:text-2xl tracking-tight uppercase drop-shadow truncate max-w-[240px] flex items-center gap-1.5 ${
+                            displayPassport.nameColor === 'gold' ? 'text-[#F5C542]' :
+                            displayPassport.nameColor === 'cyan' ? 'text-[#22D3EE]' :
+                            displayPassport.nameColor === 'purple' ? 'text-[#C084FC]' :
+                            displayPassport.nameColor === 'pink' ? 'text-[#E83EBC]' :
+                            displayPassport.nameColor === 'fire' ? 'text-[#FB923C]' :
+                            'text-white'
+                          }`}>
+                            <span>{displayPassport.nickname}</span>
+                            {displayPassport.featuredBadgeIcon && (
+                              <span className="text-base select-none inline-block transform hover:scale-125 transition-transform" title="Símbolo de Destaque">
+                                {displayPassport.featuredBadgeIcon}
+                              </span>
+                            )}
                           </h4>
                           <div
                             onClick={handleCopyTag}
@@ -1807,23 +1837,23 @@ export default function PassportSection({
                     </div>
 
                     <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
-                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🐾 Pet / Companheiro</span>
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🐾 Pet Favorito</span>
                       <strong className="text-white text-[11px] truncate block">
                         {displayPassport.favoritePet || 'Unicórnio Mágico'}
                       </strong>
                     </div>
 
                     <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
-                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🏆 Conquistas</span>
-                      <strong className="text-yellow-300 text-[11px] font-mono font-bold truncate block">
-                        {unlockedBadgesCount}/{totalBadgesCount} Desbloq.
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">🚀 Veículo</span>
+                      <strong className="text-cyan-300 text-[11px] font-mono font-bold truncate block">
+                        {displayPassport.favoriteVehicle || 'Hoverboard Neon'}
                       </strong>
                     </div>
 
                     <div className="bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/10 space-y-0.5 text-center sm:text-left">
-                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">📬 Selos Oficiais</span>
-                      <strong className="text-cyan-300 text-[11px] font-mono font-bold truncate block">
-                        {stampsCount} Coletados
+                      <span className="text-[9px] uppercase font-mono font-bold text-white/60 block">💼 Papel na Ilha</span>
+                      <strong className="text-yellow-300 text-[11px] font-mono font-bold truncate block">
+                        {displayPassport.islandJob || 'Entregador de Pizza'}
                       </strong>
                     </div>
                   </div>
@@ -1875,7 +1905,10 @@ export default function PassportSection({
 
                     {!isViewingOther && (
                       <button
-                        onClick={() => setIsEditModalOpen(true)}
+                        onClick={() => {
+                          if (triggerAudio) triggerAudio('tap');
+                          handleOpenEditModal();
+                        }}
                         className="py-3 px-4 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/40 text-purple-200 font-sans font-black text-xs uppercase tracking-wider rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Edit3 className="w-4 h-4 text-pink-300" />
@@ -2731,6 +2764,141 @@ export default function PassportSection({
                 </div>
               </div>
 
+              {/* Vehicle & Job on the Island */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase text-cyan-300 flex items-center gap-1">
+                    <span>🚀 Veículo Favorito</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={24}
+                    value={editVehicle}
+                    onChange={(e) => setEditVehicle(e.target.value)}
+                    placeholder="Ex: Hoverboard Neon"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-cyan-400"
+                  />
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {['🛹 Hoverboard', '🏎️ Carro Gamer', '🐉 Dragão Alado', '🛵 Moto Neon', '🛸 Nave UFO', '🧹 Vassoura'].map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setEditVehicle(v)}
+                        className="px-1.5 py-0.5 rounded bg-black/30 hover:bg-black/60 border border-white/5 text-[9px] text-cyan-200 cursor-pointer"
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase text-yellow-300 flex items-center gap-1">
+                    <span>💼 Papel / Profissão na Ilha</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={24}
+                    value={editJob}
+                    onChange={(e) => setEditJob(e.target.value)}
+                    placeholder="Ex: Entregador de Pizza"
+                    className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-yellow-400"
+                  />
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {['🍕 Entregador', '🎧 DJ da Ilha', '🦺 Guia Turístico', '⚡ Atleta Crazy', '🔍 Detetive', '🍹 Mestre Suco'].map((j) => (
+                      <button
+                        key={j}
+                        type="button"
+                        onClick={() => setEditJob(j)}
+                        className="px-1.5 py-0.5 rounded bg-black/30 hover:bg-black/60 border border-white/5 text-[9px] text-yellow-200 cursor-pointer"
+                      >
+                        {j}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* House Style */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase text-purple-300 flex items-center gap-1">
+                  <span>🏠 Estilo da Sua Casa / Mansão</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={24}
+                  value={editHouse}
+                  onChange={(e) => setEditHouse(e.target.value)}
+                  placeholder="Ex: Mansão Gamer"
+                  className="w-full px-3 py-2 bg-black/50 border border-white/15 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-purple-400"
+                />
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {['🏠 Mansão Gamer', '🏰 Castelo Real', '🚀 Nave Espacial', '⛵ Iate de Luxo', '🍄 Casa Cogumelo', '🌴 Casa da Árvore'].map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => setEditHouse(h)}
+                      className="px-1.5 py-0.5 rounded bg-black/30 hover:bg-black/60 border border-white/5 text-[9px] text-purple-200 cursor-pointer"
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Name Color & Badge Icon */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-black/40 border border-white/10 rounded-2xl">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold uppercase text-amber-300 flex items-center justify-between">
+                    <span>🎨 Cor do Seu Nome</span>
+                    <span className="text-[9px] font-mono text-zinc-400">Destaque VIP</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'white', label: 'Branco', color: 'bg-white text-black' },
+                      { id: 'gold', label: 'Dourado', color: 'bg-amber-400 text-black' },
+                      { id: 'cyan', label: 'Ciano', color: 'bg-cyan-400 text-black' },
+                      { id: 'purple', label: 'Roxo', color: 'bg-purple-400 text-black' },
+                      { id: 'pink', label: 'Rosa', color: 'bg-pink-400 text-black' },
+                      { id: 'fire', label: 'Fogo', color: 'bg-orange-500 text-white' }
+                    ].map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setEditNameColor(c.id as any)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
+                          editNameColor === c.id ? 'ring-2 ring-white scale-105 shadow-md ' + c.color : 'bg-black/50 text-zinc-300 border border-white/10 hover:border-white/30'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${c.color}`} />
+                        <span>{c.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold uppercase text-pink-300 flex items-center justify-between">
+                    <span>✨ Símbolo de Destaque</span>
+                    <span className="text-[9px] font-mono text-zinc-400">Ao lado do Nick</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['⚡', '👑', '💎', '🌟', '🔥', '🦄', '🚀', '🎮', '🍕', '🏆'].map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => setEditFeaturedIcon(icon)}
+                        className={`w-8 h-8 rounded-lg text-sm flex items-center justify-center transition-all cursor-pointer ${
+                          editFeaturedIcon === icon ? 'bg-pink-500 text-white scale-110 shadow-md ring-2 ring-pink-300' : 'bg-black/50 hover:bg-black/80 text-zinc-300 border border-white/10'
+                        }`}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* Avatar Frame Selection */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-extrabold uppercase text-purple-300 flex items-center gap-1">
@@ -2991,17 +3159,17 @@ export default function PassportSection({
             )}
 
             <div className="space-y-3">
-              {/* Direct URL input preview */}
-              <div className="bg-black/60 border border-purple-500/30 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-left">
+              {/* Direct URL input preview with short compact link */}
+              <div className="bg-[#0B0817] border border-[#34275A] rounded-2xl p-2.5 flex items-center justify-between gap-2 text-left">
                 <div className="flex-1 overflow-hidden">
-                  <span className="block text-[9px] font-mono uppercase font-bold text-pink-400">Seu Link Oficial:</span>
-                  <span className="font-mono text-xs text-yellow-300 truncate block">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/?passaporte=${encodeURIComponent(passport.playerTag)}` : `https://pkxdcentral.site/?passaporte=${passport.playerTag}`}
+                  <span className="block text-[9px] font-mono uppercase font-bold text-[#E83EBC]">Seu Link Curto Oficial:</span>
+                  <span className="font-mono text-xs text-[#F5C542] truncate block">
+                    {`https://pkxdcentral.site/?id=${encodeURIComponent(passport.playerTag)}`}
                   </span>
                 </div>
                 <button
                   onClick={handleCopyLink}
-                  className="px-3 py-1.5 bg-pink-500 hover:bg-pink-600 active:scale-95 text-white font-sans font-black text-[11px] uppercase rounded-xl transition-all flex items-center gap-1 cursor-pointer flex-shrink-0"
+                  className="px-3 py-1.5 bg-[#7C3AED] hover:bg-[#9B5CFF] active:scale-95 text-white font-sans font-black text-[11px] uppercase rounded-xl transition-all flex items-center gap-1 cursor-pointer flex-shrink-0 shadow-md"
                 >
                   {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedLink ? 'Copiado!' : 'Copiar'}</span>
@@ -3011,14 +3179,14 @@ export default function PassportSection({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   onClick={handleCopyLink}
-                  className="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                  className="w-full py-3 bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] hover:brightness-110 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
                 >
                   {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
                   <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
                 </button>
 
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`✨ Confira meu PKXD ID Oficial no PK XD Central com minhas conquistas e medalhas!\n🎮 Meu Nick: ${passport.nickname}\n🆔 Tag: ${passport.playerTag}\n🪪 Acesse meu PKXD ID: ${typeof window !== 'undefined' ? window.location.origin : 'https://pkxdcentral.site'}/?pkxd-id=${encodeURIComponent(passport.playerTag)}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`✨ Confira meu PKXD ID Oficial!\n🎮 ${passport.nickname} (${passport.playerTag})\n🪪 https://pkxdcentral.site/?id=${encodeURIComponent(passport.playerTag)}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
@@ -3029,7 +3197,7 @@ export default function PassportSection({
 
               <button
                 onClick={handleCopyTag}
-                className="w-full py-2.5 bg-neutral-800 hover:bg-neutral-700 text-cyan-300 font-mono font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 bg-[#1D1638] hover:bg-[#251B46] border border-[#34275A] text-[#22D3EE] font-mono font-bold text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>{copiedTag ? 'Tag Copiada!' : `Copiar Tag: ${passport.playerTag}`}</span>

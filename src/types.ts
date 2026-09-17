@@ -244,6 +244,10 @@ export interface PKXDPassport {
   cardTheme: 'neon-purple' | 'cyber-blue' | 'golden-vip' | 'sunset-pink' | 'emerald-gamer' | 'volcano-red' | 'frost-diamond' | 'galaxy-space' | 'candy-pop' | 'retro-arcade' | 'aurora-nordic' | 'lava-core';
   avatarFrame?: 'classic' | 'neon-glow' | 'vip-gold' | 'cyber-tech' | 'fire-magic' | 'galaxy-star';
   favoritePet?: string;
+  favoriteVehicle?: string;
+  islandJob?: string;
+  nameColor?: 'gold' | 'cyan' | 'purple' | 'pink' | 'white' | 'fire';
+  featuredBadgeIcon?: string;
   statusPhrase?: string;
   nicknamePrefix?: string;
   honorBadgeId?: string;

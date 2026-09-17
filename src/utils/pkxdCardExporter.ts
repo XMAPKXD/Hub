@@ -387,11 +387,20 @@ export async function renderNativeCanvasCard(passport: PKXDPassport): Promise<HT
   // Profile text cluster
   const textX = avatarX + avatarSize + 35;
   
-  // Nickname with optional prefix
+  // Nickname with optional prefix and custom name color
   const prefix = passport.nicknamePrefix ? `${passport.nicknamePrefix} ` : '';
   const fullName = `${prefix}${passport.nickname || 'EXPLORADOR'}`.toUpperCase();
   ctx.font = '900 36px "Arial Black", Impact, sans-serif';
-  ctx.fillStyle = '#ffffff';
+  
+  // Custom name color
+  let nameFill = '#ffffff';
+  if (passport.nameColor === 'gold') nameFill = '#F5C542';
+  else if (passport.nameColor === 'cyan') nameFill = '#22D3EE';
+  else if (passport.nameColor === 'purple') nameFill = '#C084FC';
+  else if (passport.nameColor === 'pink') nameFill = '#E83EBC';
+  else if (passport.nameColor === 'fire') nameFill = '#FB923C';
+  
+  ctx.fillStyle = nameFill;
   ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
   ctx.shadowBlur = 10;
   ctx.fillText(fullName.slice(0, 22), textX, 195);
@@ -413,8 +422,9 @@ export async function renderNativeCanvasCard(passport: PKXDPassport): Promise<HT
   ctx.fillStyle = '#67e8f9';
   ctx.fillText(tagStr, textX + 15, 237);
 
-  // Official Title
-  const titleStr = `✨ ${passport.title || 'Explorador da Ilha'}`;
+  // Official Title and Featured Badge Icon
+  const iconStr = passport.featuredBadgeIcon ? `${passport.featuredBadgeIcon} ` : '✨ ';
+  const titleStr = `${iconStr}${passport.title || 'Explorador da Ilha'}`;
   ctx.font = '900 16px sans-serif';
   ctx.fillStyle = palette.accent;
   ctx.fillText(titleStr, textX + tagW + 20, 237);
@@ -483,15 +493,24 @@ export async function renderNativeCanvasCard(passport: PKXDPassport): Promise<HT
   const tileCount = 4;
   const tileW = (width - 120 - tileGap * (tileCount - 1)) / tileCount;
 
-  const tiles = [
-    { label: '🎮 JOGO FAVORITO', value: passport.favoriteMinigame || 'Crazy Run' },
-    { label: '🏠 ESTILO DE CASA', value: passport.houseTheme || 'Mansão Gamer' },
-    { label: '🐾 PET COMPANHEIRO', value: passport.favoritePet || 'Unicórnio Mágico' },
-    { 
-      label: '🏆 CONQUISTAS', 
-      value: `${(passport.badges || []).filter(b => b.unlocked).length} Desbloqueadas` 
-    }
-  ];
+  const candidateTiles: { label: string; value: string }[] = [];
+  candidateTiles.push({ label: '🎮 JOGO FAVORITO', value: passport.favoriteMinigame || 'Crazy Run' });
+  if (passport.favoriteVehicle) {
+    candidateTiles.push({ label: '🚀 VEÍCULO', value: passport.favoriteVehicle });
+  }
+  if (passport.favoritePet) {
+    candidateTiles.push({ label: '🐾 PET', value: passport.favoritePet });
+  }
+  if (passport.islandJob) {
+    candidateTiles.push({ label: '💼 PROFISSÃO', value: passport.islandJob });
+  }
+  candidateTiles.push({ label: '🏠 CASA', value: passport.houseTheme || 'Mansão Gamer' });
+  candidateTiles.push({ 
+    label: '🏆 CONQUISTAS', 
+    value: `${(passport.badges || []).filter(b => b.unlocked).length} Desbloqueadas` 
+  });
+
+  const tiles = candidateTiles.slice(0, 4);
 
   tiles.forEach((t, i) => {
     const tx = 60 + i * (tileW + tileGap);

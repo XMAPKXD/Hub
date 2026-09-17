@@ -366,31 +366,31 @@ export default function CountdownWidget({
   return (
     <div 
       id="countdown-container"
-      className="relative overflow-hidden bg-neutral-950/60 border border-purple-500/20 shadow-2xl p-6 sm:p-8 rounded-3xl text-white backdrop-blur-md"
+      className="relative overflow-hidden bg-[#1D1638] border border-[#34275A] shadow-xl p-6 sm:p-8 rounded-[20px] text-[#F8F7FF]"
     >
       <div className="relative z-10 space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#34275A] pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-950/50 rounded-2xl border border-purple-500/30">
-              <Flame className="w-6 h-6 text-purple-400 fill-purple-400 animate-pulse" />
+            <div className="p-3 bg-[#251B46] rounded-[14px] border border-[#7C3AED]/40">
+              <Flame className="w-6 h-6 text-[#7C3AED] fill-[#7C3AED]" />
             </div>
             <div>
-              <h3 className="font-sans font-black text-xl sm:text-2xl tracking-tight text-white uppercase">
+              <h3 className="font-sans font-black text-xl sm:text-2xl tracking-tight text-[#F8F7FF] uppercase">
                 Próximos Spoilers PK XD
               </h3>
-              <p className="font-sans text-xs text-neutral-400">
-                Toda segunda-feira às <span className="text-purple-400 font-extrabold">17:30</span> ao vivo!
+              <p className="font-sans text-xs text-[#B8B2CC]">
+                Toda segunda-feira às <span className="text-[#22D3EE] font-bold">17:30</span> ao vivo!
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-center">
-            <span className="flex h-3 w-3 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-600"></span>
+            <span className="flex h-2.5 w-2.5 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7C3AED] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#7C3AED]"></span>
             </span>
-            <span className="font-sans text-[10px] font-black tracking-wider text-purple-300 uppercase bg-purple-950/60 px-3 py-1 rounded-full border border-purple-500/20">
+            <span className="font-sans text-[10px] font-bold tracking-wider text-[#C4B5FD] uppercase bg-[#251B46] px-3 py-1 rounded-full border border-[#34275A]">
               {timeLeft.isExpired ? 'Liberado!' : 'Agendado'}
             </span>
           </div>
@@ -400,15 +400,15 @@ export default function CountdownWidget({
         {timeLeft.isExpired ? (
           <div 
             id="spoiler-revealed-state"
-            className="flex flex-col items-start justify-start p-5 sm:p-6 bg-neutral-900/60 border border-purple-500/20 rounded-2xl text-left relative overflow-hidden transition-all duration-200 w-full space-y-5"
+            className="flex flex-col items-start justify-start p-5 sm:p-6 bg-[#15102A] border border-[#34275A] rounded-[16px] text-left relative overflow-hidden transition-all duration-200 w-full space-y-5"
           >
             <div className="relative z-10 w-full space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-neutral-800 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[#34275A] pb-3">
                 <div>
-                  <span className="font-sans text-[9px] font-black tracking-wider text-purple-300 bg-purple-950/50 px-2.5 py-0.5 rounded-md uppercase border border-purple-500/20">
+                  <span className="font-sans text-[9px] font-bold tracking-wider text-[#E83EBC] bg-[#3A1947] px-2.5 py-0.5 rounded-full uppercase border border-[#E83EBC]/30">
                     🔥 SPOILER CONFIRMADO & REVELADO
                   </span>
-                  <h4 className="font-sans font-black text-xl sm:text-2xl text-white tracking-tight uppercase leading-tight mt-1.5">
+                  <h4 className="font-sans font-black text-xl sm:text-2xl text-[#F8F7FF] tracking-tight uppercase leading-tight mt-1.5">
                     {spoilerTitle || 'Nova Atualização Incrível!'}
                   </h4>
                 </div>
@@ -421,7 +421,7 @@ export default function CountdownWidget({
                       playTapSound();
                       onOpenFullscreen(spoilerTitle || 'Nova Atualização Incrível!', spoilerDesc, activeImageUrl);
                     }}
-                    className="flex-shrink-0 px-4 py-2 bg-purple-650 hover:bg-purple-750 text-white font-sans font-black uppercase text-[10px] tracking-wider rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:scale-102 active:scale-98 transition-all border-0"
+                    className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] hover:brightness-110 text-white font-sans font-bold uppercase text-[10px] tracking-wider rounded-[14px] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all border border-[#9B5CFF]/30"
                   >
                     <Eye className="w-3.5 h-3.5 text-white" /> Foco Imersivo
                   </button>
@@ -430,22 +430,22 @@ export default function CountdownWidget({
 
               {/* CRISP AND CLEAR IMAGE DIRECT ENTRY */}
               {activeImageUrl ? (
-                <div className="relative w-full overflow-hidden rounded-xl border border-purple-500/20 bg-neutral-950 shadow-inner flex items-center justify-center p-1.5">
+                <div className="relative w-full overflow-hidden rounded-[14px] border border-[#34275A] bg-[#0B0817] flex items-center justify-center p-1.5">
                   <img 
                     src={activeImageUrl} 
                     alt="Imagem Revelada do Spoiler" 
-                    className="w-full max-h-[400px] object-contain rounded-lg hover:scale-[1.01] transition-transform duration-300 mx-auto"
+                    className="w-full max-h-[400px] object-contain rounded-[10px] hover:scale-[1.01] transition-transform duration-300 mx-auto"
                     referrerPolicy="no-referrer"
                   />
                 </div>
               ) : null}
 
               {/* DIRECT TEXT PARSING & BEAUTIFUL DETAILS */}
-              <div className="bg-neutral-950/60 p-4 sm:p-5 rounded-xl border border-purple-500/20 shadow-md space-y-2.5">
-                <h5 className="font-sans font-black text-xs text-purple-300 uppercase tracking-wider border-b border-neutral-800 pb-1.5">
+              <div className="bg-[#0B0817]/60 p-4 sm:p-5 rounded-[14px] border border-[#34275A] space-y-2.5">
+                <h5 className="font-sans font-bold text-xs text-[#22D3EE] uppercase tracking-wider border-b border-[#34275A] pb-1.5">
                   📋 Especificações da Atualização:
                 </h5>
-                <div className="max-h-[250px] overflow-y-auto pr-1 text-neutral-200">
+                <div className="max-h-[250px] overflow-y-auto pr-1 text-[#B8B2CC]">
                   {parseAndRenderContent(spoilerDesc)}
                 </div>
               </div>
@@ -455,22 +455,22 @@ export default function CountdownWidget({
           <div className="space-y-5">
             {/* Show Delayed banner warning if delay is active */}
             {isDelayed && (
-              <div className="p-4 bg-amber-955/40 border border-amber-500/20 rounded-2xl flex items-start gap-3 text-left">
-                <span className="p-1.5 bg-amber-950 text-amber-400 rounded-lg font-bold text-xs">
+              <div className="p-4 bg-[#251B46] border border-[#F5C542]/30 rounded-[14px] flex items-start gap-3 text-left">
+                <span className="p-1.5 bg-[#15102A] text-[#F5C542] rounded-[8px] font-bold text-xs">
                   ⚠️
                 </span>
                 <div>
-                  <h4 className="font-sans font-black text-xs text-amber-300 uppercase tracking-wider">
+                  <h4 className="font-sans font-bold text-xs text-[#F5C542] uppercase tracking-wider">
                     Spoiler Adiado / Atrasado
                   </h4>
-                  <p className="font-sans text-xs text-amber-200 mt-1">
+                  <p className="font-sans text-xs text-[#B8B2CC] mt-1">
                     {delayMessage || 'O spoiler desta segunda-feira foi adiado ou atrasará um pouquinho no envio. Fiquem calmos, já postaremos tudo!'}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Grid for Countdown digits - Apple Minimal style */}
+            {/* Grid for Countdown digits */}
             <div className="grid grid-cols-4 gap-3 select-none">
               {[
                 { label: 'DIAS', value: timeLeft.days },
@@ -481,38 +481,38 @@ export default function CountdownWidget({
                 <div 
                   key={idx}
                   onClick={pulseTap}
-                  className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-neutral-900/50 hover:bg-purple-950/40 border border-purple-500/10 shadow-md transition-all active:scale-95 cursor-pointer"
+                  className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-[14px] bg-[#15102A] hover:bg-[#251B46] border border-[#34275A] shadow-sm transition-all active:scale-95 cursor-pointer"
                 >
-                  <span className="font-mono font-black text-2xl sm:text-4xl text-white">
+                  <span className="font-mono font-black text-2xl sm:text-4xl text-[#F8F7FF]">
                     {String(column.value).padStart(2, '0')}
                   </span>
-                  <span className="font-sans font-extrabold text-[9px] sm:text-[10px] text-purple-300/85 tracking-wider uppercase mt-1">
+                  <span className="font-sans font-bold text-[9px] sm:text-[10px] text-[#B8B2CC] tracking-wider uppercase mt-1">
                     {column.label}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* Glowing progress slider bar */}
+            {/* Progress slider bar */}
             <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs font-bold text-neutral-400 px-1 font-sans">
+              <div className="flex justify-between items-center text-xs font-bold text-[#B8B2CC] px-1 font-sans">
                 <span>Carga de Energia do Spoiler</span>
-                <span className="text-purple-400 font-black">{Math.round(progressPercent)}% Pronto</span>
+                <span className="text-[#22D3EE] font-black">{Math.round(progressPercent)}% Pronto</span>
               </div>
-              <div className="w-full h-3 bg-neutral-950 rounded-full overflow-hidden p-0.5 border border-purple-500/10">
+              <div className="w-full h-2.5 bg-[#0B0817] rounded-full overflow-hidden p-0.5 border border-[#34275A]">
                 <div 
-                  className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-650 rounded-full transition-all duration-1000 ease-out"
+                  className="h-full bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] rounded-full transition-all duration-1000 ease-out"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
             </div>
 
             {/* Prompt Card */}
-            <div className="flex items-start gap-3 bg-purple-950/30 border border-purple-500/15 p-4 rounded-2xl">
-              <HelpCircle className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 bg-[#15102A] border border-[#34275A] p-4 rounded-[14px]">
+              <HelpCircle className="w-5 h-5 text-[#7C3AED] flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-sans font-bold text-sm text-purple-300">O que acontece na contagem?</h4>
-                <p className="font-sans text-xs text-neutral-300 leading-relaxed mt-0.5">
+                <h4 className="font-sans font-bold text-sm text-[#F8F7FF]">O que acontece na contagem?</h4>
+                <p className="font-sans text-xs text-[#B8B2CC] leading-relaxed mt-0.5">
                   Toda segunda-feira às 17h30, o relógio zera e libera os exclusivos spoilers coletivos de PK XD. Fique ligado na página ou acesse nosso Canal no WhatsApp para receber em primeira mão!
                 </p>
               </div>
