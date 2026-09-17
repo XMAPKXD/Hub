@@ -43,13 +43,13 @@ export default function FeaturedVideos({ videos, isAdmin, currentUser, onDelete,
   return (
     <section 
       id="featured-videos-section" 
-      className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 space-y-6 text-left relative overflow-hidden"
+      className="bg-[#1D1638]/72 backdrop-blur-xl border border-white/[0.09] rounded-3xl p-6 sm:p-8 space-y-6 text-left relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.38)]"
     >
       {/* Accent glow spots */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full filter blur-2xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-500/5 rounded-full filter blur-2xl pointer-events-none" />
 
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-2xl">
             <Trophy className="w-5 h-5 text-indigo-400 animate-pulse" />
@@ -89,13 +89,13 @@ export default function FeaturedVideos({ videos, isAdmin, currentUser, onDelete,
       </div>
 
       {/* PAINEL / COMUNIDADE AREA SELECTOR */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/5 pb-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.08] pb-4">
         <button
           onClick={() => { playTapSound(); setActiveTab('painel'); }}
           className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'painel'
               ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:bg-amber-400 scale-[1.02]'
-              : 'bg-zinc-800/30 hover:bg-zinc-800/50 text-gray-400 border border-white/5'
+              : 'bg-[#15102A]/75 hover:bg-white/5 text-gray-400 border border-white/[0.08]'
           }`}
         >
           <Star className={`w-3.5 h-3.5 ${activeTab === 'painel' ? 'fill-current' : ''}`} />
@@ -107,7 +107,7 @@ export default function FeaturedVideos({ videos, isAdmin, currentUser, onDelete,
           className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'comunidade'
               ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:bg-indigo-500 scale-[1.02]'
-              : 'bg-zinc-800/30 hover:bg-zinc-800/50 text-gray-400 border border-white/5'
+              : 'bg-[#15102A]/75 hover:bg-white/5 text-gray-400 border border-white/[0.08]'
           }`}
         >
           <Trophy className="w-3.5 h-3.5" />
@@ -135,10 +135,10 @@ export default function FeaturedVideos({ videos, isAdmin, currentUser, onDelete,
               return (
                 <div
                   key={video.id}
-                  className={`bg-black/35 border rounded-3xl overflow-hidden flex flex-col justify-between group transition-all relative ${
+                  className={`backdrop-blur-lg rounded-3xl overflow-hidden flex flex-col justify-between group transition-all relative ${
                     isPainel
-                      ? 'border-yellow-400 bg-gradient-to-b from-zinc-950 via-zinc-900 to-amber-950/25 shadow-[0_0_25px_rgba(245,158,11,0.22)] ring-1 ring-yellow-400/30'
-                      : 'border-white/5 hover:border-indigo-500/30'
+                      ? 'border border-yellow-400/50 bg-gradient-to-b from-[#221838]/85 via-[#1a1230]/80 to-[#2c1d12]/75 shadow-[0_8px_28px_rgba(245,158,11,0.18)]'
+                      : 'bg-[#15102A]/75 border border-white/[0.08] hover:border-indigo-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
                   }`}
                 >
                   {/* Floating Banner for Painel Videos giving extra prestige highlight */}

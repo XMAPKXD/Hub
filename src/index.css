@@ -141,20 +141,86 @@ body {
 #pkxd-app-root.theme-dark {
   background-color: #0B0817 !important;
   background-image: 
-    radial-gradient(ellipse at 50% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 65%),
-    radial-gradient(ellipse at 85% 30%, rgba(34, 211, 238, 0.04) 0px, transparent 50%),
-    radial-gradient(ellipse at 15% 70%, rgba(232, 62, 188, 0.03) 0px, transparent 50%) !important;
+    radial-gradient(circle at 18% 12%, rgba(124, 58, 237, 0.16) 0px, transparent 42%),
+    radial-gradient(circle at 82% 20%, rgba(34, 211, 238, 0.10) 0px, transparent 38%),
+    radial-gradient(circle at 50% 50%, rgba(232, 62, 188, 0.08) 0px, transparent 45%),
+    radial-gradient(circle at 20% 80%, rgba(155, 92, 255, 0.12) 0px, transparent 42%),
+    radial-gradient(circle at 85% 88%, rgba(245, 197, 66, 0.06) 0px, transparent 35%) !important;
+  background-attachment: fixed !important;
   color: #F8F7FF !important;
 }
 
-/* Dark mode Cards and Surfaces */
+/* Subtle & Premium Glassmorphic Cards and Surfaces (60–75% opacity, 14–18px blur, delicate translucent borders) */
 #pkxd-app-root.theme-dark main section,
 #pkxd-app-root.theme-dark .glass-panel,
-#pkxd-app-root.theme-dark .glass-card {
-  background: #1D1638 !important;
-  border: 1px solid #34275A !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45) !important;
+#pkxd-app-root.theme-dark .glass-card,
+#pkxd-app-root.theme-dark .glass-effect-card {
+  background: rgba(29, 22, 56, 0.70) !important;
+  backdrop-filter: blur(16px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 
+    0 8px 32px -4px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
   color: #F8F7FF !important;
+}
+
+/* Secondary / Elevated Glass Surface (65% opacity, 14px blur) */
+#pkxd-app-root.theme-dark .glass-surface-elevated,
+#pkxd-app-root.theme-dark .glass-effect-elevated {
+  background: rgba(37, 27, 70, 0.65) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Glass Navigation Dock, Headers & Floating Bars (75% opacity, 18px blur) */
+#pkxd-app-root.theme-dark .glass-dock,
+#pkxd-app-root.theme-dark .glass-effect-dock,
+#pkxd-app-root.theme-dark nav#nav-header {
+  background: rgba(21, 16, 42, 0.75) !important;
+  backdrop-filter: blur(18px) saturate(135%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Glass Badges & Floating Pills (65% opacity, 10px blur) */
+#pkxd-app-root.theme-dark .glass-badge,
+#pkxd-app-root.theme-dark .glass-effect-badge {
+  background: rgba(37, 27, 70, 0.65) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+}
+
+/* Glass Modals & Floating Dialogs (80% opacity, 20px blur) */
+#pkxd-app-root.theme-dark .glass-modal,
+#pkxd-app-root.theme-dark .glass-effect-modal {
+  background: rgba(21, 16, 42, 0.80) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 
+    0 24px 64px -12px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Countdown blocks with subtle Glassmorphism */
+#pkxd-app-root.theme-dark .grid-cols-4 > div,
+#pkxd-app-root.theme-dark #gift-countdown-timer-clocks > div {
+  background: rgba(21, 16, 42, 0.72) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Text overrides for Dark mode */
@@ -175,12 +241,14 @@ body {
   color: #B8B2CC;
 }
 
-/* Clean Form inputs in Dark mode */
+/* Clean Form inputs in Dark mode with delicate glass feel */
 #pkxd-app-root.theme-dark input,
 #pkxd-app-root.theme-dark textarea,
 #pkxd-app-root.theme-dark select {
-  background: #15102A !important;
-  border: 1px solid #34275A !important;
+  background: rgba(21, 16, 42, 0.75) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
   color: #F8F7FF !important;
 }
 
@@ -208,14 +276,6 @@ body {
   color: #FFFFFF;
   border: 1px solid rgba(155, 92, 255, 0.4);
   box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
-}
-
-/* Countdown blocks in Dark Mode */
-#pkxd-app-root.theme-dark .grid-cols-4 > div,
-#pkxd-app-root.theme-dark #gift-countdown-timer-clocks > div {
-  background: #15102A !important;
-  border: 1px solid #34275A !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
 }
 
 #pkxd-app-root.theme-dark .grid-cols-4 span,

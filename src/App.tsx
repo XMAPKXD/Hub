@@ -2567,10 +2567,10 @@ export default function App() {
               } catch(e) {}
             }
           }}
-          className={`p-3 rounded-full hover:scale-105 active:scale-95 duration-100 transition-all shadow-xl cursor-pointer border-2 ${
+          className={`p-3 rounded-full hover:scale-105 active:scale-95 duration-100 transition-all shadow-[0_8px_24px_rgba(0,0,0,0.4)] backdrop-blur-md cursor-pointer border ${
             soundEnabled 
-              ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-400' 
-              : 'bg-purple-900 hover:bg-purple-950 text-purple-400 border-purple-800'
+              ? 'bg-[#7C3AED]/80 hover:bg-[#7C3AED] text-white border-white/20' 
+              : 'bg-[#1D1638]/75 hover:bg-[#251B46]/80 text-[#B8B2CC] border-white/10'
           }`}
           title={soundEnabled ? "Desativar efeitos sonoros" : "Ativar efeitos sonoros"}
         >
@@ -2579,7 +2579,7 @@ export default function App() {
       </div>
 
       {/* Navigation Header - Fully responsive and accessible PK XD Central Header */}
-      <nav id="nav-header" className="sticky top-0 z-40 bg-[#15102A] border-b border-[#34275A] select-none py-2.5 px-3 sm:px-6 shadow-md backdrop-blur-md">
+      <nav id="nav-header" className="sticky top-0 z-40 bg-[#15102A]/75 border-b border-white/[0.08] select-none py-2.5 px-3 sm:px-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-3 w-full">
           
           {/* Brand Name & Logo with Click to Home */}
@@ -2592,7 +2592,7 @@ export default function App() {
             className="text-left flex items-center gap-2 group cursor-pointer focus:outline-none shrink-0"
             title="Ir para o Início do PKXD Central"
           >
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[14px] bg-[#251B46] border border-[#7C3AED]/40 text-[#F5C542] flex items-center justify-center font-black text-base sm:text-lg group-hover:scale-105 transition-transform shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[14px] bg-[#251B46]/80 backdrop-blur-md border border-[#7C3AED]/40 text-[#F5C542] flex items-center justify-center font-black text-base sm:text-lg group-hover:scale-105 transition-transform shrink-0 shadow-sm">
               ⚡
             </div>
             <div className="flex flex-col justify-center">
@@ -2628,7 +2628,7 @@ export default function App() {
                   });
                 }
               }}
-              className="h-8 sm:h-9 w-8 sm:w-9 rounded-[14px] bg-[#1D1638] hover:bg-[#251B46] border border-[#34275A] text-[#B8B2CC] hover:text-[#F8F7FF] transition-all cursor-pointer relative flex items-center justify-center text-xs font-bold shadow-sm active:scale-95 shrink-0"
+              className="h-8 sm:h-9 w-8 sm:w-9 rounded-[14px] bg-[#1D1638]/70 hover:bg-[#251B46]/80 backdrop-blur-md border border-white/[0.08] text-[#B8B2CC] hover:text-[#F8F7FF] transition-all cursor-pointer relative flex items-center justify-center text-xs font-bold shadow-sm active:scale-95 shrink-0"
               title="Central de Notificações"
             >
               <BellRing className="w-4 h-4 animate-swing" />
@@ -2652,10 +2652,10 @@ export default function App() {
                   navigateTo('/progresso-creator');
                 }
               }}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap backdrop-blur-md ${
                 isCreatorProgressRoute
-                  ? 'bg-[#9B5CFF] text-white border-white/40'
-                  : 'bg-[#7C3AED] hover:bg-[#9B5CFF] text-[#FFFFFF] border-[#9B5CFF]/30'
+                  ? 'bg-[#9B5CFF] text-white border-white/40 shadow-sm'
+                  : 'bg-[#7C3AED]/80 hover:bg-[#9B5CFF] text-[#FFFFFF] border-white/20'
               }`}
               title={isCreatorProgressRoute ? 'Voltar ao Hub' : 'Ver meu progresso para Creator'}
             >
@@ -2675,10 +2675,10 @@ export default function App() {
                   navigateTo('/inscricoes');
                 }
               }}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap backdrop-blur-md ${
                 isApplicationsRoute
-                  ? 'bg-[#251B46] text-[#22D3EE] border-[#22D3EE]/40'
-                  : 'bg-[#1D1638] hover:bg-[#251B46] text-[#B8B2CC] hover:text-[#F8F7FF] border-[#34275A]'
+                  ? 'bg-[#251B46]/85 text-[#22D3EE] border-[#22D3EE]/40 shadow-sm'
+                  : 'bg-[#1D1638]/70 hover:bg-[#251B46]/80 text-[#B8B2CC] hover:text-[#F8F7FF] border-white/[0.08]'
               }`}
               title={isApplicationsRoute ? 'Voltar ao Hub' : 'Inscrições Oficiais'}
             >
@@ -2694,16 +2694,16 @@ export default function App() {
                 triggerAudio('tap');
                 navigateTo('/pkxd-id');
               }}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 whitespace-nowrap backdrop-blur-md ${
                 activeTab === 'passaporte'
-                  ? 'bg-[#251B46] text-[#F5C542] border-[#F5C542]/40'
-                  : 'bg-[#1D1638] hover:bg-[#251B46] text-[#B8B2CC] hover:text-[#F8F7FF] border-[#34275A]'
+                  ? 'bg-[#251B46]/85 text-[#F5C542] border-[#F5C542]/40 shadow-sm'
+                  : 'bg-[#1D1638]/70 hover:bg-[#251B46]/80 text-[#B8B2CC] hover:text-[#F8F7FF] border-white/[0.08]'
               }`}
               title="Acessar PKXD ID e Perfil"
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0 text-[#F5C542]" />
               <span className="hidden sm:inline">PKXD ID</span>
-              <span className="bg-[#15102A] text-[#C4B5FD] text-[8px] sm:text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full border border-[#34275A]">
+              <span className="bg-[#15102A]/80 text-[#C4B5FD] text-[8px] sm:text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full border border-white/10">
                 Lv.{fanLevel}
               </span>
             </button>
@@ -2716,7 +2716,7 @@ export default function App() {
                   triggerAudio('tap');
                   navigateTo('/pkxd-id');
                 }}
-                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm bg-[#123225] hover:bg-[#184232] border-[#25D366]/40 text-[#25D366] active:scale-95 shrink-0 whitespace-nowrap"
+                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm bg-[#123225]/80 hover:bg-[#184232] border-[#25D366]/40 text-[#25D366] active:scale-95 shrink-0 whitespace-nowrap backdrop-blur-md"
                 title={`Conectado como ${user.displayName || user.email}`}
               >
                 <div className="w-4 h-4 rounded-full bg-[#25D366]/20 border border-[#25D366]/40 flex items-center justify-center text-[9px] shrink-0">
@@ -2733,7 +2733,7 @@ export default function App() {
                   triggerAudio('tap');
                   setExplicitAuthModalOpen(true);
                 }}
-                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] text-[#FFFFFF] border-[#9B5CFF]/30 hover:brightness-110 shrink-0 whitespace-nowrap"
+                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] text-[#FFFFFF] border-white/20 hover:brightness-110 shrink-0 whitespace-nowrap backdrop-blur-md"
                 title="Fazer Login ou Criar Conta"
               >
                 <KeyRound className="w-3.5 h-3.5 shrink-0" />
@@ -2748,10 +2748,10 @@ export default function App() {
                 triggerAudio('tap');
                 setShowAdminPanel(!showAdminPanel);
               }}
-              className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 shrink-0 whitespace-nowrap ${
+              className={`h-8 sm:h-9 px-2 sm:px-2.5 rounded-[14px] border font-sans text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 shrink-0 whitespace-nowrap backdrop-blur-md ${
                 showAdminPanel 
-                ? 'bg-[#251B46] text-[#F5C542] border-[#F5C542]/40' 
-                : 'bg-[#1D1638] hover:bg-[#251B46] text-[#B8B2CC] hover:text-[#F8F7FF] border-[#34275A]'
+                ? 'bg-[#251B46]/85 text-[#F5C542] border-[#F5C542]/40 shadow-sm' 
+                : 'bg-[#1D1638]/70 hover:bg-[#251B46]/80 text-[#B8B2CC] hover:text-[#F8F7FF] border-white/[0.08]'
               }`}
               title={showAdminPanel ? 'Fechar Painel Admin' : 'Painel de Administração'}
             >
@@ -2765,15 +2765,15 @@ export default function App() {
 
       {/* Banner de Notificação para Usuários que ainda não cadastraram Nome e # do PK XD */}
       {!isTagConfigured(currentPlayerTag) && !tagBannerDismissed && (
-        <div className="bg-[#1D1638] border-b border-[#34275A] px-3 sm:px-6 py-2.5 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 text-left z-20 sticky top-[53px] sm:top-[61px] shadow-sm animate-fade-in">
+        <div className="bg-[#1D1638]/75 border-b border-white/[0.08] px-3 sm:px-6 py-2.5 backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 text-left z-20 sticky top-[53px] sm:top-[61px] shadow-[0_4px_20px_rgba(0,0,0,0.25)] animate-fade-in">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#251B46] border border-[#7C3AED]/40 rounded-[12px] text-[#F5C542] flex-shrink-0">
+            <div className="p-2 bg-[#251B46]/80 border border-[#7C3AED]/40 rounded-[12px] text-[#F5C542] flex-shrink-0 backdrop-blur-md">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
               <p className="text-xs font-black text-[#F8F7FF] flex items-center gap-1.5 flex-wrap">
                 <span>🎮 Complete sua Identidade PK XD!</span>
-                <span className="text-[10px] bg-[#251B46] text-[#F5C542] border border-[#F5C542]/30 font-mono px-2 py-0.5 rounded-full font-bold shadow-sm">
+                <span className="text-[10px] bg-[#251B46]/80 text-[#F5C542] border border-[#F5C542]/30 font-mono px-2 py-0.5 rounded-full font-bold shadow-sm">
                   +25 XP GRÁTIS
                 </span>
               </p>
@@ -2791,7 +2791,7 @@ export default function App() {
                 setTagSetupError('');
                 setShowTagSetupModal(true);
               }}
-              className="px-4 py-1.5 bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] hover:brightness-110 text-[#FFFFFF] text-xs font-bold uppercase tracking-wider rounded-[14px] shadow-sm cursor-pointer transition-all active:scale-95 border border-[#9B5CFF]/30"
+              className="px-4 py-1.5 bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] hover:brightness-110 text-[#FFFFFF] text-xs font-bold uppercase tracking-wider rounded-[14px] shadow-sm cursor-pointer transition-all active:scale-95 border border-white/20"
             >
               Cadastrar Tag ⚡
             </button>
@@ -3258,7 +3258,7 @@ export default function App() {
             </div>
 
             {/* Visual Navigation Tab Bar - High-tier Responsive Navigation Dock */}
-            <div className="max-w-4xl mx-auto mb-8 bg-[#15102A] backdrop-blur-xl p-1.5 sm:p-2 rounded-[20px] border border-[#34275A] grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2 shadow-lg select-none sticky top-14 sm:top-16 z-20">
+            <div className="max-w-4xl mx-auto mb-8 bg-[#15102A]/75 backdrop-blur-xl p-1.5 sm:p-2 rounded-[20px] border border-white/[0.09] grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2 shadow-[0_12px_32px_rgba(0,0,0,0.38)] select-none sticky top-14 sm:top-16 z-20">
               <button
                 onClick={() => {
                   triggerAudio('tap');
@@ -3267,7 +3267,7 @@ export default function App() {
                 className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-[14px] font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'inicio'
                     ? 'bg-[#7C3AED] text-[#FFFFFF] shadow-sm'
-                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.04]'
+                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.06]'
                 }`}
               >
                 <Home className={`w-3.5 h-3.5 flex-shrink-0 ${activeTab === 'inicio' ? 'text-white' : 'text-[#8E879F]'}`} />
@@ -3282,7 +3282,7 @@ export default function App() {
                 className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-[14px] font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'eventos'
                     ? 'bg-[#7C3AED] text-[#FFFFFF] shadow-sm'
-                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.04]'
+                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.06]'
                 }`}
               >
                 <Calendar className={`w-3.5 h-3.5 flex-shrink-0 ${activeTab === 'eventos' ? 'text-white' : 'text-[#8E879F]'}`} />
@@ -3297,7 +3297,7 @@ export default function App() {
                 className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-[14px] font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center relative ${
                   activeTab === 'passaporte'
                     ? 'bg-[#7C3AED] text-[#FFFFFF] shadow-sm'
-                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.04]'
+                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.06]'
                 }`}
               >
                 <Sparkles className={`w-3.5 h-3.5 flex-shrink-0 ${activeTab === 'passaporte' ? 'text-white' : 'text-[#8E879F]'}`} />
@@ -3312,7 +3312,7 @@ export default function App() {
                 className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-[14px] font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'comunidade'
                     ? 'bg-[#7C3AED] text-[#FFFFFF] shadow-sm'
-                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.04]'
+                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.06]'
                 }`}
               >
                 <Users className={`w-3.5 h-3.5 flex-shrink-0 ${activeTab === 'comunidade' ? 'text-white' : 'text-[#8E879F]'}`} />
@@ -3327,7 +3327,7 @@ export default function App() {
                 className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-[14px] font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'missoes'
                     ? 'bg-[#7C3AED] text-[#FFFFFF] shadow-sm'
-                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.04]'
+                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.06]'
                 }`}
               >
                 <Target className={`w-3.5 h-3.5 flex-shrink-0 ${activeTab === 'missoes' ? 'text-white' : 'text-[#8E879F]'}`} />
@@ -3342,7 +3342,7 @@ export default function App() {
                 className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-1 sm:px-3 rounded-[14px] font-sans text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 text-center ${
                   activeTab === 'artes'
                     ? 'bg-[#7C3AED] text-[#FFFFFF] shadow-sm'
-                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.04]'
+                    : 'bg-transparent text-[#A9A3B7] hover:text-[#F8F7FF] hover:bg-white/[0.06]'
                 }`}
               >
                 <Palette className={`w-3.5 h-3.5 flex-shrink-0 ${activeTab === 'artes' ? 'text-white' : 'text-[#8E879F]'}`} />
@@ -3390,15 +3390,15 @@ export default function App() {
                 {/* Creator Progress Analyzer Quick Banner */}
                 <div 
                   id="creator-analyzer-home-banner"
-                  className="bg-[#15102A] border border-[#34275A] rounded-[20px] p-5 sm:p-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden"
+                  className="bg-[#15102A]/72 backdrop-blur-xl border border-white/[0.09] rounded-[20px] p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.35)] flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-[14px] bg-[#251B46] border border-[#7C3AED]/40 flex items-center justify-center text-[#7C3AED] shrink-0">
+                    <div className="w-12 h-12 rounded-[14px] bg-[#251B46]/80 backdrop-blur-md border border-[#7C3AED]/40 flex items-center justify-center text-[#7C3AED] shrink-0 shadow-sm">
                       <Sparkles className="w-6 h-6" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#3A1947] text-[#E83EBC] border border-[#E83EBC]/30">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#3A1947]/80 backdrop-blur-sm text-[#E83EBC] border border-[#E83EBC]/30">
                           Novo Recurso
                         </span>
                         <h3 className="text-base sm:text-lg font-black text-[#F8F7FF] uppercase">
@@ -4167,7 +4167,7 @@ export default function App() {
             }
           }}
         >
-          <div className="bg-neutral-900 border-2 border-cyan-400 rounded-3xl p-5 sm:p-8 w-full max-w-2xl relative shadow-[0_0_30px_rgba(34,211,238,0.2)] my-4 sm:my-8 text-left cursor-default">
+          <div className="bg-[#15102A]/85 backdrop-blur-xl border border-cyan-400/40 rounded-3xl p-5 sm:p-8 w-full max-w-2xl relative shadow-[0_24px_64px_rgba(0,0,0,0.65)] my-4 sm:my-8 text-left cursor-default">
             
             {/* Top Close Controls */}
             <button
@@ -4187,7 +4187,7 @@ export default function App() {
             </div>
 
             {/* Native browser/mobile alert toggle card */}
-            <div className="mb-6 p-4 rounded-2xl bg-slate-950 border border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="mb-6 p-4 rounded-2xl bg-[#1D1638]/70 backdrop-blur-md border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <h4 className="font-sans font-black text-xs uppercase tracking-wider text-pink-400">📲 Notificações no Celular / Navegador</h4>
                 <p className="text-[11px] text-gray-400 leading-normal">
@@ -4281,7 +4281,7 @@ export default function App() {
                   return (
                     <div 
                       key={notif.id}
-                      className="p-4 bg-neutral-950/60 border border-white/10 rounded-2xl flex items-start gap-3 hover:border-white/20 transition-all shadow-inner relative group"
+                      className="p-4 bg-[#1D1638]/70 backdrop-blur-md border border-white/[0.08] rounded-2xl flex items-start gap-3 hover:border-white/20 transition-all shadow-sm relative group"
                     >
                       <span className="text-xl leading-none select-none p-1.5 bg-white/5 rounded-xl block">
                         {icon}
@@ -4369,7 +4369,7 @@ export default function App() {
       {/* QUICK PK XD TAG SETUP MODAL FOR EXISTING USERS */}
       {showTagSetupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-zinc-900 border-2 border-pink-500/50 rounded-3xl p-6 w-full max-w-md relative shadow-2xl text-left space-y-4 overflow-hidden">
+          <div className="bg-[#15102A]/85 backdrop-blur-xl border border-pink-500/40 rounded-3xl p-6 w-full max-w-md relative shadow-[0_24px_64px_rgba(0,0,0,0.65)] text-left space-y-4 overflow-hidden">
             <button
               onClick={() => setShowTagSetupModal(false)}
               className="absolute top-4 right-4 p-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full cursor-pointer"

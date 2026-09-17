@@ -366,13 +366,13 @@ export default function CountdownWidget({
   return (
     <div 
       id="countdown-container"
-      className="relative overflow-hidden bg-[#1D1638] border border-[#34275A] shadow-xl p-6 sm:p-8 rounded-[20px] text-[#F8F7FF]"
+      className="relative overflow-hidden bg-[#1D1638]/72 backdrop-blur-xl border border-white/[0.09] shadow-[0_8px_32px_rgba(0,0,0,0.38)] p-6 sm:p-8 rounded-[20px] text-[#F8F7FF]"
     >
       <div className="relative z-10 space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#34275A] pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#251B46] rounded-[14px] border border-[#7C3AED]/40">
+            <div className="p-3 bg-[#251B46]/80 backdrop-blur-md rounded-[14px] border border-[#7C3AED]/40 shadow-sm">
               <Flame className="w-6 h-6 text-[#7C3AED] fill-[#7C3AED]" />
             </div>
             <div>
@@ -390,7 +390,7 @@ export default function CountdownWidget({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7C3AED] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#7C3AED]"></span>
             </span>
-            <span className="font-sans text-[10px] font-bold tracking-wider text-[#C4B5FD] uppercase bg-[#251B46] px-3 py-1 rounded-full border border-[#34275A]">
+            <span className="font-sans text-[10px] font-bold tracking-wider text-[#C4B5FD] uppercase bg-[#251B46]/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
               {timeLeft.isExpired ? 'Liberado!' : 'Agendado'}
             </span>
           </div>
@@ -400,12 +400,12 @@ export default function CountdownWidget({
         {timeLeft.isExpired ? (
           <div 
             id="spoiler-revealed-state"
-            className="flex flex-col items-start justify-start p-5 sm:p-6 bg-[#15102A] border border-[#34275A] rounded-[16px] text-left relative overflow-hidden transition-all duration-200 w-full space-y-5"
+            className="flex flex-col items-start justify-start p-5 sm:p-6 bg-[#15102A]/70 backdrop-blur-md border border-white/[0.08] rounded-[16px] text-left relative overflow-hidden transition-all duration-200 w-full space-y-5"
           >
             <div className="relative z-10 w-full space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[#34275A] pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-white/[0.08] pb-3">
                 <div>
-                  <span className="font-sans text-[9px] font-bold tracking-wider text-[#E83EBC] bg-[#3A1947] px-2.5 py-0.5 rounded-full uppercase border border-[#E83EBC]/30">
+                  <span className="font-sans text-[9px] font-bold tracking-wider text-[#E83EBC] bg-[#3A1947]/80 backdrop-blur-sm px-2.5 py-0.5 rounded-full uppercase border border-[#E83EBC]/30">
                     🔥 SPOILER CONFIRMADO & REVELADO
                   </span>
                   <h4 className="font-sans font-black text-xl sm:text-2xl text-[#F8F7FF] tracking-tight uppercase leading-tight mt-1.5">
@@ -481,7 +481,7 @@ export default function CountdownWidget({
                 <div 
                   key={idx}
                   onClick={pulseTap}
-                  className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-[14px] bg-[#15102A] hover:bg-[#251B46] border border-[#34275A] shadow-sm transition-all active:scale-95 cursor-pointer"
+                  className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-[14px] bg-[#15102A]/75 hover:bg-[#251B46]/80 backdrop-blur-md border border-white/[0.08] shadow-sm transition-all active:scale-95 cursor-pointer"
                 >
                   <span className="font-mono font-black text-2xl sm:text-4xl text-[#F8F7FF]">
                     {String(column.value).padStart(2, '0')}
@@ -499,7 +499,7 @@ export default function CountdownWidget({
                 <span>Carga de Energia do Spoiler</span>
                 <span className="text-[#22D3EE] font-black">{Math.round(progressPercent)}% Pronto</span>
               </div>
-              <div className="w-full h-2.5 bg-[#0B0817] rounded-full overflow-hidden p-0.5 border border-[#34275A]">
+              <div className="w-full h-2.5 bg-[#0B0817]/80 backdrop-blur-sm rounded-full overflow-hidden p-0.5 border border-white/10">
                 <div 
                   className="h-full bg-gradient-to-r from-[#7C3AED] to-[#9B5CFF] rounded-full transition-all duration-1000 ease-out"
                   style={{ width: `${progressPercent}%` }}
@@ -508,7 +508,7 @@ export default function CountdownWidget({
             </div>
 
             {/* Prompt Card */}
-            <div className="flex items-start gap-3 bg-[#15102A] border border-[#34275A] p-4 rounded-[14px]">
+            <div className="flex items-start gap-3 bg-[#15102A]/70 backdrop-blur-md border border-white/[0.08] p-4 rounded-[14px]">
               <HelpCircle className="w-5 h-5 text-[#7C3AED] flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-sans font-bold text-sm text-[#F8F7FF]">O que acontece na contagem?</h4>

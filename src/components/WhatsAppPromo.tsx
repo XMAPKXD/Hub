@@ -71,15 +71,15 @@ export default function WhatsAppPromo({ channelUrl, onAddXP }: WhatsAppPromoProp
   return (
     <div 
       id="whatsapp-promo-container"
-      className="bg-[#1D1638] p-6 sm:p-8 rounded-[20px] border border-[#34275A] shadow-xl text-[#F8F7FF] overflow-hidden relative"
+      className="bg-[#1D1638]/72 backdrop-blur-xl p-6 sm:p-8 rounded-[20px] border border-white/[0.09] shadow-[0_8px_32px_rgba(0,0,0,0.38)] text-[#F8F7FF] overflow-hidden relative"
     >
       <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
         
         {/* Left Side: Mockup WhatsApp Message Feed */}
         <div className="w-full md:w-5/12 flex-shrink-0">
-          <div className="bg-[#0B0817] rounded-[14px] border border-[#34275A] overflow-hidden shadow-xl relative select-none">
+          <div className="bg-[#0B0817]/80 backdrop-blur-md rounded-[14px] border border-white/[0.08] overflow-hidden shadow-xl relative select-none">
             {/* Header / Chat Name */}
-            <div className="bg-[#15102A] p-3.5 flex items-center gap-3 border-b border-[#34275A]">
+            <div className="bg-[#15102A]/90 p-3.5 flex items-center gap-3 border-b border-white/[0.08]">
               <div className="w-9 h-9 rounded-[10px] bg-gradient-to-tr from-[#7C3AED] via-[#9B5CFF] to-[#22D3EE] flex items-center justify-center font-bold font-sans text-sm text-white shadow-md">
                 PC
               </div>
@@ -98,19 +98,19 @@ export default function WhatsAppPromo({ channelUrl, onAddXP }: WhatsAppPromoProp
             <div className="p-4 space-y-4 max-h-[220px] overflow-y-auto bg-[#0B0817]/80">
               
                {/* Message bubble 1 */}
-               <div className="bg-[#15102A] text-[#B8B2CC] p-3 rounded-[14px] rounded-tl-sm max-w-[85%] text-xs shadow-md border-l-2 border-[#22D3EE]">
+               <div className="bg-[#15102A]/85 text-[#B8B2CC] p-3 rounded-[14px] rounded-tl-sm max-w-[85%] text-xs shadow-md border-l-2 border-[#22D3EE] backdrop-blur-sm">
                 <span className="text-[#22D3EE] font-bold text-[10px] block mb-1">📢 COMUNIDADE PKXD CENTRAL</span>
                 Fala galera de PK XD! 🕹️ Aqui postamos com total exclusividade os spoilers das novas atualizações e códigos ativos!
                 <span className="text-[9px] text-[#716A83] text-right block mt-1.5">17:28</span>
               </div>
 
               {/* Message bubble 2 */}
-              <div className="bg-[#15102A] text-[#B8B2CC] p-3 rounded-[14px] rounded-tl-sm max-w-[85%] text-xs shadow-md border-l-2 border-[#E83EBC]">
+              <div className="bg-[#15102A]/85 text-[#B8B2CC] p-3 rounded-[14px] rounded-tl-sm max-w-[85%] text-xs shadow-md border-l-2 border-[#E83EBC] backdrop-blur-sm">
                 <span className="text-[#E83EBC] font-bold text-[10px] block mb-1">🚀 SPOILERS SEMANAIS</span>
                 Tem spoiler novo toda semana, SEGUNDA-FEIRA às 17:30h (NORMALMENTE)! Ative o sininho no canal para não perder nada! 🔮✨
                 
                 {/* Fake action/reaction bar in chat bubble */}
-                <div className="mt-3 pt-2 border-t border-[#34275A] flex justify-between items-center">
+                <div className="mt-3 pt-2 border-t border-white/[0.08] flex justify-between items-center">
                   <button 
                     onClick={handleLike}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[10px] text-[10px] font-bold transition-all ${
@@ -147,8 +147,8 @@ export default function WhatsAppPromo({ channelUrl, onAddXP }: WhatsAppPromoProp
           {/* Value Badges */}
           <div className="grid grid-cols-2 gap-3 max-w-md mx-auto md:mx-0">
             {[
-              { icon: Ticket, text: 'Códigos Exclusivos', color: 'text-[#F5C542] border-[#34275A] bg-[#15102A]' },
-              { icon: ShieldCheck, text: 'Notícias Oficiais', color: 'text-[#22D3EE] border-[#34275A] bg-[#15102A]' }
+              { icon: Ticket, text: 'Códigos Exclusivos', color: 'text-[#F5C542] border-white/[0.08] bg-[#15102A]/75 backdrop-blur-md' },
+              { icon: ShieldCheck, text: 'Notícias Oficiais', color: 'text-[#22D3EE] border-white/[0.08] bg-[#15102A]/75 backdrop-blur-md' }
             ].map((feature, idx) => (
               <div 
                 key={idx}
@@ -188,7 +188,7 @@ export default function WhatsAppPromo({ channelUrl, onAddXP }: WhatsAppPromoProp
                     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent('Acesse o canal de Spoilers e Códigos Oficiais de PK XD: ' + channelUrl)}`, '_blank');
                   }
                 }}
-                className="w-full sm:w-auto px-4 py-3 sm:py-3.5 bg-[#15102A] hover:bg-[#251B46] text-[#B8B2CC] hover:text-[#F8F7FF] font-sans font-bold text-xs sm:text-sm rounded-[14px] border border-[#34275A] transition-all flex flex-wrap items-center justify-center gap-2 cursor-pointer text-center"
+                className="w-full sm:w-auto px-4 py-3 sm:py-3.5 bg-[#15102A]/80 hover:bg-[#251B46]/80 text-[#B8B2CC] hover:text-[#F8F7FF] font-sans font-bold text-xs sm:text-sm rounded-[14px] border border-white/10 backdrop-blur-md transition-all flex flex-wrap items-center justify-center gap-2 cursor-pointer text-center"
               >
                 <span>🔗 COMPARTILHAR CANAL</span>
               </button>

@@ -23,17 +23,17 @@ export default function WelcomeGuideCard({
   return (
     <div 
       id="first-access-welcome-guide"
-      className="relative overflow-hidden bg-[#1D1638] border border-[#34275A] rounded-[20px] p-5 sm:p-7 shadow-lg text-left select-none animate-fade-in"
+      className="relative overflow-hidden bg-[#1D1638]/72 backdrop-blur-xl border border-white/[0.09] rounded-[20px] p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.38)] text-left select-none animate-fade-in"
     >
       {/* Header bar with dismiss and compact mode selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#34275A] relative z-10">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08] relative z-10">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-[12px] bg-[#251B46] border border-[#7C3AED]/40 flex items-center justify-center text-[#7C3AED] shadow-sm">
+          <div className="w-9 h-9 rounded-[12px] bg-[#251B46]/80 backdrop-blur-md border border-[#7C3AED]/40 flex items-center justify-center text-[#7C3AED] shadow-sm">
             <Compass className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#15102A] text-[#22D3EE] border border-[#22D3EE]/30">
+              <span className="text-[9px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#15102A]/80 backdrop-blur-sm text-[#22D3EE] border border-[#22D3EE]/30">
                 Guia Rápido
               </span>
               <h3 className="font-sans font-black text-sm sm:text-base text-[#F8F7FF] uppercase tracking-tight">
@@ -55,8 +55,8 @@ export default function WelcomeGuideCard({
             }}
             className={`px-3 py-1.5 rounded-[12px] text-[11px] font-sans font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer border ${
               isCompactMode
-                ? 'bg-[#7C3AED] text-white border-[#9B5CFF]/30'
-                : 'bg-[#15102A] text-[#B8B2CC] border-[#34275A] hover:text-[#F8F7FF]'
+                ? 'bg-[#7C3AED] text-white border-white/20'
+                : 'bg-[#15102A]/80 backdrop-blur-sm text-[#B8B2CC] border-white/10 hover:text-[#F8F7FF]'
             }`}
             title="Alternar entre visualização focada e completa"
           >
@@ -68,7 +68,7 @@ export default function WelcomeGuideCard({
               if (triggerAudio) triggerAudio('tap');
               onDismiss();
             }}
-            className="p-1.5 rounded-[12px] bg-[#15102A] hover:bg-[#251B46] text-[#716A83] hover:text-[#F8F7FF] border border-[#34275A] transition-colors cursor-pointer"
+            className="p-1.5 rounded-[12px] bg-[#15102A]/80 hover:bg-[#251B46] text-[#716A83] hover:text-[#F8F7FF] border border-white/10 transition-colors cursor-pointer"
             title="Fechar guia"
           >
             <X className="w-4 h-4" />
@@ -84,7 +84,7 @@ export default function WelcomeGuideCard({
             if (triggerAudio) triggerAudio('tap');
             onNavigateToPassport();
           }}
-          className="group p-4 bg-[#15102A] hover:bg-[#251B46] border border-[#34275A] hover:border-[#F5C542]/50 rounded-[16px] transition-all cursor-pointer shadow-sm flex flex-col justify-between space-y-3"
+          className="group p-4 bg-[#15102A]/75 hover:bg-[#251B46]/80 backdrop-blur-md border border-white/[0.08] hover:border-[#F5C542]/50 rounded-[16px] transition-all cursor-pointer shadow-sm flex flex-col justify-between space-y-3"
         >
           <div className="space-y-2">
             <div className="w-10 h-10 rounded-[12px] bg-[#251B46] border border-[#F5C542]/30 text-[#F5C542] flex items-center justify-center font-bold">
@@ -112,7 +112,7 @@ export default function WelcomeGuideCard({
             if (triggerAudio) triggerAudio('tap');
             onNavigateToSpoilers();
           }}
-          className="group p-4 bg-[#15102A] hover:bg-[#251B46] border border-[#34275A] hover:border-[#E83EBC]/50 rounded-[16px] transition-all cursor-pointer shadow-sm flex flex-col justify-between space-y-3"
+          className="group p-4 bg-[#15102A]/75 hover:bg-[#251B46]/80 backdrop-blur-md border border-white/[0.08] hover:border-[#E83EBC]/50 rounded-[16px] transition-all cursor-pointer shadow-sm flex flex-col justify-between space-y-3"
         >
           <div className="space-y-2">
             <div className="w-10 h-10 rounded-[12px] bg-[#3A1947] border border-[#E83EBC]/30 text-[#E83EBC] flex items-center justify-center font-bold">
@@ -140,7 +140,7 @@ export default function WelcomeGuideCard({
             if (triggerAudio) triggerAudio('tap');
             onNavigateToCreator();
           }}
-          className="group p-4 bg-[#15102A] hover:bg-[#251B46] border border-[#34275A] hover:border-[#7C3AED]/50 rounded-[16px] transition-all cursor-pointer shadow-sm flex flex-col justify-between space-y-3"
+          className="group p-4 bg-[#15102A]/75 hover:bg-[#251B46]/80 backdrop-blur-md border border-white/[0.08] hover:border-[#7C3AED]/50 rounded-[16px] transition-all cursor-pointer shadow-sm flex flex-col justify-between space-y-3"
         >
           <div className="space-y-2">
             <div className="w-10 h-10 rounded-[12px] bg-[#251B46] border border-[#7C3AED]/40 text-[#7C3AED] flex items-center justify-center font-bold">

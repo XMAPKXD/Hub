@@ -888,7 +888,7 @@ export default function EventsSection({
       </AnimatePresence>
 
       {/* Main Section Header */}
-      <div className="bg-gradient-to-r from-purple-900/80 via-zinc-900 to-indigo-950/80 border-2 border-purple-500/30 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-gradient-to-r from-[#251B46]/85 via-[#1D1638]/80 to-[#15102A]/85 backdrop-blur-xl border border-white/[0.09] rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.4)] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         
         {/* Neon Glow */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/10 rounded-full filter blur-3xl pointer-events-none" />
@@ -928,8 +928,8 @@ export default function EventsSection({
       </div>
 
       {/* Mode Switcher: Todos os Eventos vs Minha Agenda PKXD */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-950/80 p-2 rounded-2xl border border-purple-500/30 shadow-lg">
-        <div className="flex items-center gap-1.5 bg-black/50 p-1 rounded-xl border border-white/10 flex-1 sm:flex-initial">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#15102A]/75 backdrop-blur-xl p-2 rounded-2xl border border-white/[0.08] shadow-md">
+        <div className="flex items-center gap-1.5 bg-[#0B0817]/60 backdrop-blur-sm p-1 rounded-xl border border-white/5 flex-1 sm:flex-initial">
           <button
             onClick={() => {
               if (triggerAudio) triggerAudio('tap');
@@ -978,7 +978,7 @@ export default function EventsSection({
       <div className="space-y-4">
         {/* Status Filters */}
         <div className="flex flex-wrap gap-2 items-center justify-between">
-          <div className="flex flex-wrap gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/10">
+          <div className="flex flex-wrap gap-1.5 bg-[#15102A]/75 backdrop-blur-md p-1.5 rounded-2xl border border-white/[0.08]">
             <button
               onClick={() => { if (triggerAudio) triggerAudio('tap'); setStatusFilter("TODOS"); }}
               className={`px-3.5 py-1.5 rounded-xl font-sans text-xs font-extrabold uppercase transition-all cursor-pointer ${
@@ -1099,7 +1099,7 @@ export default function EventsSection({
             return (
               <div
                 key={event.id}
-                className="bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-xl hover:border-purple-500/40 transition-all duration-300 group relative"
+                className="bg-[#1D1638]/72 backdrop-blur-xl border border-white/[0.09] rounded-3xl overflow-hidden flex flex-col shadow-[0_8px_32px_rgba(0,0,0,0.35)] hover:border-purple-500/40 transition-all duration-300 group relative"
               >
                 {/* Banner Header Image */}
                 <div className="relative h-44 sm:h-48 w-full bg-black overflow-hidden flex-shrink-0">
@@ -1108,7 +1108,7 @@ export default function EventsSection({
                     alt={event.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1D1638] via-[#1D1638]/30 to-transparent" />
 
                   {/* Status Badge */}
                   <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">

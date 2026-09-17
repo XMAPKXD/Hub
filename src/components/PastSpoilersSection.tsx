@@ -256,14 +256,14 @@ export default function PastSpoilersSection({ spoilers, isAdmin, onDelete, onEdi
   return (
     <section 
       id="past-spoilers-history-section"
-      className="bg-zinc-950/85 border border-zinc-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl relative overflow-hidden text-left"
+      className="bg-[#1D1638]/72 backdrop-blur-xl border border-white/[0.09] rounded-3xl p-6 sm:p-8 space-y-6 shadow-[0_8px_32px_rgba(0,0,0,0.38)] relative overflow-hidden text-left"
     >
       {/* Decorative neon gradient glow */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full filter blur-2xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/5 rounded-full filter blur-2xl pointer-events-none" />
 
       {/* Section Header */}
-      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
         <div className="flex items-center gap-2.5">
           <div className="p-2 bg-pink-500/10 rounded-xl border border-pink-500/25">
             <Flame className="w-5 h-5 text-pink-400 fill-pink-400 animate-pulse" />
@@ -277,13 +277,13 @@ export default function PastSpoilersSection({ spoilers, isAdmin, onDelete, onEdi
             </p>
           </div>
         </div>
-        <span className="text-[10px] sm:text-xs font-mono font-bold px-3 py-1 bg-zinc-900 border border-zinc-800 text-pink-400 rounded-full flex-shrink-0 self-start sm:self-center">
+        <span className="text-[10px] sm:text-xs font-mono font-bold px-3 py-1 bg-[#251B46]/80 backdrop-blur-md border border-white/10 text-pink-400 rounded-full flex-shrink-0 self-start sm:self-center">
           {isEmpty ? 0 : spoilers.length} Lançados
         </span>
       </div>
 
       {isEmpty ? (
-        <div className="relative z-10 text-center py-10 px-4 bg-zinc-900/40 rounded-2xl border border-dashed border-zinc-800 text-gray-400 font-sans space-y-3">
+        <div className="relative z-10 text-center py-10 px-4 bg-[#15102A]/60 backdrop-blur-sm rounded-2xl border border-dashed border-white/10 text-gray-400 font-sans space-y-3">
           <p className="text-sm font-semibold text-gray-300">
             Nenhum spoiler arquivado ainda 🔮
           </p>
@@ -316,7 +316,7 @@ export default function PastSpoilersSection({ spoilers, isAdmin, onDelete, onEdi
             <div 
               key={spoil.id}
               onClick={() => setImmersiveSpoiler(spoil)}
-              className="flex flex-col bg-zinc-900/45 hover:bg-zinc-900/80 border border-zinc-800 hover:border-pink-500/40 rounded-2xl overflow-hidden transition-all duration-300 shadow-md group cursor-pointer relative"
+              className="flex flex-col bg-[#15102A]/75 hover:bg-[#251B46]/80 backdrop-blur-md border border-white/[0.08] hover:border-pink-500/40 rounded-2xl overflow-hidden transition-all duration-300 shadow-md group cursor-pointer relative"
             >
               {/* Card Image */}
               <div className="h-32 w-full overflow-hidden relative bg-black/40 border-b border-zinc-800/60">
@@ -476,11 +476,11 @@ export default function PastSpoilersSection({ spoilers, isAdmin, onDelete, onEdi
         >
           {/* Main Modal Panel */}
           <div 
-            className="relative bg-zinc-950 border-2 border-zinc-800 hover:border-pink-500/40 max-w-2xl w-full rounded-3xl overflow-hidden shadow-2xl my-8 text-slate-100 flex flex-col max-h-[90vh] scale-up"
+            className="relative bg-[#15102A]/85 backdrop-blur-2xl border border-pink-500/40 max-w-2xl w-full rounded-3xl overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.7)] my-8 text-slate-100 flex flex-col max-h-[90vh] scale-up"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header Area */}
-            <div className="p-5 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="p-5 border-b border-white/[0.08] bg-[#1D1638]/75 backdrop-blur-md flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping" />
                 <span className="text-[10px] sm:text-xs font-mono font-black uppercase text-pink-400 tracking-widest">
